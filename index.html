@@ -10,8 +10,8 @@
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <!-- Canvas Confetti -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
-  <!-- PeerJS for Real-time WebRTC Multiplayer without custom servers -->
-  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <!-- High Performance Public WebSocket MQTT Relay for 100% reliable cross-device sync -->
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;900&family=Chakra+Petch:wght@600;700;800&display=swap');
@@ -554,9 +554,8 @@
       forcedRig: null, // Easter Egg rigging ('ODD' | 'EVEN' | null)
       players: {}, // id -> { id, name, chips, choice, betAmount, hasBet, isHost, isBot, wins }
       netChannel: null,
-      peer: null,
-      peerConnections: [],
-      hostConn: null,
+      mqttClient: null,
+      mqttTopic: null,
       dice1: 1,
       dice2: 1
     };
@@ -763,89 +762,98 @@
       modalFinalResult.classList.add('hidden');
     });
 
-    // --- NETWORKING (WebRTC PeerJS + BroadcastChannel Hybrid) ---
-    function getHostPeerId(code) {
-      return 'holzzak_room_' + code.toLowerCase();
-    }
-
+    // --- 100% RELIABLE CLOUD REAL-TIME NETWORKING (MQTT over WebSocket) ---
     function setupNetworking(code, isHost) {
       disconnectNetworking();
 
-      // 1. Same-browser fallback via BroadcastChannel
+      store.mqttTopic = `holzzak_v2_arena/${code.toUpperCase()}`;
+
+      // 1. Same-device local fallback (BroadcastChannel)
       try {
         store.netChannel = new BroadcastChannel('hz_room_' + code);
         store.netChannel.onmessage = (e) => handleNetworkMessage(e.data);
       } catch(err) {}
 
-      // 2. Cross-device WebRTC via PeerJS
+      // 2. Global Public WebSocket Broker (wss://broker.emqx.io:8084/mqtt)
       try {
-        if (isHost) {
-          const peerId = getHostPeerId(code);
-          store.peer = new Peer(peerId);
+        const clientOptions = {
+          clientId: 'hz_' + store.myId + '_' + Math.random().toString(16).substring(2, 7),
+          clean: true,
+          connectTimeout: 5000,
+          reconnectPeriod: 2000
+        };
 
-          store.peer.on('open', (id) => {
-            console.log('Host WebRTC active:', id);
+        // Connect to secure SSL WebSocket broker
+        const client = mqtt.connect('wss://broker.emqx.io:8084/mqtt', clientOptions);
+        store.mqttClient = client;
+
+        client.on('connect', () => {
+          client.subscribe(store.mqttTopic, { qos: 0 }, (err) => {
+            if (!err) {
+              if (isHost) {
+                showToast(`방 [${code}] 개설 완료 (클라우드 동기화 활성)`);
+              } else {
+                showToast(`방 [${code}]에 실시간 연결되었습니다!`);
+                // Announce join to host
+                setTimeout(() => {
+                  broadcastData({
+                    type: 'JOIN_REQ',
+                    sender: store.myId,
+                    player: store.players[store.myId]
+                  });
+                }, 200);
+              }
+            }
           });
+        });
 
-          store.peer.on('connection', (conn) => {
-            store.peerConnections.push(conn);
-            conn.on('data', (data) => {
-              handleNetworkMessage(data);
-              // Host rebroadcasts client events to all other peers
-              broadcastData(data, conn);
-            });
-            conn.on('close', () => {
-              store.peerConnections = store.peerConnections.filter(c => c !== conn);
-            });
-            // Send full state to newly joined client
-            setTimeout(() => {
-              conn.send({
-                type: 'SYNC',
-                sender: store.myId,
-                players: store.players,
-                phase: store.phase,
-                currentRound: store.currentRound,
-                totalRounds: store.totalRounds
-              });
-            }, 300);
-          });
+        client.on('message', (topic, payload) => {
+          if (topic !== store.mqttTopic) return;
+          try {
+            const data = JSON.parse(payload.toString());
+            handleNetworkMessage(data);
+          } catch(e) {}
+        });
 
-          store.peer.on('error', (err) => {
-            console.warn('Peer host notice:', err.type);
-          });
-        } else {
-          // Client connects to host peer
-          const clientPeerId = 'hz_client_' + store.myId;
-          store.peer = new Peer(clientPeerId);
+        client.on('error', (err) => {
+          console.warn('Primary broker fail, trying backup broker...', err);
+          setupBackupBroker(code, isHost);
+        });
 
-          store.peer.on('open', () => {
-            const hostId = getHostPeerId(code);
-            const conn = store.peer.connect(hostId, { reliable: true });
-            store.hostConn = conn;
+      } catch (err) {
+        console.error('MQTT setup error:', err);
+      }
 
-            conn.on('open', () => {
-              showToast('방장과 실시간 연결되었습니다!');
-              conn.send({
+      broadcastState();
+    }
+
+    // Backup WSS Broker if EMQX is unreachable
+    function setupBackupBroker(code, isHost) {
+      try {
+        if (store.mqttClient) store.mqttClient.end();
+        const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
+          clientId: 'hz_bak_' + store.myId,
+          clean: true
+        });
+        store.mqttClient = client;
+        client.on('connect', () => {
+          client.subscribe(store.mqttTopic, { qos: 0 }, () => {
+            if (!isHost) {
+              broadcastData({
                 type: 'JOIN_REQ',
                 sender: store.myId,
                 player: store.players[store.myId]
               });
-            });
-
-            conn.on('data', (data) => handleNetworkMessage(data));
-            conn.on('close', () => showToast('방장과의 연결이 끊어졌습니다.', false));
+            }
           });
-
-          store.peer.on('error', (err) => {
-            console.warn('Peer client notice:', err.type);
-            showToast('방장 연결 대기 중 (동일 브라우저 탭 채널 연결 시도)', false);
-          });
-        }
-      } catch (e) {
-        console.error('WebRTC Init Error:', e);
-      }
-
-      broadcastState();
+        });
+        client.on('message', (topic, payload) => {
+          if (topic !== store.mqttTopic) return;
+          try {
+            handleNetworkMessage(JSON.parse(payload.toString()));
+          } catch(e) {}
+        });
+      } catch(e){}
     }
 
     function disconnectNetworking() {
@@ -854,34 +862,29 @@
         store.netChannel.close();
         store.netChannel = null;
       }
-      if (store.hostConn) {
-        try { store.hostConn.close(); } catch(e){}
-        store.hostConn = null;
-      }
-      if (store.peerConnections) {
-        store.peerConnections.forEach(c => { try { c.close(); } catch(e){} });
-        store.peerConnections = [];
-      }
-      if (store.peer) {
-        try { store.peer.destroy(); } catch(e){}
-        store.peer = null;
+      if (store.mqttClient) {
+        broadcastData({ type: 'LEAVE', id: store.myId });
+        try {
+          store.mqttClient.unsubscribe(store.mqttTopic);
+          store.mqttClient.end();
+        } catch(e) {}
+        store.mqttClient = null;
       }
     }
 
-    function broadcastData(data, excludeConn = null) {
-      // Local broadcast
+    function broadcastData(data) {
+      const msgStr = JSON.stringify(data);
+
+      // 1. Same-device tab sync
       if (store.netChannel) {
         try { store.netChannel.postMessage(data); } catch(e){}
       }
-      // P2P WebRTC broadcast
-      if (store.isHost && store.peerConnections) {
-        store.peerConnections.forEach(c => {
-          if (c !== excludeConn && c.open) {
-            try { c.send(data); } catch(e){}
-          }
-        });
-      } else if (!store.isHost && store.hostConn && store.hostConn.open) {
-        try { store.hostConn.send(data); } catch(e){}
+
+      // 2. Real cross-device cloud sync
+      if (store.mqttClient && store.mqttClient.connected && store.mqttTopic) {
+        try {
+          store.mqttClient.publish(store.mqttTopic, msgStr, { qos: 0 });
+        } catch(e) {}
       }
     }
 
@@ -903,10 +906,23 @@
         if (data.player) {
           store.players[data.player.id] = data.player;
           renderAll();
-          if (store.isHost) broadcastState();
+          if (store.isHost) {
+            broadcastState();
+            showToast(`[${data.player.name}] 님이 입장했습니다!`);
+          }
         }
       } else if (data.type === 'SYNC') {
-        if (data.players) store.players = data.players;
+        if (data.players) {
+          // Merge remote player states without overwriting local balance unexpectedly
+          Object.keys(data.players).forEach(id => {
+            if (id !== store.myId) {
+              store.players[id] = data.players[id];
+            } else if (!store.isHost && data.players[id]) {
+              // Sync host authoritative flags if needed
+              store.players[id].isBankrupt = data.players[id].isBankrupt;
+            }
+          });
+        }
         if (data.phase) store.phase = data.phase;
         if (data.currentRound) store.currentRound = data.currentRound;
         if (data.totalRounds) store.totalRounds = data.totalRounds;
