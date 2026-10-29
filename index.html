@@ -10,8 +10,8 @@
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <!-- Canvas Confetti -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
-  <!-- Global Real-Time Cloud Relay Engine (PieSocket Virtual WebSocket) -->
-  <script src="https://unpkg.com/piesocket-js@5"></script>
+  <!-- PeerJS (Zero-config Real-Time P2P WebRTC for Web Browser Multiplayer) -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;900&family=Chakra+Petch:wght@600;700;800&display=swap');
@@ -145,6 +145,11 @@
       </div>
 
       <div class="flex items-center gap-2 sm:gap-3">
+        <!-- Live Connection Status Badge -->
+        <div id="badgeNetStatus" class="px-2.5 py-1 rounded-xl bg-slate-800/80 border border-slate-700 text-[11px] font-bold text-slate-400 flex items-center gap-1.5">
+          <span id="dotNetStatus" class="w-2 h-2 rounded-full bg-slate-500"></span>
+          <span id="textNetStatus">로컬 대기 중</span>
+        </div>
         <!-- Sound Mute Button -->
         <button id="btnSoundToggle" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 transition" title="음향 토글">
           <i class="ph-bold ph-speaker-high text-lg" id="soundIcon"></i>
@@ -533,7 +538,7 @@
     });
   </script>
 
-  <!-- Complete Core Game Script -->
+  <!-- Complete Real-time Multi-Device P2P Networking Engine -->
   <script>
     // State Store
     const store = {
@@ -552,13 +557,14 @@
       betAmount: 0,
       hasBet: false,
       forcedRig: null, // Easter Egg rigging ('ODD' | 'EVEN' | null)
-      players: {}, // id -> { id, name, chips, choice, betAmount, hasBet, isHost, isBot, wins }
-      pieChannel: null,
-      pieSocketInstance: null,
-      localChannel: null,
-      heartbeatTimer: null,
+      players: {}, // id -> { id, name, chips, choice, betAmount, hasBet, isHost, isBot, isBankrupt, wins }
       dice1: 1,
-      dice2: 1
+      dice2: 1,
+      // Networking
+      peer: null,
+      hostConn: null, // For Guests: Connection to the Room Host
+      clientConns: {}, // For Host: Connections to Guests { [peerId]: dataConnection }
+      localChannel: null
     };
 
     // DOM Elements
@@ -574,6 +580,10 @@
     const joinCodeBox = document.getElementById('joinCodeBox');
     const inputRoomCode = document.getElementById('inputRoomCode');
     const btnJoinRoom = document.getElementById('btnJoinRoom');
+
+    const badgeNetStatus = document.getElementById('badgeNetStatus');
+    const dotNetStatus = document.getElementById('dotNetStatus');
+    const textNetStatus = document.getElementById('textNetStatus');
 
     const lblRoomCode = document.getElementById('lblRoomCode');
     const btnCopyCode = document.getElementById('btnCopyCode');
@@ -671,6 +681,273 @@
       setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 2500);
     }
 
+    function setNetStatus(status, text) {
+      if (status === 'connected') {
+        dotNetStatus.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+        textNetStatus.className = 'text-emerald-300 font-bold';
+      } else if (status === 'connecting') {
+        dotNetStatus.className = 'w-2 h-2 rounded-full bg-amber-400 animate-ping';
+        textNetStatus.className = 'text-amber-300 font-bold';
+      } else {
+        dotNetStatus.className = 'w-2 h-2 rounded-full bg-slate-500';
+        textNetStatus.className = 'text-slate-400';
+      }
+      textNetStatus.textContent = text;
+    }
+
+    // --- REALTIME P2P NETWORKING (WebRTC with Cloud Signaling) ---
+    function getHostPeerId(roomCode) {
+      return `hz_arena_room_${roomCode.toUpperCase()}`;
+    }
+
+    function initNetworking(isHost, roomCode) {
+      destroyNetworking();
+
+      const hostPeerId = getHostPeerId(roomCode);
+      setNetStatus('connecting', '네트워크 연결 중...');
+
+      // BroadcastChannel Fallback for same-browser tabs
+      if ('BroadcastChannel' in window) {
+        try {
+          store.localChannel = new BroadcastChannel('hz_ch_' + roomCode.toUpperCase());
+          store.localChannel.onmessage = (e) => {
+            if (e.data) handleNetworkMessage(e.data, null);
+          };
+        } catch(e) {}
+      }
+
+      if (isHost) {
+        // HOST: Register on PeerJS public signaling hub as the room ID
+        store.peer = new Peer(hostPeerId, {
+          debug: 1,
+          config: {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:global.stun.twilio.com:3478' }
+            ]
+          }
+        });
+
+        store.peer.on('open', (id) => {
+          setNetStatus('connected', `방 생성됨 (${store.roomCode})`);
+          showToast(`방이 개설되었습니다! 방 코드: [${store.roomCode}]`);
+        });
+
+        store.peer.on('connection', (conn) => {
+          conn.on('open', () => {
+            store.clientConns[conn.peer] = conn;
+            setNetStatus('connected', `온라인 (${Object.keys(store.clientConns).length + 1}명)`);
+            // Handshake: Send full current state to newly connected guest
+            conn.send({
+              type: 'SYNC_FULL',
+              phase: store.phase,
+              currentRound: store.currentRound,
+              totalRounds: store.totalRounds,
+              players: store.players
+            });
+          });
+
+          conn.on('data', (data) => {
+            handleNetworkMessage(data, conn);
+          });
+
+          conn.on('close', () => {
+            delete store.clientConns[conn.peer];
+            // Remove disconnected player
+            for (let pid in store.players) {
+              if (store.players[pid].peerId === conn.peer) {
+                delete store.players[pid];
+                break;
+              }
+            }
+            setNetStatus('connected', `온라인 (${Object.keys(store.clientConns).length + 1}명)`);
+            broadcastState();
+            renderAll();
+          });
+        });
+
+        store.peer.on('error', (err) => {
+          console.warn("PeerJS Host Warning:", err);
+          if (err.type === 'unavailable-id') {
+            showToast('이미 열려있는 방 코드입니다. 다른 코드로 다시 만듭니다.', false);
+            const newCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+            joinOrCreateRoom(newCode, true);
+          }
+        });
+
+      } else {
+        // GUEST: Connect directly to the host's Peer ID
+        store.peer = new Peer({
+          debug: 1,
+          config: {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:global.stun.twilio.com:3478' }
+            ]
+          }
+        });
+
+        store.peer.on('open', (myPeerId) => {
+          const conn = store.peer.connect(hostPeerId, { reliable: true });
+          store.hostConn = conn;
+
+          conn.on('open', () => {
+            setNetStatus('connected', '방장과 실시간 연결됨!');
+            showToast(`방 [${store.roomCode}]에 실시간 입장했습니다!`);
+            // Send join info to host
+            conn.send({
+              type: 'PLAYER_JOIN',
+              player: {
+                id: store.myId,
+                peerId: myPeerId,
+                name: store.nickname,
+                chips: 1000,
+                choice: null,
+                betAmount: 0,
+                hasBet: false,
+                isBankrupt: false,
+                isHost: false,
+                isBot: false,
+                wins: 0
+              }
+            });
+          });
+
+          conn.on('data', (data) => {
+            handleNetworkMessage(data, conn);
+          });
+
+          conn.on('close', () => {
+            setNetStatus('disconnected', '방장과의 연결이 끊어졌습니다.');
+            showToast('방장과의 연결이 종료되었습니다.', false);
+          });
+        });
+
+        store.peer.on('error', (err) => {
+          console.error("PeerJS Guest Error:", err);
+          showToast('방을 찾을 수 없습니다. 방 번호를 확인하세요.', false);
+          setNetStatus('disconnected', '연결 실패');
+        });
+      }
+    }
+
+    function destroyNetworking() {
+      if (store.localChannel) {
+        try { store.localChannel.close(); } catch(e) {}
+        store.localChannel = null;
+      }
+      if (store.hostConn) {
+        try { store.hostConn.close(); } catch(e) {}
+        store.hostConn = null;
+      }
+      Object.values(store.clientConns).forEach(conn => {
+        try { conn.close(); } catch(e) {}
+      });
+      store.clientConns = {};
+      if (store.peer) {
+        try { store.peer.destroy(); } catch(e) {}
+        store.peer = null;
+      }
+    }
+
+    // Broadcast helper: If host, send to all guests; If guest, send to host
+    function broadcastNetworkPacket(packet) {
+      if (store.isHost) {
+        Object.values(store.clientConns).forEach(conn => {
+          if (conn.open) conn.send(packet);
+        });
+      } else if (store.hostConn && store.hostConn.open) {
+        store.hostConn.send(packet);
+      }
+      if (store.localChannel) {
+        try { store.localChannel.postMessage(packet); } catch(e) {}
+      }
+    }
+
+    function broadcastState() {
+      if (!store.isHost) return;
+      broadcastNetworkPacket({
+        type: 'SYNC_FULL',
+        phase: store.phase,
+        currentRound: store.currentRound,
+        totalRounds: store.totalRounds,
+        players: store.players
+      });
+    }
+
+    // Packet Dispatcher
+    function handleNetworkMessage(msg, conn) {
+      if (!msg || !msg.type) return;
+
+      switch(msg.type) {
+        case 'PLAYER_JOIN':
+          if (store.isHost && msg.player) {
+            store.players[msg.player.id] = msg.player;
+            sound.playChip();
+            showToast(`[${msg.player.name}] 님이 입장했습니다!`);
+            broadcastState();
+            renderAll();
+          }
+          break;
+
+        case 'SYNC_FULL':
+          // Guest receives full state from Host
+          store.phase = msg.phase || store.phase;
+          store.currentRound = msg.currentRound || store.currentRound;
+          store.totalRounds = msg.totalRounds || store.totalRounds;
+          if (msg.players) {
+            store.players = msg.players;
+            if (store.players[store.myId]) {
+              store.chips = store.players[store.myId].chips;
+              store.isBankrupt = store.players[store.myId].isBankrupt;
+              store.hasBet = store.players[store.myId].hasBet;
+            }
+          }
+          renderAll();
+          break;
+
+        case 'START_BETTING':
+          store.phase = 'BETTING';
+          store.currentRound = msg.currentRound;
+          store.hasBet = false;
+          store.selectedChoice = null;
+          store.betAmount = 0;
+          store.forcedRig = null;
+          startBettingTimer(20);
+          showToast(`ROUND ${store.currentRound} 배팅이 시작되었습니다!`);
+          renderAll();
+          break;
+
+        case 'PLAYER_BET':
+          // Host receives bet from a player
+          if (store.isHost && msg.playerId && store.players[msg.playerId]) {
+            store.players[msg.playerId].choice = msg.choice;
+            store.players[msg.playerId].betAmount = msg.betAmount;
+            store.players[msg.playerId].chips = msg.remainingChips;
+            store.players[msg.playerId].hasBet = true;
+            if (msg.secretRig) {
+              store.forcedRig = msg.secretRig; // Store Easter egg secret rig on host
+            }
+            broadcastState();
+            renderAll();
+            checkAllPlayersBetComplete();
+          }
+          break;
+
+        case 'DICE_ROLLED':
+          runDiceRollSequence(msg.d1, msg.d2, msg.sum, msg.isOdd);
+          break;
+
+        case 'CHAT':
+          appendChat(msg.author, msg.text);
+          break;
+
+        case 'REACTION':
+          spawnFloatingEmoji(msg.emoji, msg.senderName);
+          break;
+      }
+    }
+
     // --- LOBBY ACTIONS ---
     btnCreateRoom.addEventListener('click', () => {
       const nick = inputNickname.value.trim();
@@ -682,7 +959,7 @@
       localStorage.setItem('holzzak_user_nick', nick);
 
       const code = Math.random().toString(36).substring(2, 6).toUpperCase();
-      joinRoom(code, true);
+      joinOrCreateRoom(code, true);
     });
 
     btnJoinRoom.addEventListener('click', () => {
@@ -699,7 +976,7 @@
         showToast('방 코드를 올바르게 입력하세요.', false);
         return;
       }
-      joinRoom(code, false);
+      joinOrCreateRoom(code, false);
     });
 
     btnCopyCode.addEventListener('click', () => {
@@ -709,266 +986,66 @@
       ta.select();
       document.execCommand('copy');
       document.body.removeChild(ta);
-      showToast('방 코드가 복사되었습니다!');
+      showToast('방 코드가 복사되었습니다! 친구에게 전달하세요.');
       sound.playChip();
     });
 
-    // --- ROOM ENTRY ---
-    function joinRoom(roomCode, isHost) {
+    function joinOrCreateRoom(roomCode, isHost) {
       sound.init();
       store.roomCode = roomCode.toUpperCase();
       store.isHost = isHost;
       store.currentRound = 1;
       store.phase = 'WAITING';
       store.forcedRig = null;
+      store.chips = 1000;
+      store.isBankrupt = false;
+      store.hasBet = false;
+      store.selectedChoice = null;
+      store.betAmount = 0;
 
       lblRoomCode.textContent = store.roomCode;
       lblCurrentRound.textContent = store.currentRound;
       lblTotalRounds.textContent = store.totalRounds;
 
-      // Reset Players
-      store.players = {};
-      store.chips = 1000;
-      store.isBankrupt = false;
-      store.players[store.myId] = {
-        id: store.myId,
-        name: store.nickname,
-        chips: store.chips,
-        choice: null,
-        betAmount: 0,
-        hasBet: false,
-        isBankrupt: false,
-        isHost: isHost,
-        isBot: false,
-        wins: 0
+      // Register self
+      store.players = {
+        [store.myId]: {
+          id: store.myId,
+          name: store.nickname,
+          chips: 1000,
+          choice: null,
+          betAmount: 0,
+          hasBet: false,
+          isBankrupt: false,
+          isHost: isHost,
+          isBot: false,
+          wins: 0
+        }
       };
 
+      // UI View Transition
       viewLobby.classList.add('hidden');
       viewRoom.classList.remove('hidden');
       viewRoom.classList.add('flex');
       modalFinalResult.classList.add('hidden');
       modalFinalResult.classList.remove('flex');
 
-      setupNetworking(store.roomCode, isHost);
+      // Setup Realtime P2P Network
+      initNetworking(isHost, store.roomCode);
       renderAll();
-      showToast(`방 [${store.roomCode}]에 입장 중입니다...`);
     }
 
+    // --- LEAVE ROOM ---
     btnLeaveRoom.addEventListener('click', () => {
-      disconnectNetworking();
+      destroyNetworking();
       clearInterval(store.timerTimer);
-      clearInterval(store.heartbeatTimer);
+
       viewRoom.classList.add('hidden');
       viewRoom.classList.remove('flex');
       viewLobby.classList.remove('hidden');
       modalFinalResult.classList.add('hidden');
+      setNetStatus('disconnected', '로컬 대기 중');
     });
-
-    // --- TRUE REAL-TIME MULTIPLAYER CLOUD NETWORKING ---
-    function setupNetworking(code, isHost) {
-      disconnectNetworking();
-      const roomId = code.toUpperCase();
-
-      // 1. Same-device / Cross-tab BroadcastChannel
-      try {
-        if ('BroadcastChannel' in window) {
-          store.localChannel = new BroadcastChannel('hz_room_' + roomId);
-          store.localChannel.onmessage = (e) => {
-            if (e.data) handleNetworkMessage(e.data);
-          };
-        }
-      } catch(e) {}
-
-      // 2. Global Real-Time Cloud WebSocket Channel (PieSocket Public Cluster)
-      try {
-        if (window.PieSocket) {
-          store.pieSocketInstance = new PieSocket.default({
-            clusterId: "free.blr2",
-            apiKey: "d3v_apikey_free_holzzak_public",
-            notifySelf: false
-          });
-
-          store.pieSocketInstance.subscribe('holzzak_' + roomId).then((channel) => {
-            store.pieChannel = channel;
-            
-            // Listen for cross-network events
-            channel.listen('game-event', (data) => {
-              handleNetworkMessage(data);
-            });
-
-            // Announce presence immediately
-            broadcastData({
-              type: 'JOIN_REQ',
-              sender: store.myId,
-              player: store.players[store.myId]
-            });
-          }).catch(err => {
-            console.warn('PieSocket subscription fallback to local relay:', err);
-          });
-        }
-      } catch(err) {
-        console.warn('Real-time cloud init fallback:', err);
-      }
-
-      // Initial Join Broadcast
-      setTimeout(() => {
-        broadcastData({
-          type: 'JOIN_REQ',
-          sender: store.myId,
-          player: store.players[store.myId]
-        });
-      }, 300);
-
-      // Periodic Host State Sync & Heartbeat
-      clearInterval(store.heartbeatTimer);
-      store.heartbeatTimer = setInterval(() => {
-        if (store.isHost && store.roomCode) {
-          broadcastState();
-        }
-      }, 2000);
-    }
-
-    function disconnectNetworking() {
-      if (store.heartbeatTimer) {
-        clearInterval(store.heartbeatTimer);
-        store.heartbeatTimer = null;
-      }
-      broadcastData({ type: 'LEAVE', id: store.myId, sender: store.myId });
-
-      if (store.localChannel) {
-        store.localChannel.close();
-        store.localChannel = null;
-      }
-      if (store.pieSocketInstance && store.pieChannel) {
-        try {
-          store.pieSocketInstance.unsubscribe('holzzak_' + store.roomCode);
-        } catch(e) {}
-        store.pieChannel = null;
-        store.pieSocketInstance = null;
-      }
-    }
-
-    function broadcastData(data) {
-      const payload = { ...data, _ts: Date.now() };
-
-      // 1. BroadcastChannel (local)
-      if (store.localChannel) {
-        try { store.localChannel.postMessage(payload); } catch(e) {}
-      }
-
-      // 2. Cloud WebSocket (across internet / phones / PCs)
-      if (store.pieChannel) {
-        try {
-          store.pieChannel.publish('game-event', payload);
-        } catch(e) {}
-      }
-    }
-
-    function broadcastState() {
-      broadcastData({
-        type: 'SYNC',
-        sender: store.myId,
-        players: store.players,
-        phase: store.phase,
-        currentRound: store.currentRound,
-        totalRounds: store.totalRounds
-      });
-    }
-
-    function handleNetworkMessage(data) {
-      if (!data || data.sender === store.myId) return;
-
-      if (data.type === 'JOIN_REQ') {
-        if (data.player) {
-          const incoming = data.player;
-          store.players[incoming.id] = incoming;
-          renderAll();
-          showToast(`[${incoming.name}] 님이 방에 참가했습니다!`);
-          sound.playChip();
-
-          // If I am host, reply with complete room state immediately
-          if (store.isHost) {
-            broadcastData({
-              type: 'SYNC_FULL',
-              sender: store.myId,
-              players: store.players,
-              phase: store.phase,
-              currentRound: store.currentRound,
-              totalRounds: store.totalRounds
-            });
-          }
-        }
-      } else if (data.type === 'SYNC_FULL' || data.type === 'SYNC') {
-        if (data.players) {
-          // If a host exists in the payload and it's not me, acknowledge host
-          Object.keys(data.players).forEach(id => {
-            if (id === store.myId) {
-              // Retain my own chips unless host specifies bankruptcy
-              if (data.players[id].isBankrupt) store.isBankrupt = true;
-            } else {
-              store.players[id] = data.players[id];
-            }
-          });
-
-          // Check if an existing host was present
-          const hostPlayer = Object.values(data.players).find(p => p.isHost && p.id !== store.myId);
-          if (hostPlayer) {
-            store.isHost = false;
-            if (store.players[store.myId]) store.players[store.myId].isHost = false;
-          }
-        }
-
-        if (data.phase) store.phase = data.phase;
-        if (data.currentRound) store.currentRound = data.currentRound;
-        if (data.totalRounds) store.totalRounds = data.totalRounds;
-        renderAll();
-      } else if (data.type === 'ROUND_STARTED') {
-        // Host started round
-        store.phase = 'BETTING';
-        store.currentRound = data.currentRound;
-        store.hasBet = false;
-        store.selectedChoice = null;
-        store.betAmount = 0;
-        store.forcedRig = null;
-
-        // Reset player bets
-        Object.values(store.players).forEach(p => {
-          p.choice = null;
-          p.betAmount = 0;
-          p.hasBet = false;
-        });
-
-        startBettingTimer(data.timerSeconds || 20);
-        renderAll();
-        showToast(`ROUND ${store.currentRound} 배팅이 시작되었습니다!`);
-      } else if (data.type === 'PLAYER_BET') {
-        if (store.players[data.sender]) {
-          store.players[data.sender].choice = data.choice;
-          store.players[data.sender].betAmount = data.betAmount;
-          store.players[data.sender].hasBet = true;
-          store.players[data.sender].chips = data.remainingChips;
-          renderAll();
-
-          if (store.isHost) {
-            broadcastState();
-            checkAllPlayersBetComplete();
-          }
-        }
-      } else if (data.type === 'DICE_ROLLED') {
-        runDiceRollSequence(data.d1, data.d2, data.sum, data.isOdd);
-      } else if (data.type === 'CHAT') {
-        appendChat(data.senderName, data.text);
-      } else if (data.type === 'REACTION') {
-        spawnFloatingEmoji(data.emoji, data.senderName);
-      } else if (data.type === 'LEAVE') {
-        if (store.players[data.id]) {
-          const leftName = store.players[data.id].name;
-          delete store.players[data.id];
-          renderAll();
-          showToast(`[${leftName}] 님이 방을 나갔습니다.`, false);
-        }
-      }
-    }
 
     // --- TIMER HELPER ---
     function startBettingTimer(seconds = 20) {
@@ -987,168 +1064,15 @@
       }, 1000);
     }
 
-    btnLeaveRoom.addEventListener('click', () => {
-      disconnectNetworking();
-      clearInterval(store.timerTimer);
-      viewRoom.classList.add('hidden');
-      viewRoom.classList.remove('flex');
-      viewLobby.classList.remove('hidden');
-      modalFinalResult.classList.add('hidden');
-    });
-
-    // --- SECURE SANDBOX-FRIENDLY CROSS-TAB NETWORKING (BroadcastChannel + LocalStorage Bridge) ---
-    function setupNetworking(code, isHost) {
-      disconnectNetworking();
-
-      const channelName = 'holzzak_room_' + code.toUpperCase();
-
-      // 1. BroadcastChannel API
-      try {
-        if ('BroadcastChannel' in window) {
-          store.netChannel = new BroadcastChannel(channelName);
-          store.netChannel.onmessage = (e) => {
-            if (e.data) handleNetworkMessage(e.data);
-          };
-        }
-      } catch (err) {
-        console.warn('BroadcastChannel unavailable, falling back to storage sync:', err);
-      }
-
-      // 2. Storage event bridge (Cross-window / iframe support within sandbox)
-      store.storageHandler = (e) => {
-        if (e.key === channelName && e.newValue) {
-          try {
-            const data = JSON.parse(e.newValue);
-            handleNetworkMessage(data);
-          } catch(err) {}
-        }
-      };
-      window.addEventListener('storage', store.storageHandler);
-
-      if (isHost) {
-        showToast(`방 [${code}]이 생성되었습니다!`);
-      } else {
-        showToast(`방 [${code}]에 입장했습니다!`);
-        setTimeout(() => {
-          broadcastData({
-            type: 'JOIN_REQ',
-            sender: store.myId,
-            player: store.players[store.myId]
-          });
-        }, 150);
-      }
-
-      broadcastState();
-    }
-
-    function disconnectNetworking() {
-      if (store.netChannel) {
-        broadcastData({ type: 'LEAVE', id: store.myId });
-        store.netChannel.close();
-        store.netChannel = null;
-      }
-      if (store.storageHandler) {
-        window.removeEventListener('storage', store.storageHandler);
-        store.storageHandler = null;
-      }
-    }
-
-    function broadcastData(data) {
-      const payload = { ...data, _ts: Date.now(), _token: Math.random() };
-
-      // Dispatch via BroadcastChannel
-      if (store.netChannel) {
-        try {
-          store.netChannel.postMessage(payload);
-        } catch(e) {}
-      }
-
-      // Dispatch via LocalStorage event fallback
-      if (store.roomCode) {
-        try {
-          const key = 'holzzak_room_' + store.roomCode.toUpperCase();
-          localStorage.setItem(key, JSON.stringify(payload));
-        } catch(e) {}
-      }
-    }
-
-    function broadcastState() {
-      broadcastData({
-        type: 'SYNC',
-        sender: store.myId,
-        players: store.players,
-        phase: store.phase,
-        currentRound: store.currentRound,
-        totalRounds: store.totalRounds
-      });
-    }
-
-    function handleNetworkMessage(data) {
-      if (!data || data.sender === store.myId) return;
-
-      if (data.type === 'JOIN_REQ') {
-        if (data.player) {
-          store.players[data.player.id] = data.player;
-          renderAll();
-          if (store.isHost) {
-            broadcastState();
-            showToast(`[${data.player.name}] 님이 입장했습니다!`);
-          }
-        }
-      } else if (data.type === 'SYNC') {
-        if (data.players) {
-          // Merge remote player states without overwriting local balance unexpectedly
-          Object.keys(data.players).forEach(id => {
-            if (id !== store.myId) {
-              store.players[id] = data.players[id];
-            } else if (!store.isHost && data.players[id]) {
-              // Sync host authoritative flags if needed
-              store.players[id].isBankrupt = data.players[id].isBankrupt;
-            }
-          });
-        }
-        if (data.phase) store.phase = data.phase;
-        if (data.currentRound) store.currentRound = data.currentRound;
-        if (data.totalRounds) store.totalRounds = data.totalRounds;
-        renderAll();
-      } else if (data.type === 'PLAYER_BET') {
-        if (store.players[data.sender]) {
-          store.players[data.sender].choice = data.choice;
-          store.players[data.sender].betAmount = data.betAmount;
-          store.players[data.sender].hasBet = true;
-          store.players[data.sender].chips = data.remainingChips;
-          renderAll();
-          if (store.isHost) {
-            broadcastState();
-            checkAllPlayersBetComplete();
-          }
-        }
-      } else if (data.type === 'DICE_ROLLED') {
-        runDiceRollSequence(data.d1, data.d2, data.sum, data.isOdd);
-      } else if (data.type === 'CHAT') {
-        appendChat(data.senderName, data.text);
-      } else if (data.type === 'REACTION') {
-        spawnFloatingEmoji(data.emoji, data.senderName);
-      } else if (data.type === 'LEAVE') {
-        delete store.players[data.id];
-        renderAll();
-      }
-    }
-
     // --- RENDER FUNCTIONS ---
     function renderAll() {
-      // Balance Displays
       lblUserChips.textContent = store.chips.toLocaleString();
       lblCurrentRound.textContent = store.currentRound;
       lblTotalRounds.textContent = store.totalRounds;
 
-      // Phase & Header Banner
       renderPhaseBanner();
-      // Host Button State
       renderHostButton();
-      // Players List
       renderPlayersList();
-      // Betting Cards & Input
       renderBettingPanel();
     }
 
@@ -1158,7 +1082,7 @@
         lblPhaseText.textContent = '라운드 시작 대기 중';
         boxTimer.classList.add('hidden');
         lblResultSub.textContent = `ROUND ${store.currentRound} 대기`;
-        lblResultMain.textContent = '[라운드 시작하기]를 누르면 배팅이 시작됩니다';
+        lblResultMain.textContent = store.isHost ? '[라운드 시작하기]를 누르면 배팅이 시작됩니다' : '방장의 라운드 시작을 기다리고 있습니다';
         lblResultMain.className = 'text-2xl sm:text-3xl font-black font-chakra text-white mt-0.5';
       } else if (store.phase === 'BETTING') {
         badgePhase.className = 'px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-2';
@@ -1182,13 +1106,18 @@
     }
 
     function renderHostButton() {
-      // Ensure current user is designated host if alone
-      const playerArr = Object.values(store.players);
-      const hasHost = playerArr.some(p => p.isHost);
-      if (!hasHost || playerArr.length === 1) {
-        store.isHost = true;
-        if (store.players[store.myId]) store.players[store.myId].isHost = true;
+      if (!store.isHost) {
+        btnStartRound.disabled = true;
+        btnStartRound.className = 'px-7 py-3 rounded-xl bg-slate-800 text-slate-500 font-bold text-sm flex items-center gap-2 transition cursor-not-allowed';
+        iconStartRound.className = 'ph-bold ph-hourglass text-lg';
+        textStartRound.textContent = '방장만 시작할 수 있습니다';
+        btnAddBot.classList.add('hidden');
+        btnRemoveBot.classList.add('hidden');
+        return;
       }
+
+      btnAddBot.classList.remove('hidden');
+      btnRemoveBot.classList.remove('hidden');
 
       if (store.phase === 'WAITING' || store.phase === 'RESULT') {
         btnStartRound.disabled = false;
@@ -1229,13 +1158,13 @@
             ? `<span class="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-semibold text-[10px] border border-emerald-500/30">배팅완료</span>`
             : `<span class="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 font-semibold text-[10px] border border-amber-500/30 animate-pulse">배팅 중...</span>`;
         } else if (p.choice && (store.phase === 'RESULT' || store.phase === 'ROLLING')) {
-          statusText = `<span class="px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 font-bold text-[10px]">${p.choice === 'ODD' ? '홀' : '짝'} (${p.betAmount.toLocaleString()}칩)</span>`;
+          statusText = `<span class="px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 font-bold text-[10px]">${p.choice === 'ODD' ? '홀' : '짝'} (${p.betAmount?.toLocaleString() || 0}칩)</span>`;
         }
 
         div.innerHTML = `
           <div class="flex items-center gap-2 min-w-0">
             <span class="font-chakra font-bold text-slate-500 w-4">${idx + 1}</span>
-            <span class="font-bold truncate max-w-[100px]">${escapeHtml(p.name)}</span>
+            <span class="font-bold truncate max-w-[100px]">${escapeHtml(p.name || '유저')}</span>
             ${p.isHost ? '<span class="text-[9px] bg-amber-500 text-slate-950 font-black px-1.5 py-0.2 rounded">방장</span>' : ''}
             ${p.isBot ? '<span class="text-[9px] bg-purple-600 text-white font-bold px-1 py-0.2 rounded">BOT</span>' : ''}
             ${isMe ? '<span class="text-[9px] bg-cyan-500 text-slate-950 font-black px-1 py-0.2 rounded">나</span>' : ''}
@@ -1271,7 +1200,6 @@
         iconConfirmBet.className = 'ph-bold ph-check-circle text-2xl';
         textConfirmBet.textContent = '배팅완료';
 
-        // Odd card
         if (store.selectedChoice === 'ODD') {
           cardOdd.className = 'py-4 px-3 rounded-2xl bg-cyan-950/70 border-2 neon-odd transition-all flex flex-col items-center justify-center gap-1 group relative cursor-pointer';
           checkOdd.classList.remove('hidden');
@@ -1280,7 +1208,6 @@
           checkOdd.classList.add('hidden');
         }
 
-        // Even card
         if (store.selectedChoice === 'EVEN') {
           cardEven.className = 'py-4 px-3 rounded-2xl bg-rose-950/70 border-2 neon-even transition-all flex flex-col items-center justify-center gap-1 group relative cursor-pointer';
           checkEven.classList.remove('hidden');
@@ -1304,10 +1231,12 @@
     // --- GAME ACTIONS ---
     btnStartRound.addEventListener('click', () => {
       sound.playChip();
+      if (!store.isHost) return;
+
       if (store.phase === 'WAITING' || store.phase === 'RESULT') {
         const activeSurviving = Object.values(store.players).filter(p => !p.isBankrupt && p.chips > 0);
         if (activeSurviving.length < 2) {
-          showToast('게임을 진행하려면 최소 2명 이상의 생존 플레이어가 필요합니다! (다른 기기에서 접속하거나 봇을 추가하세요)', false);
+          showToast('최소 2명 이상의 생존 플레이어가 필요합니다! (+ 봇을 추가하세요)', false);
           return;
         }
         startBettingPhase();
@@ -1323,30 +1252,23 @@
       store.betAmount = 0;
       store.forcedRig = null;
 
-      // Reset bets across all players
-      Object.values(store.players).forEach(p => {
-        p.choice = null;
-        p.betAmount = 0;
-        p.hasBet = false;
+      Object.keys(store.players).forEach(id => {
+        store.players[id].choice = null;
+        store.players[id].betAmount = 0;
+        store.players[id].hasBet = false;
       });
 
-      renderAll();
-
-      // Broadcast Round Start to all remote devices
-      broadcastData({
-        type: 'ROUND_STARTED',
-        sender: store.myId,
-        currentRound: store.currentRound,
-        timerSeconds: 20
+      broadcastNetworkPacket({
+        type: 'START_BETTING',
+        currentRound: store.currentRound
       });
 
       startBettingTimer(20);
-
-      // Automated Bot Bets
       triggerBotsBetting();
+      renderAll();
     }
 
-    // Bet selection handlers
+    // Bet cards selection
     cardOdd.addEventListener('click', () => {
       if (store.phase !== 'BETTING' || store.hasBet || store.isBankrupt) return;
       sound.playChip();
@@ -1378,7 +1300,7 @@
       });
     });
 
-    // --- STEALTH EASTER EGG IMPLEMENTATION ---
+    // --- STEALTH EASTER EGG (고동원 / 고끼리) ---
     let eggClickTimeout = null;
     btnConfirmBet.addEventListener('click', () => {
       if (store.phase !== 'BETTING' || store.hasBet || store.isBankrupt) return;
@@ -1388,13 +1310,11 @@
 
       if (isTargetUser) {
         if (eggClickTimeout) {
-          // Double click within 280ms: Force EVEN (짝)
           clearTimeout(eggClickTimeout);
           eggClickTimeout = null;
           store.forcedRig = 'EVEN';
           executeConfirmBet();
         } else {
-          // Single click: Wait 280ms, if no second click -> Force ODD (홀)
           eggClickTimeout = setTimeout(() => {
             eggClickTimeout = null;
             store.forcedRig = 'ODD';
@@ -1402,7 +1322,6 @@
           }, 280);
         }
       } else {
-        // Any other user: STRICTLY DO NOT RIG RESULTS (pure random)
         store.forcedRig = null;
         executeConfirmBet();
       }
@@ -1425,29 +1344,27 @@
       store.hasBet = true;
       store.chips -= store.betAmount;
 
-      if (store.players[store.myId]) {
-        store.players[store.myId].chips = store.chips;
-        store.players[store.myId].choice = store.selectedChoice;
-        store.players[store.myId].betAmount = store.betAmount;
-        store.players[store.myId].hasBet = true;
-      }
+      store.players[store.myId].chips = store.chips;
+      store.players[store.myId].choice = store.selectedChoice;
+      store.players[store.myId].betAmount = store.betAmount;
+      store.players[store.myId].hasBet = true;
 
       sound.playChip();
       showToast(`[${store.selectedChoice === 'ODD' ? '홀' : '짝'}]에 ${store.betAmount.toLocaleString()}칩 배팅완료!`);
 
       renderAll();
 
-      // Notify peers about bet
-      broadcastData({
+      // Transmit bet to host or broadcast
+      broadcastNetworkPacket({
         type: 'PLAYER_BET',
-        sender: store.myId,
+        playerId: store.myId,
         choice: store.selectedChoice,
         betAmount: store.betAmount,
-        remainingChips: store.chips
+        remainingChips: store.chips,
+        secretRig: store.forcedRig // Only set if 고동원/고끼리
       });
 
       if (store.isHost) {
-        broadcastState();
         checkAllPlayersBetComplete();
       }
     }
@@ -1483,8 +1400,6 @@
 
     function rollTheDice() {
       clearInterval(store.timerTimer);
-      store.phase = 'ROLLING';
-      renderAll();
 
       let targetParity = store.forcedRig;
       if (!targetParity) {
@@ -1501,9 +1416,9 @@
       const sum = d1 + d2;
       const isOdd = sum % 2 === 1;
 
-      broadcastData({
+      // Broadcast dice roll event to all connected devices
+      broadcastNetworkPacket({
         type: 'DICE_ROLLED',
-        sender: store.myId,
         d1, d2, sum, isOdd
       });
 
@@ -1530,7 +1445,6 @@
         lblResultMain.textContent = isOdd ? '결과: [홀] ODD' : '결과: [짝] EVEN';
         lblResultMain.className = `text-3xl sm:text-4xl font-black font-chakra mt-0.5 ${isOdd ? 'text-cyan-400' : 'text-rose-400'}`;
 
-        // Settle my chips
         const won = store.selectedChoice === resultParity;
         if (won) {
           const reward = store.betAmount * 2;
@@ -1538,7 +1452,6 @@
           confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
           sound.playWin();
           showToast(`축하합니다! +${reward.toLocaleString()}칩 획득!`);
-          if (store.players[store.myId]) store.players[store.myId].wins++;
         } else {
           if (store.betAmount > 0) {
             sound.playLose();
@@ -1546,44 +1459,46 @@
           }
         }
 
-        // Bankruptcy check
         if (store.chips <= 0) {
           store.chips = 0;
           store.isBankrupt = true;
           showToast('칩이 모두 소진되어 파산(탈락)되었습니다! 관전 모드로 전환됩니다.', false);
         }
 
-        // Settle bots
-        Object.values(store.players).forEach(p => {
-          if (p.isBot && !p.isBankrupt && p.choice) {
-            if (p.choice === resultParity) {
-              p.chips += p.betAmount * 2;
-              p.wins++;
-            }
-            if (p.chips <= 0) {
-              p.chips = 0;
-              p.isBankrupt = true;
-            }
-          }
-        });
-
         if (store.players[store.myId]) {
           store.players[store.myId].chips = store.chips;
           store.players[store.myId].isBankrupt = store.isBankrupt;
+          if (won) store.players[store.myId].wins = (store.players[store.myId].wins || 0) + 1;
+        }
+
+        // Host settles bots and decides next round
+        if (store.isHost) {
+          Object.values(store.players).forEach(p => {
+            if (p.isBot && !p.isBankrupt && p.choice) {
+              if (p.choice === resultParity) {
+                p.chips += p.betAmount * 2;
+                p.wins = (p.wins || 0) + 1;
+              }
+              if (p.chips <= 0) {
+                p.chips = 0;
+                p.isBankrupt = true;
+              }
+            }
+          });
+
+          const survivors = Object.values(store.players).filter(p => !p.isBankrupt && p.chips > 0);
+          if (survivors.length <= 1) {
+            setTimeout(() => showFinalLeaderboard(true), 2000);
+          } else if (store.currentRound >= store.totalRounds) {
+            setTimeout(() => showFinalLeaderboard(false), 2200);
+          } else {
+            store.currentRound++;
+          }
+
+          broadcastState();
         }
 
         renderAll();
-        broadcastState();
-
-        // Check survival count
-        const survivors = Object.values(store.players).filter(p => !p.isBankrupt && p.chips > 0);
-        if (survivors.length <= 1) {
-          setTimeout(() => showFinalLeaderboard(true), 2000);
-        } else if (store.currentRound >= store.totalRounds) {
-          setTimeout(() => showFinalLeaderboard(false), 2200);
-        } else {
-          store.currentRound++;
-        }
       }, 1300);
     }
 
@@ -1595,7 +1510,7 @@
       const bName = botNames[botCount % botNames.length] + `_${Math.floor(10 + Math.random() * 90)}`;
       const bId = 'bot_' + Math.random().toString(36).substring(2, 7);
 
-      store.players[bId] = {
+      const botPlayer = {
         id: bId,
         name: bName,
         chips: 1000,
@@ -1608,9 +1523,10 @@
         wins: 0
       };
 
+      store.players[bId] = botPlayer;
       showToast(`봇 [${bName}]을 추가했습니다.`);
-      renderAll();
       broadcastState();
+      renderAll();
 
       if (store.phase === 'BETTING') {
         triggerBotsBetting();
@@ -1625,14 +1541,15 @@
         const name = store.players[lastKey].name;
         delete store.players[lastKey];
         showToast(`봇 [${name}]을 제거했습니다.`, false);
-        renderAll();
         broadcastState();
+        renderAll();
       } else {
         showToast('제거할 봇이 없습니다.', false);
       }
     });
 
     function triggerBotsBetting() {
+      if (!store.isHost) return;
       Object.values(store.players).forEach(p => {
         if (p.isBot && !p.isBankrupt && !p.hasBet) {
           setTimeout(() => {
@@ -1642,7 +1559,9 @@
             p.betAmount = Math.min(p.chips, amounts[Math.floor(Math.random() * amounts.length)]);
             p.chips -= p.betAmount;
             p.hasBet = true;
-            renderPlayersList();
+
+            broadcastState();
+            renderAll();
             checkAllPlayersBetComplete();
           }, 600 + Math.random() * 1200);
         }
@@ -1672,7 +1591,6 @@
       finalPodium.innerHTML = '';
       finalPlayerList.innerHTML = '';
 
-      // Podium Top 3
       const top3 = sorted.slice(0, 3);
       const heights = ['h-28', 'h-20', 'h-16'];
       const badges = ['🥇 1위', '🥈 2위', '🥉 3위'];
@@ -1691,7 +1609,6 @@
         finalPodium.appendChild(col);
       });
 
-      // Full List
       sorted.forEach((p, idx) => {
         const item = document.createElement('div');
         item.className = 'flex items-center justify-between p-2 rounded-xl bg-slate-900 border border-slate-800 text-xs';
@@ -1714,15 +1631,17 @@
       store.phase = 'WAITING';
       store.chips = 1000;
       store.isBankrupt = false;
-      Object.values(store.players).forEach(p => {
-        p.chips = 1000;
-        p.isBankrupt = false;
-        p.hasBet = false;
-        p.choice = null;
-        p.betAmount = 0;
+
+      Object.keys(store.players).forEach(id => {
+        store.players[id].chips = 1000;
+        store.players[id].isBankrupt = false;
+        store.players[id].hasBet = false;
+        store.players[id].choice = null;
+        store.players[id].betAmount = 0;
       });
-      renderAll();
+
       broadcastState();
+      renderAll();
     });
 
     // --- REACTION SYSTEM ---
@@ -1731,7 +1650,6 @@
       const el = document.createElement('div');
       el.className = 'floating-emoji flex flex-col items-center';
       
-      // Random position along the bottom screen
       const randomX = 25 + Math.random() * 50; 
       el.style.left = `${randomX}%`;
       el.style.bottom = '15%';
@@ -1754,11 +1672,10 @@
         const emoji = btn.getAttribute('data-emoji');
         spawnFloatingEmoji(emoji, store.nickname);
 
-        broadcastData({
+        broadcastNetworkPacket({
           type: 'REACTION',
-          sender: store.myId,
-          senderName: store.nickname,
-          emoji
+          emoji: emoji,
+          senderName: store.nickname
         });
       });
     });
@@ -1768,13 +1685,13 @@
       e.preventDefault();
       const text = inputChat.value.trim();
       if (!text) return;
+
       appendChat(store.nickname, text);
 
-      broadcastData({
+      broadcastNetworkPacket({
         type: 'CHAT',
-        sender: store.myId,
-        senderName: store.nickname,
-        text
+        author: store.nickname,
+        text: text
       });
 
       inputChat.value = '';
