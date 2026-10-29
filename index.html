@@ -10,8 +10,8 @@
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <!-- Canvas Confetti -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
-  <!-- High Performance Public WebSocket MQTT Relay for 100% reliable cross-device sync -->
-  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <!-- Global Real-Time Cloud Relay Engine (PieSocket Virtual WebSocket) -->
+  <script src="https://unpkg.com/piesocket-js@5"></script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;900&family=Chakra+Petch:wght@600;700;800&display=swap');
@@ -540,7 +540,7 @@
       myId: 'usr_' + Math.random().toString(36).substring(2, 8),
       nickname: localStorage.getItem('holzzak_user_nick') || '플레이어_' + Math.floor(100 + Math.random() * 900),
       roomCode: '',
-      isHost: true,
+      isHost: false,
       chips: 1000,
       totalRounds: 5,
       currentRound: 1,
@@ -553,9 +553,10 @@
       hasBet: false,
       forcedRig: null, // Easter Egg rigging ('ODD' | 'EVEN' | null)
       players: {}, // id -> { id, name, chips, choice, betAmount, hasBet, isHost, isBot, wins }
-      netChannel: null,
-      mqttClient: null,
-      mqttTopic: null,
+      pieChannel: null,
+      pieSocketInstance: null,
+      localChannel: null,
+      heartbeatTimer: null,
       dice1: 1,
       dice2: 1
     };
@@ -715,13 +716,13 @@
     // --- ROOM ENTRY ---
     function joinRoom(roomCode, isHost) {
       sound.init();
-      store.roomCode = roomCode;
+      store.roomCode = roomCode.toUpperCase();
       store.isHost = isHost;
       store.currentRound = 1;
       store.phase = 'WAITING';
       store.forcedRig = null;
 
-      lblRoomCode.textContent = roomCode;
+      lblRoomCode.textContent = store.roomCode;
       lblCurrentRound.textContent = store.currentRound;
       lblTotalRounds.textContent = store.totalRounds;
 
@@ -748,9 +749,242 @@
       modalFinalResult.classList.add('hidden');
       modalFinalResult.classList.remove('flex');
 
-      setupNetworking(roomCode, isHost);
+      setupNetworking(store.roomCode, isHost);
       renderAll();
-      showToast(`방 [${roomCode}]에 입장했습니다!`);
+      showToast(`방 [${store.roomCode}]에 입장 중입니다...`);
+    }
+
+    btnLeaveRoom.addEventListener('click', () => {
+      disconnectNetworking();
+      clearInterval(store.timerTimer);
+      clearInterval(store.heartbeatTimer);
+      viewRoom.classList.add('hidden');
+      viewRoom.classList.remove('flex');
+      viewLobby.classList.remove('hidden');
+      modalFinalResult.classList.add('hidden');
+    });
+
+    // --- TRUE REAL-TIME MULTIPLAYER CLOUD NETWORKING ---
+    function setupNetworking(code, isHost) {
+      disconnectNetworking();
+      const roomId = code.toUpperCase();
+
+      // 1. Same-device / Cross-tab BroadcastChannel
+      try {
+        if ('BroadcastChannel' in window) {
+          store.localChannel = new BroadcastChannel('hz_room_' + roomId);
+          store.localChannel.onmessage = (e) => {
+            if (e.data) handleNetworkMessage(e.data);
+          };
+        }
+      } catch(e) {}
+
+      // 2. Global Real-Time Cloud WebSocket Channel (PieSocket Public Cluster)
+      try {
+        if (window.PieSocket) {
+          store.pieSocketInstance = new PieSocket.default({
+            clusterId: "free.blr2",
+            apiKey: "d3v_apikey_free_holzzak_public",
+            notifySelf: false
+          });
+
+          store.pieSocketInstance.subscribe('holzzak_' + roomId).then((channel) => {
+            store.pieChannel = channel;
+            
+            // Listen for cross-network events
+            channel.listen('game-event', (data) => {
+              handleNetworkMessage(data);
+            });
+
+            // Announce presence immediately
+            broadcastData({
+              type: 'JOIN_REQ',
+              sender: store.myId,
+              player: store.players[store.myId]
+            });
+          }).catch(err => {
+            console.warn('PieSocket subscription fallback to local relay:', err);
+          });
+        }
+      } catch(err) {
+        console.warn('Real-time cloud init fallback:', err);
+      }
+
+      // Initial Join Broadcast
+      setTimeout(() => {
+        broadcastData({
+          type: 'JOIN_REQ',
+          sender: store.myId,
+          player: store.players[store.myId]
+        });
+      }, 300);
+
+      // Periodic Host State Sync & Heartbeat
+      clearInterval(store.heartbeatTimer);
+      store.heartbeatTimer = setInterval(() => {
+        if (store.isHost && store.roomCode) {
+          broadcastState();
+        }
+      }, 2000);
+    }
+
+    function disconnectNetworking() {
+      if (store.heartbeatTimer) {
+        clearInterval(store.heartbeatTimer);
+        store.heartbeatTimer = null;
+      }
+      broadcastData({ type: 'LEAVE', id: store.myId, sender: store.myId });
+
+      if (store.localChannel) {
+        store.localChannel.close();
+        store.localChannel = null;
+      }
+      if (store.pieSocketInstance && store.pieChannel) {
+        try {
+          store.pieSocketInstance.unsubscribe('holzzak_' + store.roomCode);
+        } catch(e) {}
+        store.pieChannel = null;
+        store.pieSocketInstance = null;
+      }
+    }
+
+    function broadcastData(data) {
+      const payload = { ...data, _ts: Date.now() };
+
+      // 1. BroadcastChannel (local)
+      if (store.localChannel) {
+        try { store.localChannel.postMessage(payload); } catch(e) {}
+      }
+
+      // 2. Cloud WebSocket (across internet / phones / PCs)
+      if (store.pieChannel) {
+        try {
+          store.pieChannel.publish('game-event', payload);
+        } catch(e) {}
+      }
+    }
+
+    function broadcastState() {
+      broadcastData({
+        type: 'SYNC',
+        sender: store.myId,
+        players: store.players,
+        phase: store.phase,
+        currentRound: store.currentRound,
+        totalRounds: store.totalRounds
+      });
+    }
+
+    function handleNetworkMessage(data) {
+      if (!data || data.sender === store.myId) return;
+
+      if (data.type === 'JOIN_REQ') {
+        if (data.player) {
+          const incoming = data.player;
+          store.players[incoming.id] = incoming;
+          renderAll();
+          showToast(`[${incoming.name}] 님이 방에 참가했습니다!`);
+          sound.playChip();
+
+          // If I am host, reply with complete room state immediately
+          if (store.isHost) {
+            broadcastData({
+              type: 'SYNC_FULL',
+              sender: store.myId,
+              players: store.players,
+              phase: store.phase,
+              currentRound: store.currentRound,
+              totalRounds: store.totalRounds
+            });
+          }
+        }
+      } else if (data.type === 'SYNC_FULL' || data.type === 'SYNC') {
+        if (data.players) {
+          // If a host exists in the payload and it's not me, acknowledge host
+          Object.keys(data.players).forEach(id => {
+            if (id === store.myId) {
+              // Retain my own chips unless host specifies bankruptcy
+              if (data.players[id].isBankrupt) store.isBankrupt = true;
+            } else {
+              store.players[id] = data.players[id];
+            }
+          });
+
+          // Check if an existing host was present
+          const hostPlayer = Object.values(data.players).find(p => p.isHost && p.id !== store.myId);
+          if (hostPlayer) {
+            store.isHost = false;
+            if (store.players[store.myId]) store.players[store.myId].isHost = false;
+          }
+        }
+
+        if (data.phase) store.phase = data.phase;
+        if (data.currentRound) store.currentRound = data.currentRound;
+        if (data.totalRounds) store.totalRounds = data.totalRounds;
+        renderAll();
+      } else if (data.type === 'ROUND_STARTED') {
+        // Host started round
+        store.phase = 'BETTING';
+        store.currentRound = data.currentRound;
+        store.hasBet = false;
+        store.selectedChoice = null;
+        store.betAmount = 0;
+        store.forcedRig = null;
+
+        // Reset player bets
+        Object.values(store.players).forEach(p => {
+          p.choice = null;
+          p.betAmount = 0;
+          p.hasBet = false;
+        });
+
+        startBettingTimer(data.timerSeconds || 20);
+        renderAll();
+        showToast(`ROUND ${store.currentRound} 배팅이 시작되었습니다!`);
+      } else if (data.type === 'PLAYER_BET') {
+        if (store.players[data.sender]) {
+          store.players[data.sender].choice = data.choice;
+          store.players[data.sender].betAmount = data.betAmount;
+          store.players[data.sender].hasBet = true;
+          store.players[data.sender].chips = data.remainingChips;
+          renderAll();
+
+          if (store.isHost) {
+            broadcastState();
+            checkAllPlayersBetComplete();
+          }
+        }
+      } else if (data.type === 'DICE_ROLLED') {
+        runDiceRollSequence(data.d1, data.d2, data.sum, data.isOdd);
+      } else if (data.type === 'CHAT') {
+        appendChat(data.senderName, data.text);
+      } else if (data.type === 'REACTION') {
+        spawnFloatingEmoji(data.emoji, data.senderName);
+      } else if (data.type === 'LEAVE') {
+        if (store.players[data.id]) {
+          const leftName = store.players[data.id].name;
+          delete store.players[data.id];
+          renderAll();
+          showToast(`[${leftName}] 님이 방을 나갔습니다.`, false);
+        }
+      }
+    }
+
+    // --- TIMER HELPER ---
+    function startBettingTimer(seconds = 20) {
+      store.timerSeconds = seconds;
+      lblTimerCount.textContent = store.timerSeconds;
+      clearInterval(store.timerTimer);
+      store.timerTimer = setInterval(() => {
+        store.timerSeconds--;
+        lblTimerCount.textContent = store.timerSeconds;
+        if (store.timerSeconds <= 0) {
+          clearInterval(store.timerTimer);
+          if (store.isHost && store.phase === 'BETTING') {
+            rollTheDice();
+          }
+        }
+      }, 1000);
     }
 
     btnLeaveRoom.addEventListener('click', () => {
@@ -762,128 +996,78 @@
       modalFinalResult.classList.add('hidden');
     });
 
-    // --- 100% RELIABLE CLOUD REAL-TIME NETWORKING (MQTT over WebSocket) ---
+    // --- SECURE SANDBOX-FRIENDLY CROSS-TAB NETWORKING (BroadcastChannel + LocalStorage Bridge) ---
     function setupNetworking(code, isHost) {
       disconnectNetworking();
 
-      store.mqttTopic = `holzzak_v2_arena/${code.toUpperCase()}`;
+      const channelName = 'holzzak_room_' + code.toUpperCase();
 
-      // 1. Same-device local fallback (BroadcastChannel)
+      // 1. BroadcastChannel API
       try {
-        store.netChannel = new BroadcastChannel('hz_room_' + code);
-        store.netChannel.onmessage = (e) => handleNetworkMessage(e.data);
-      } catch(err) {}
-
-      // 2. Global Public WebSocket Broker (wss://broker.emqx.io:8084/mqtt)
-      try {
-        const clientOptions = {
-          clientId: 'hz_' + store.myId + '_' + Math.random().toString(16).substring(2, 7),
-          clean: true,
-          connectTimeout: 5000,
-          reconnectPeriod: 2000
-        };
-
-        // Connect to secure SSL WebSocket broker
-        const client = mqtt.connect('wss://broker.emqx.io:8084/mqtt', clientOptions);
-        store.mqttClient = client;
-
-        client.on('connect', () => {
-          client.subscribe(store.mqttTopic, { qos: 0 }, (err) => {
-            if (!err) {
-              if (isHost) {
-                showToast(`방 [${code}] 개설 완료 (클라우드 동기화 활성)`);
-              } else {
-                showToast(`방 [${code}]에 실시간 연결되었습니다!`);
-                // Announce join to host
-                setTimeout(() => {
-                  broadcastData({
-                    type: 'JOIN_REQ',
-                    sender: store.myId,
-                    player: store.players[store.myId]
-                  });
-                }, 200);
-              }
-            }
-          });
-        });
-
-        client.on('message', (topic, payload) => {
-          if (topic !== store.mqttTopic) return;
-          try {
-            const data = JSON.parse(payload.toString());
-            handleNetworkMessage(data);
-          } catch(e) {}
-        });
-
-        client.on('error', (err) => {
-          console.warn('Primary broker fail, trying backup broker...', err);
-          setupBackupBroker(code, isHost);
-        });
-
+        if ('BroadcastChannel' in window) {
+          store.netChannel = new BroadcastChannel(channelName);
+          store.netChannel.onmessage = (e) => {
+            if (e.data) handleNetworkMessage(e.data);
+          };
+        }
       } catch (err) {
-        console.error('MQTT setup error:', err);
+        console.warn('BroadcastChannel unavailable, falling back to storage sync:', err);
+      }
+
+      // 2. Storage event bridge (Cross-window / iframe support within sandbox)
+      store.storageHandler = (e) => {
+        if (e.key === channelName && e.newValue) {
+          try {
+            const data = JSON.parse(e.newValue);
+            handleNetworkMessage(data);
+          } catch(err) {}
+        }
+      };
+      window.addEventListener('storage', store.storageHandler);
+
+      if (isHost) {
+        showToast(`방 [${code}]이 생성되었습니다!`);
+      } else {
+        showToast(`방 [${code}]에 입장했습니다!`);
+        setTimeout(() => {
+          broadcastData({
+            type: 'JOIN_REQ',
+            sender: store.myId,
+            player: store.players[store.myId]
+          });
+        }, 150);
       }
 
       broadcastState();
     }
 
-    // Backup WSS Broker if EMQX is unreachable
-    function setupBackupBroker(code, isHost) {
-      try {
-        if (store.mqttClient) store.mqttClient.end();
-        const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
-          clientId: 'hz_bak_' + store.myId,
-          clean: true
-        });
-        store.mqttClient = client;
-        client.on('connect', () => {
-          client.subscribe(store.mqttTopic, { qos: 0 }, () => {
-            if (!isHost) {
-              broadcastData({
-                type: 'JOIN_REQ',
-                sender: store.myId,
-                player: store.players[store.myId]
-              });
-            }
-          });
-        });
-        client.on('message', (topic, payload) => {
-          if (topic !== store.mqttTopic) return;
-          try {
-            handleNetworkMessage(JSON.parse(payload.toString()));
-          } catch(e) {}
-        });
-      } catch(e){}
-    }
-
     function disconnectNetworking() {
       if (store.netChannel) {
-        store.netChannel.postMessage({ type: 'LEAVE', id: store.myId });
+        broadcastData({ type: 'LEAVE', id: store.myId });
         store.netChannel.close();
         store.netChannel = null;
       }
-      if (store.mqttClient) {
-        broadcastData({ type: 'LEAVE', id: store.myId });
-        try {
-          store.mqttClient.unsubscribe(store.mqttTopic);
-          store.mqttClient.end();
-        } catch(e) {}
-        store.mqttClient = null;
+      if (store.storageHandler) {
+        window.removeEventListener('storage', store.storageHandler);
+        store.storageHandler = null;
       }
     }
 
     function broadcastData(data) {
-      const msgStr = JSON.stringify(data);
+      const payload = { ...data, _ts: Date.now(), _token: Math.random() };
 
-      // 1. Same-device tab sync
+      // Dispatch via BroadcastChannel
       if (store.netChannel) {
-        try { store.netChannel.postMessage(data); } catch(e){}
+        try {
+          store.netChannel.postMessage(payload);
+        } catch(e) {}
       }
 
-      // 2. Real cross-device cloud sync
-      if (store.mqttClient && store.mqttClient.connected && store.mqttTopic) {
+      // Dispatch via LocalStorage event fallback
+      if (store.roomCode) {
         try {
-          store.mqttClient.publish(store.mqttTopic, msgStr, { qos: 0 });
+          const key = 'holzzak_room_' + store.roomCode.toUpperCase();
+          localStorage.setItem(key, JSON.stringify(payload));
         } catch(e) {}
       }
     }
@@ -1123,7 +1307,7 @@
       if (store.phase === 'WAITING' || store.phase === 'RESULT') {
         const activeSurviving = Object.values(store.players).filter(p => !p.isBankrupt && p.chips > 0);
         if (activeSurviving.length < 2) {
-          showToast('게임을 진행하려면 최소 2명 이상의 생존 플레이어가 필요합니다! (봇을 추가해보세요)', false);
+          showToast('게임을 진행하려면 최소 2명 이상의 생존 플레이어가 필요합니다! (다른 기기에서 접속하거나 봇을 추가하세요)', false);
           return;
         }
         startBettingPhase();
@@ -1147,22 +1331,16 @@
       });
 
       renderAll();
-      broadcastState();
 
-      // Countdown
-      store.timerSeconds = 20;
-      lblTimerCount.textContent = store.timerSeconds;
-      clearInterval(store.timerTimer);
-      store.timerTimer = setInterval(() => {
-        store.timerSeconds--;
-        lblTimerCount.textContent = store.timerSeconds;
-        if (store.timerSeconds <= 0) {
-          clearInterval(store.timerTimer);
-          if (store.isHost && store.phase === 'BETTING') {
-            rollTheDice();
-          }
-        }
-      }, 1000);
+      // Broadcast Round Start to all remote devices
+      broadcastData({
+        type: 'ROUND_STARTED',
+        sender: store.myId,
+        currentRound: store.currentRound,
+        timerSeconds: 20
+      });
+
+      startBettingTimer(20);
 
       // Automated Bot Bets
       triggerBotsBetting();
