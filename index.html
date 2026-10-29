@@ -903,6 +903,9 @@
               store.hasBet = store.players[store.myId].hasBet;
             }
           }
+          if (store.phase === 'FINISHED' && !store.isHost) {
+            showFinalLeaderboard(msg.isEarlyElimination || false);
+          }
           renderAll();
           break;
 
@@ -939,8 +942,16 @@
           break;
 
         case 'SHOW_FINAL_RESULT':
-          if (msg.players) store.players = msg.players;
+          if (msg.players) {
+            store.players = msg.players;
+            if (store.players[store.myId]) {
+              store.chips = store.players[store.myId].chips;
+              store.isBankrupt = store.players[store.myId].isBankrupt;
+            }
+          }
+          store.phase = 'FINISHED';
           showFinalLeaderboard(msg.isEarlyElimination || false);
+          renderAll();
           break;
 
         case 'GAME_RESTARTED':
@@ -1603,6 +1614,17 @@
         desc.textContent = '다른 모든 플레이어가 파산하여 최후의 생존자가 결정되었습니다!';
       } else {
         desc.textContent = '모든 라운드가 종료되었습니다! 최종 순위입니다.';
+      }
+
+      // Guest UI adjustments for Restart button
+      if (!store.isHost) {
+        btnRestartGame.disabled = true;
+        btnRestartGame.className = 'w-full py-3.5 bg-slate-800 text-slate-400 font-bold rounded-xl text-sm border border-slate-700 flex items-center justify-center gap-2 cursor-not-allowed';
+        btnRestartGame.innerHTML = '<i class="ph-bold ph-hourglass text-lg"></i><span>방장의 새 게임 시작을 대기 중입니다...</span>';
+      } else {
+        btnRestartGame.disabled = false;
+        btnRestartGame.className = 'w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-sm transition shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 cursor-pointer';
+        btnRestartGame.innerHTML = '<i class="ph-bold ph-arrow-counter-clockwise text-lg"></i><span>새 게임 시작하기 (다시 플레이)</span>';
       }
 
       const sorted = Object.values(store.players).sort((a, b) => {
