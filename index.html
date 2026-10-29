@@ -564,7 +564,8 @@
       peer: null,
       hostConn: null, // For Guests: Connection to the Room Host
       clientConns: {}, // For Host: Connections to Guests { [peerId]: dataConnection }
-      localChannel: null
+      localChannel: null,
+      heartbeatTimer: null
     };
 
     // DOM Elements
@@ -706,7 +707,7 @@
       const hostPeerId = getHostPeerId(roomCode);
       setNetStatus('connecting', '네트워크 연결 중...');
 
-      // BroadcastChannel Fallback for same-browser tabs
+      // BroadcastChannel for same-browser tabs
       if ('BroadcastChannel' in window) {
         try {
           store.localChannel = new BroadcastChannel('hz_ch_' + roomCode.toUpperCase());
@@ -731,6 +732,7 @@
         store.peer.on('open', (id) => {
           setNetStatus('connected', `방 생성됨 (${store.roomCode})`);
           showToast(`방이 개설되었습니다! 방 코드: [${store.roomCode}]`);
+          startHostHeartbeat();
         });
 
         store.peer.on('connection', (conn) => {
@@ -752,17 +754,7 @@
           });
 
           conn.on('close', () => {
-            delete store.clientConns[conn.peer];
-            // Remove disconnected player
-            for (let pid in store.players) {
-              if (store.players[pid].peerId === conn.peer) {
-                delete store.players[pid];
-                break;
-              }
-            }
-            setNetStatus('connected', `온라인 (${Object.keys(store.clientConns).length + 1}명)`);
-            broadcastState();
-            renderAll();
+            handlePlayerDisconnectByPeer(conn.peer);
           });
         });
 
@@ -808,9 +800,12 @@
                 isBankrupt: false,
                 isHost: false,
                 isBot: false,
-                wins: 0
+                wins: 0,
+                joinedAt: Date.now(),
+                lastSeen: Date.now()
               }
             });
+            startGuestHeartbeat();
           });
 
           conn.on('data', (data) => {
@@ -818,8 +813,7 @@
           });
 
           conn.on('close', () => {
-            setNetStatus('disconnected', '방장과의 연결이 끊어졌습니다.');
-            showToast('방장과의 연결이 종료되었습니다.', false);
+            handleHostDisconnected();
           });
         });
 
@@ -831,7 +825,113 @@
       }
     }
 
+    // Heartbeats and disconnection cleanup
+    function startHostHeartbeat() {
+      clearInterval(store.heartbeatTimer);
+      store.heartbeatTimer = setInterval(() => {
+        if (!store.isHost) return;
+        const now = Date.now();
+        let changed = false;
+
+        for (let pid in store.players) {
+          const p = store.players[pid];
+          if (p.id !== store.myId && !p.isBot) {
+            // Disconnect if no heartbeat for over 7 seconds
+            if (p.lastSeen && now - p.lastSeen > 7000) {
+              const leavingName = p.name;
+              delete store.players[pid];
+              if (p.peerId && store.clientConns[p.peerId]) {
+                try { store.clientConns[p.peerId].close(); } catch(e) {}
+                delete store.clientConns[p.peerId];
+              }
+              showToast(`[${leavingName}] 님의 접속이 끊어져 퇴장 처리되었습니다.`, false);
+              changed = true;
+            }
+          }
+        }
+
+        if (changed) {
+          setNetStatus('connected', `온라인 (${Object.keys(store.clientConns).length + 1}명)`);
+          broadcastState();
+          renderAll();
+          checkAllPlayersBetComplete();
+        }
+
+        // Host ping to all
+        broadcastNetworkPacket({ type: 'HOST_PING', time: now });
+      }, 2500);
+    }
+
+    function startGuestHeartbeat() {
+      clearInterval(store.heartbeatTimer);
+      store.heartbeatTimer = setInterval(() => {
+        if (store.isHost) return;
+        if (store.hostConn && store.hostConn.open) {
+          store.hostConn.send({ type: 'HEARTBEAT_PING', playerId: store.myId });
+        }
+      }, 2500);
+    }
+
+    function handlePlayerDisconnectByPeer(peerId) {
+      delete store.clientConns[peerId];
+      let removedName = '';
+      for (let pid in store.players) {
+        if (store.players[pid].peerId === peerId) {
+          removedName = store.players[pid].name;
+          delete store.players[pid];
+          break;
+        }
+      }
+      setNetStatus('connected', `온라인 (${Object.keys(store.clientConns).length + 1}명)`);
+      if (removedName) {
+        showToast(`[${removedName}] 님이 퇴장하셨습니다.`, false);
+      }
+      broadcastState();
+      renderAll();
+      checkAllPlayersBetComplete();
+    }
+
+    // Host migration when host leaves
+    function handleHostDisconnected() {
+      showToast('방장과의 연결이 끊어졌습니다. 새로운 방장을 선출합니다...', false);
+
+      // Remove previous host from players
+      for (let pid in store.players) {
+        if (store.players[pid].isHost) {
+          delete store.players[pid];
+          break;
+        }
+      }
+
+      // Elect oldest remaining human player as new host
+      const candidates = Object.values(store.players)
+        .filter(p => !p.isBot)
+        .sort((a, b) => (a.joinedAt || 0) - (b.joinedAt || 0));
+
+      if (candidates.length > 0 && candidates[0].id === store.myId) {
+        // I become the new Host!
+        showToast('축하합니다! 새로운 방장으로 승격되었습니다.');
+        store.isHost = true;
+        store.players[store.myId].isHost = true;
+        initNetworking(true, store.roomCode);
+        broadcastNetworkPacket({
+          type: 'HOST_MIGRATED',
+          newHostId: store.myId,
+          newHostName: store.nickname
+        });
+      } else {
+        setNetStatus('connecting', '새 방장과 재연결 시도 중...');
+        setTimeout(() => {
+          if (!store.isHost) {
+            initNetworking(false, store.roomCode);
+          }
+        }, 1500);
+      }
+      renderAll();
+    }
+
     function destroyNetworking() {
+      clearInterval(store.heartbeatTimer);
       if (store.localChannel) {
         try { store.localChannel.close(); } catch(e) {}
         store.localChannel = null;
@@ -882,12 +982,48 @@
       switch(msg.type) {
         case 'PLAYER_JOIN':
           if (store.isHost && msg.player) {
+            msg.player.lastSeen = Date.now();
             store.players[msg.player.id] = msg.player;
             sound.playChip();
             showToast(`[${msg.player.name}] 님이 입장했습니다!`);
             broadcastState();
             renderAll();
           }
+          break;
+
+        case 'PLAYER_LEAVE':
+          if (msg.playerId && store.players[msg.playerId]) {
+            const leftName = store.players[msg.playerId].name;
+            delete store.players[msg.playerId];
+            showToast(`[${leftName}] 님이 방을 나갔습니다.`, false);
+            if (store.isHost) {
+              broadcastState();
+              checkAllPlayersBetComplete();
+            }
+            renderAll();
+          }
+          break;
+
+        case 'HEARTBEAT_PING':
+          if (store.isHost && msg.playerId && store.players[msg.playerId]) {
+            store.players[msg.playerId].lastSeen = Date.now();
+          }
+          break;
+
+        case 'HOST_PING':
+          // Host is alive, acknowledge
+          if (!store.isHost && store.hostConn && store.hostConn.open) {
+            store.hostConn.send({ type: 'HEARTBEAT_PING', playerId: store.myId });
+          }
+          break;
+
+        case 'HOST_MIGRATED':
+          showToast(`새로운 방장 [${msg.newHostName}] 님이 게임을 이끕니다!`);
+          if (msg.newHostId && store.players[msg.newHostId]) {
+            Object.values(store.players).forEach(p => p.isHost = false);
+            store.players[msg.newHostId].isHost = true;
+          }
+          renderAll();
           break;
 
         case 'SYNC_FULL':
@@ -928,6 +1064,7 @@
             store.players[msg.playerId].betAmount = msg.betAmount;
             store.players[msg.playerId].chips = msg.remainingChips;
             store.players[msg.playerId].hasBet = true;
+            store.players[msg.playerId].lastSeen = Date.now();
             if (msg.secretRig) {
               store.forcedRig = msg.secretRig; // Store Easter egg secret rig on host
             }
@@ -1039,7 +1176,9 @@
           isBankrupt: false,
           isHost: isHost,
           isBot: false,
-          wins: 0
+          wins: 0,
+          joinedAt: Date.now(),
+          lastSeen: Date.now()
         }
       };
 
@@ -1057,6 +1196,26 @@
 
     // --- LEAVE ROOM ---
     btnLeaveRoom.addEventListener('click', () => {
+      broadcastNetworkPacket({
+        type: 'PLAYER_LEAVE',
+        playerId: store.myId
+      });
+
+      if (store.isHost) {
+        // Trigger host migration before closing
+        const nextHost = Object.values(store.players)
+          .filter(p => p.id !== store.myId && !p.isBot)
+          .sort((a, b) => (a.joinedAt || 0) - (b.joinedAt || 0))[0];
+
+        if (nextHost) {
+          broadcastNetworkPacket({
+            type: 'HOST_MIGRATED',
+            newHostId: nextHost.id,
+            newHostName: nextHost.name
+          });
+        }
+      }
+
       destroyNetworking();
       clearInterval(store.timerTimer);
 
@@ -1065,6 +1224,14 @@
       viewLobby.classList.remove('hidden');
       modalFinalResult.classList.add('hidden');
       setNetStatus('disconnected', '로컬 대기 중');
+    });
+
+    // Also notify on browser tab close / window unload
+    window.addEventListener('beforeunload', () => {
+      broadcastNetworkPacket({
+        type: 'PLAYER_LEAVE',
+        playerId: store.myId
+      });
     });
 
     // --- TIMER HELPER ---
@@ -1390,13 +1557,16 @@
     }
 
     function checkAllPlayersBetComplete() {
+      if (!store.isHost || store.phase !== 'BETTING') return;
       const pList = Object.values(store.players).filter(p => !p.isBankrupt && p.chips > 0);
       const allDone = pList.length > 0 && pList.every(p => p.hasBet);
 
-      if (allDone && store.phase === 'BETTING' && store.isHost) {
+      if (allDone) {
         clearInterval(store.timerTimer);
         setTimeout(() => {
-          rollTheDice();
+          if (store.phase === 'BETTING') {
+            rollTheDice();
+          }
         }, 500);
       }
     }
