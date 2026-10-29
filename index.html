@@ -938,6 +938,15 @@
           runDiceRollSequence(msg.d1, msg.d2, msg.sum, msg.isOdd);
           break;
 
+        case 'SHOW_FINAL_RESULT':
+          if (msg.players) store.players = msg.players;
+          showFinalLeaderboard(msg.isEarlyElimination || false);
+          break;
+
+        case 'GAME_RESTARTED':
+          handleGameRestart();
+          break;
+
         case 'CHAT':
           appendChat(msg.author, msg.text);
           break;
@@ -1488,9 +1497,23 @@
 
           const survivors = Object.values(store.players).filter(p => !p.isBankrupt && p.chips > 0);
           if (survivors.length <= 1) {
-            setTimeout(() => showFinalLeaderboard(true), 2000);
+            setTimeout(() => {
+              showFinalLeaderboard(true);
+              broadcastNetworkPacket({
+                type: 'SHOW_FINAL_RESULT',
+                isEarlyElimination: true,
+                players: store.players
+              });
+            }, 2000);
           } else if (store.currentRound >= store.totalRounds) {
-            setTimeout(() => showFinalLeaderboard(false), 2200);
+            setTimeout(() => {
+              showFinalLeaderboard(false);
+              broadcastNetworkPacket({
+                type: 'SHOW_FINAL_RESULT',
+                isEarlyElimination: false,
+                players: store.players
+              });
+            }, 2200);
           } else {
             store.currentRound++;
           }
@@ -1624,13 +1647,17 @@
       });
     }
 
-    btnRestartGame.addEventListener('click', () => {
+    function handleGameRestart() {
       modalFinalResult.classList.add('hidden');
       modalFinalResult.classList.remove('flex');
       store.currentRound = 1;
       store.phase = 'WAITING';
       store.chips = 1000;
       store.isBankrupt = false;
+      store.hasBet = false;
+      store.selectedChoice = null;
+      store.betAmount = 0;
+      store.forcedRig = null;
 
       Object.keys(store.players).forEach(id => {
         store.players[id].chips = 1000;
@@ -1640,8 +1667,15 @@
         store.players[id].betAmount = 0;
       });
 
-      broadcastState();
       renderAll();
+    }
+
+    btnRestartGame.addEventListener('click', () => {
+      handleGameRestart();
+      if (store.isHost) {
+        broadcastNetworkPacket({ type: 'GAME_RESTARTED' });
+        broadcastState();
+      }
     });
 
     // --- REACTION SYSTEM ---
