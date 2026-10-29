@@ -1312,10 +1312,11 @@
         iconStartRound.className = 'ph-bold ph-play text-lg';
         textStartRound.textContent = store.currentRound > 1 ? `다음 라운드 시작 (${store.currentRound}/${store.totalRounds})` : '라운드 시작하기';
       } else if (store.phase === 'BETTING') {
-        btnStartRound.disabled = false;
-        btnStartRound.className = 'px-7 py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 active:scale-95 text-slate-950 font-black shadow-lg shadow-cyan-500/25 text-sm flex items-center gap-2 transition cursor-pointer';
-        iconStartRound.className = 'ph-bold ph-dice-five text-lg';
-        textStartRound.textContent = '결과 확인 (주사위 굴리기)';
+        // Automatically reveals when all players finish betting or timer reaches 0. No manual button needed!
+        btnStartRound.disabled = true;
+        btnStartRound.className = 'px-7 py-3 rounded-xl bg-slate-800 text-amber-300 font-bold text-sm flex items-center gap-2 transition cursor-default';
+        iconStartRound.className = 'ph-bold ph-hourglass-high text-lg text-amber-400 animate-spin';
+        textStartRound.textContent = '모든 참가자 배팅 대기 중...';
       } else {
         btnStartRound.disabled = true;
         btnStartRound.className = 'px-7 py-3 rounded-xl bg-slate-800 text-slate-500 font-bold text-sm flex items-center gap-2 transition cursor-not-allowed';
@@ -1427,8 +1428,6 @@
           return;
         }
         startBettingPhase();
-      } else if (store.phase === 'BETTING') {
-        rollTheDice();
       }
     });
 
