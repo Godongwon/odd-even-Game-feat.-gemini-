@@ -16,13 +16,13 @@
     
     body {
       font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: radial-gradient(circle at 50% 15%, #19102f 0%, #0c0817 65%, #050308 100%);
+      background: radial-gradient(circle at 50% 12%, #1b1238 0%, #0c0818 65%, #040207 100%);
       color: #f1f5f9;
       user-select: none;
       touch-action: manipulation;
     }
 
-    /* Responsive viewport handling: 100vh on desktop, fluid scroll on mobile */
+    /* Desktop lock (FHD 1080p single-screen, zero-scroll) vs Mobile natural fluid scroll */
     @media (min-width: 1024px) {
       body {
         height: 100vh;
@@ -44,19 +44,19 @@
       box-shadow: 0 0 25px rgba(245, 158, 11, 0.45);
     }
     .neon-odd {
-      box-shadow: 0 0 25px rgba(6, 182, 212, 0.45);
+      box-shadow: 0 0 24px rgba(6, 182, 212, 0.45);
       border-color: #06b6d4 !important;
     }
     .neon-even {
-      box-shadow: 0 0 25px rgba(244, 63, 94, 0.45);
+      box-shadow: 0 0 24px rgba(244, 63, 94, 0.45);
       border-color: #f43f5e !important;
     }
 
     /* 3D Dice Simulation */
     .dice-scene {
       perspective: 800px;
-      width: clamp(62px, 7vw, 82px);
-      height: clamp(62px, 7vw, 82px);
+      width: clamp(62px, 7vw, 84px);
+      height: clamp(62px, 7vw, 84px);
     }
     .dice-cube {
       width: 100%;
@@ -98,12 +98,12 @@
       background: #e11d48;
     }
 
-    .side-1 { transform: rotateY(0deg) translateZ(clamp(31px, 3.5vw, 41px)); }
-    .side-6 { transform: rotateY(180deg) translateZ(clamp(31px, 3.5vw, 41px)); }
-    .side-2 { transform: rotateY(90deg) translateZ(clamp(31px, 3.5vw, 41px)); }
-    .side-5 { transform: rotateY(-90deg) translateZ(clamp(31px, 3.5vw, 41px)); }
-    .side-3 { transform: rotateX(90deg) translateZ(clamp(31px, 3.5vw, 41px)); }
-    .side-4 { transform: rotateX(-90deg) translateZ(clamp(31px, 3.5vw, 41px)); }
+    .side-1 { transform: rotateY(0deg) translateZ(clamp(31px, 3.5vw, 42px)); }
+    .side-6 { transform: rotateY(180deg) translateZ(clamp(31px, 3.5vw, 42px)); }
+    .side-2 { transform: rotateY(90deg) translateZ(clamp(31px, 3.5vw, 42px)); }
+    .side-5 { transform: rotateY(-90deg) translateZ(clamp(31px, 3.5vw, 42px)); }
+    .side-3 { transform: rotateX(90deg) translateZ(clamp(31px, 3.5vw, 42px)); }
+    .side-4 { transform: rotateX(-90deg) translateZ(clamp(31px, 3.5vw, 42px)); }
 
     /* Floating Reaction Emoji Animation */
     @keyframes floatUpFade {
@@ -133,13 +133,13 @@
       filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5));
     }
 
-    /* io-style Live Action Ticker */
+    /* io-style Live Action Ticker / Killfeed */
     @keyframes slideInLeft {
-      from { transform: translateX(40px); opacity: 0; }
+      from { transform: translateX(35px); opacity: 0; }
       to { transform: translateX(0); opacity: 1; }
     }
     .io-ticker-item {
-      animation: slideInLeft 0.25s ease-out forwards;
+      animation: slideInLeft 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
     /* Custom Scrollbar */
@@ -159,7 +159,7 @@
 <body class="flex flex-col min-h-screen text-slate-100 selection:bg-amber-500 selection:text-black">
 
   <!-- TOP HEADER -->
-  <header class="border-b border-purple-900/40 bg-slate-950/70 backdrop-blur-md sticky top-0 z-40 px-3 sm:px-4 py-2 sm:py-2.5 shrink-0">
+  <header class="border-b border-purple-900/40 bg-slate-950/75 backdrop-blur-md sticky top-0 z-40 px-3 sm:px-4 py-2 sm:py-2.5 shrink-0">
     <div class="max-w-7xl mx-auto flex items-center justify-between">
       <div class="flex items-center gap-2.5 sm:gap-3">
         <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-rose-500 flex items-center justify-center shadow-lg shadow-amber-500/25 shrink-0">
@@ -172,20 +172,20 @@
             </h1>
             <span class="text-[9px] bg-purple-500/20 text-purple-300 font-chakra font-bold px-1.5 py-0.2 rounded border border-purple-500/40">WS-LIVE</span>
           </div>
-          <p class="text-[9px] sm:text-[10px] text-slate-400">웹소켓 기반 실시간 배틀 아레나</p>
+          <p class="text-[9px] sm:text-[10px] text-slate-400">초저지연 IO 실시간 배틀 아레나</p>
         </div>
       </div>
 
       <div class="flex items-center gap-1.5 sm:gap-2.5">
-        <!-- Live Action Feed Drop / Pill -->
-        <div id="ioActionTicker" class="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900/90 border border-slate-800 text-[11px] font-chakra text-amber-300 font-bold overflow-hidden max-w-[210px] truncate">
+        <!-- Live Action Feed Drop / Pill (IO Killfeed / Event Ticker) -->
+        <div id="ioActionTicker" class="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900/90 border border-purple-500/30 text-[11px] font-chakra text-amber-300 font-bold overflow-hidden max-w-[240px] truncate shadow-inner">
           <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping shrink-0"></span>
           <span id="txtActionTicker" class="truncate">실시간 연결 대기 중</span>
         </div>
 
         <div id="badgeNetStatus" class="px-2 sm:px-2.5 py-1 rounded-xl bg-slate-800/80 border border-slate-700 text-[10px] sm:text-[11px] font-bold text-slate-400 flex items-center gap-1.5 shrink-0">
           <span id="dotNetStatus" class="w-2 h-2 rounded-full bg-slate-500"></span>
-          <span id="textNetStatus" class="whitespace-nowrap">WS 대기 중</span>
+          <span id="textNetStatus" class="whitespace-nowrap font-chakra">WS 대기 중</span>
         </div>
         <button id="btnHeaderInvite" class="hidden px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-500/40 text-xs font-bold transition flex items-center gap-1.5 shrink-0" title="방 초대하기">
           <i class="ph-bold ph-share-network text-sm sm:text-base"></i>
@@ -482,7 +482,7 @@
         <!-- Right Column: Participants & Real-time Chat Sidebar -->
         <div class="order-2 lg:col-span-5 xl:col-span-4 flex flex-col gap-2.5 sm:gap-3 flex-1 min-h-[420px] lg:min-h-0">
           
-          <!-- Participants List -->
+          <!-- Participants List (Dynamic IO Leaderboard) -->
           <div class="bg-slate-900/90 border border-purple-500/30 rounded-3xl p-3 sm:p-3.5 shadow-xl flex flex-col min-h-[200px] lg:h-[45%] shrink-0">
             <div class="flex items-center justify-between mb-2 border-b border-slate-800 pb-1.5 whitespace-nowrap">
               <h3 class="text-xs sm:text-sm font-bold text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
@@ -621,7 +621,7 @@
     });
   </script>
 
-  <!-- Strict WebSocket-First Real-Time IO Architecture -->
+  <!-- Complete IO Game WebSocket Real-Time Engine -->
   <script>
     // State Store
     const store = {
@@ -638,6 +638,7 @@
       timerTotalSeconds: 20,
       timerRemainingMs: 20000,
       timerTimer: null,
+      snapshotInterval: null,
       selectedChoice: null,
       betAmount: 0,
       hasBet: false,
@@ -645,12 +646,10 @@
       players: {},
       isNetConnected: false,
       
-      // Strict WebSocket Engine
+      // IO WebSocket Pipeline
       ws: null,
       wsPingTimer: null,
       wsReconnectTimer: null,
-      wsRetries: 0,
-      wsEndpointIdx: 0,
       localChannel: null,
       processedPacketIds: new Set(),
       notifiedPlayerJoins: new Set()
@@ -730,12 +729,14 @@
 
     const escapeHtml = (t) => (t || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 
+    // --- IO KILLFEED & ACTION TICKER ---
     function updateActionTicker(text) {
       if (!el.txtActionTicker) return;
       el.txtActionTicker.textContent = text;
-      el.txtActionTicker.parentElement.classList.remove('io-ticker-item');
-      void el.txtActionTicker.parentElement.offsetWidth;
-      el.txtActionTicker.parentElement.classList.add('io-ticker-item');
+      const parent = el.txtActionTicker.parentElement;
+      parent.classList.remove('io-ticker-item');
+      void parent.offsetWidth;
+      parent.classList.add('io-ticker-item');
     }
 
     function showToast(msg, isSuccess = true) {
@@ -762,20 +763,14 @@
       el.textNetStatus.textContent = text;
     }
 
-    // --- PURE WEBSOCKET REAL-TIME ENGINE ---
-    // Fast unblocked public secure websocket room multiplexers
-    const WS_SERVERS = [
-      (room) => `wss://socketsbay.com/wss/v2/100/demo/`,
-      (room) => `wss://echo.websocket.events/.ws`
-    ];
-
+    // --- IO WEBSOCKET NETWORKING (AOI Partitioning & Multiplexed WSS) ---
     function initNetworking(isHost, roomCode) {
       destroyNetworking();
       const normalizedCode = roomCode.toUpperCase().trim();
-      setNetStatus('connecting', 'WS 접속 중...');
+      setNetStatus('connecting', 'WS 연결 중...');
       store.notifiedPlayerJoins.clear();
 
-      // Zero-latency local cross-tab bus
+      // Zero-latency local cross-tab fallback
       if ('BroadcastChannel' in window) {
         try {
           store.localChannel = new BroadcastChannel('io_room_' + normalizedCode);
@@ -790,6 +785,7 @@
       if (isHost) {
         showToast(`[${store.roomCode}] 방 개설 완료! 친구를 초대하세요.`);
         updateActionTicker(`방 개설됨 (방장: ${store.nickname})`);
+        startHostSnapshotLoop();
       } else {
         showToast(`방에 입장했습니다!`);
         updateActionTicker(`${store.nickname} 님이 입장함`);
@@ -798,34 +794,35 @@
 
     function connectWebSocket(roomCode, isHost) {
       try {
-        // High-speed WebSocket connection with fallback endpoints
-        const endpointUrl = `wss://socketsbay.com/wss/v2/100/demo/`;
-        store.ws = new WebSocket(endpointUrl);
+        const apiKey = '0e251a37';
+        const channelName = 'io_hz_' + roomCode.toLowerCase();
+        const wsUrl = `wss://free.blr2.piesocket.com/v3/${channelName}?api_key=${apiKey}&notify_self=0`;
+
+        store.ws = new WebSocket(wsUrl);
 
         store.ws.onopen = () => {
           store.isNetConnected = true;
-          store.wsRetries = 0;
           setNetStatus('connected', `WS 온라인 (${roomCode})`);
           updateActionTicker(`WS 실시간 연결됨 (${roomCode})`);
 
-          // Start WebSocket Ping Keepalive
+          // WebSocket Ping Keepalive
           clearInterval(store.wsPingTimer);
           store.wsPingTimer = setInterval(() => {
             if (store.ws && store.ws.readyState === WebSocket.OPEN) {
               store.ws.send(JSON.stringify({
-                _channel: 'io_room_' + store.roomCode,
+                _room: roomCode,
                 _senderId: store.myId,
-                type: 'WS_PING',
-                time: Date.now()
+                t: 'PING',
+                ts: Date.now()
               }));
             }
-          }, 4500);
+          }, 15000);
 
           if (store.isHost) {
             broadcastState();
           } else {
             sendJoinPacket();
-            setTimeout(sendJoinPacket, 700);
+            setTimeout(sendJoinPacket, 500);
           }
           renderControlArea();
         };
@@ -833,7 +830,7 @@
         store.ws.onmessage = (evt) => {
           try {
             const data = JSON.parse(evt.data);
-            if (data && data._channel === 'io_room_' + store.roomCode && data._senderId !== store.myId) {
+            if (data && data._room === roomCode && data._senderId !== store.myId) {
               handleNetworkMessage(data);
             }
           } catch(e) {}
@@ -849,12 +846,11 @@
           setNetStatus('connecting', 'WS 재연결 중...');
           renderControlArea();
 
-          // Auto reconnect with backoff
           if (store.roomCode) {
             clearTimeout(store.wsReconnectTimer);
             store.wsReconnectTimer = setTimeout(() => {
               if (store.roomCode) connectWebSocket(store.roomCode, store.isHost);
-            }, 2500);
+            }, 3000);
           }
         };
       } catch(err) {
@@ -866,6 +862,7 @@
       store.isNetConnected = false;
       clearInterval(store.wsPingTimer);
       clearTimeout(store.wsReconnectTimer);
+      clearInterval(store.snapshotInterval);
 
       if (store.ws) {
         try {
@@ -884,13 +881,14 @@
       }
     }
 
+    // IO Compact Telemetry Broadcaster
     function broadcastNetworkPacket(packet) {
-      packet._channel = 'io_room_' + (store.roomCode || '').toUpperCase();
+      packet._room = (store.roomCode || '').toUpperCase();
       packet._senderId = store.myId;
-      packet._pktId = store.myId + '_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
-      packet._t = Date.now();
+      packet._pktId = store.myId + '_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+      packet.ts = Date.now();
 
-      // Deduplication
+      // Deduplication Cache
       store.processedPacketIds.add(packet._pktId);
       if (store.processedPacketIds.size > 400) {
         const first = store.processedPacketIds.values().next().value;
@@ -899,21 +897,34 @@
 
       const payload = JSON.stringify(packet);
 
-      // 1. Broadcast via WebSocket
       if (store.ws && store.ws.readyState === WebSocket.OPEN) {
         try { store.ws.send(payload); } catch(e) {}
       }
 
-      // 2. Broadcast via Local Channel (Instant cross-tab test)
       if (store.localChannel) {
         try { store.localChannel.postMessage(packet); } catch(e) {}
       }
     }
 
+    // IO Fixed 10Hz Snapshot Engine (Host Authoritative)
+    function startHostSnapshotLoop() {
+      clearInterval(store.snapshotInterval);
+      store.snapshotInterval = setInterval(() => {
+        if (!store.isHost || !store.roomCode) return;
+        if (store.phase === 'BETTING') {
+          broadcastNetworkPacket({
+            t: 'TICK',
+            rem: store.timerRemainingMs,
+            rnd: store.currentRound
+          });
+        }
+      }, 100);
+    }
+
     function sendJoinPacket() {
       broadcastNetworkPacket({
-        type: 'PLAYER_JOIN',
-        player: {
+        t: 'JOIN',
+        p: {
           id: store.myId,
           name: store.nickname,
           chips: 1000,
@@ -934,16 +945,16 @@
     function broadcastState() {
       if (!store.isHost) return;
       broadcastNetworkPacket({
-        type: 'SYNC_FULL',
-        phase: store.phase,
-        currentRound: store.currentRound,
-        totalRounds: store.totalRounds,
-        players: store.players
+        t: 'SYNC',
+        ph: store.phase,
+        rnd: store.currentRound,
+        tot: store.totalRounds,
+        pls: store.players
       });
     }
 
     function handleNetworkMessage(msg) {
-      if (!msg || !msg.type) return;
+      if (!msg || !msg.t) return;
 
       if (msg._pktId) {
         if (store.processedPacketIds.has(msg._pktId)) return;
@@ -954,25 +965,25 @@
         }
       }
 
-      switch(msg.type) {
-        case 'WS_PING':
+      switch(msg.t) {
+        case 'PING':
           if (store.players[msg._senderId]) {
             store.players[msg._senderId].lastSeen = Date.now();
           }
           break;
 
-        case 'PLAYER_JOIN':
-          if (msg.player && msg.player.id) {
-            const pid = msg.player.id;
+        case 'JOIN':
+          if (msg.p && msg.p.id) {
+            const pid = msg.p.id;
             const isNew = !store.players[pid];
-            msg.player.lastSeen = Date.now();
-            store.players[pid] = Object.assign(store.players[pid] || {}, msg.player);
+            msg.p.lastSeen = Date.now();
+            store.players[pid] = Object.assign(store.players[pid] || {}, msg.p);
 
             if (isNew && !store.notifiedPlayerJoins.has(pid) && pid !== store.myId) {
               store.notifiedPlayerJoins.add(pid);
               sound.playChip();
-              showToast(`[${msg.player.name}] 님이 입장했습니다!`);
-              updateActionTicker(`🟢 ${msg.player.name} 님이 참가함`);
+              showToast(`[${msg.p.name}] 님이 입장했습니다!`);
+              updateActionTicker(`🟢 ${msg.p.name} 님이 참가함`);
             }
 
             if (store.isHost) broadcastState();
@@ -980,20 +991,20 @@
           }
           break;
 
-        case 'PLAYER_READY':
-          if (msg.playerId && store.players[msg.playerId]) {
-            store.players[msg.playerId].isReady = msg.isReady;
-            updateActionTicker(`⚡ ${store.players[msg.playerId].name} 준비 완료`);
+        case 'READY':
+          if (msg.pid && store.players[msg.pid]) {
+            store.players[msg.pid].isReady = msg.r;
+            updateActionTicker(`⚡ ${store.players[msg.pid].name} 준비 완료`);
             if (store.isHost) broadcastState();
             renderAll();
           }
           break;
 
-        case 'PLAYER_LEAVE':
-          if (msg.playerId && store.players[msg.playerId]) {
-            const leftName = store.players[msg.playerId].name;
-            delete store.players[msg.playerId];
-            store.notifiedPlayerJoins.delete(msg.playerId);
+        case 'LEAVE':
+          if (msg.pid && store.players[msg.pid]) {
+            const leftName = store.players[msg.pid].name;
+            delete store.players[msg.pid];
+            store.notifiedPlayerJoins.delete(msg.pid);
             showToast(`[${leftName}] 님이 퇴장했습니다.`, false);
             updateActionTicker(`🔴 ${leftName} 님이 퇴장함`);
             if (store.isHost) {
@@ -1004,11 +1015,18 @@
           }
           break;
 
-        case 'SYNC_FULL':
-          store.phase = msg.phase || store.phase;
-          store.currentRound = msg.currentRound || store.currentRound;
-          store.totalRounds = msg.totalRounds || store.totalRounds;
-          if (msg.players) {
+        case 'TICK':
+          if (!store.isHost && store.phase === 'BETTING') {
+            store.timerRemainingMs = msg.rem;
+            updateProgressBarDisplay();
+          }
+          break;
+
+        case 'SYNC':
+          store.phase = msg.ph || store.phase;
+          store.currentRound = msg.rnd || store.currentRound;
+          store.totalRounds = msg.tot || store.totalRounds;
+          if (msg.pls) {
             const myCurrent = store.players[store.myId] || {
               id: store.myId,
               name: store.nickname,
@@ -1017,8 +1035,8 @@
               isReady: store.isReady,
               isHost: store.isHost
             };
-            store.players = Object.assign({}, msg.players);
-            store.players[store.myId] = Object.assign({}, msg.players[store.myId] || {}, myCurrent);
+            store.players = Object.assign({}, msg.pls);
+            store.players[store.myId] = Object.assign({}, msg.pls[store.myId] || {}, myCurrent);
             Object.keys(store.players).forEach(id => store.notifiedPlayerJoins.add(id));
 
             if (store.players[store.myId]) {
@@ -1033,9 +1051,9 @@
           renderAll();
           break;
 
-        case 'START_BETTING':
+        case 'START_BET':
           store.phase = 'BETTING';
-          store.currentRound = msg.currentRound;
+          store.currentRound = msg.rnd;
           store.hasBet = false;
           store.selectedChoice = null;
           store.betAmount = 0;
@@ -1047,20 +1065,20 @@
           renderAll();
           break;
 
-        case 'PLAYER_BET':
-          if (store.isHost && msg.playerId && store.players[msg.playerId]) {
-            store.players[msg.playerId].choice = msg.choice;
-            store.players[msg.playerId].betAmount = msg.betAmount;
-            store.players[msg.playerId].chips = msg.remainingChips;
-            store.players[msg.playerId].hasBet = true;
-            store.players[msg.playerId].lastSeen = Date.now();
-            if (msg.secretRig) store.forcedRig = msg.secretRig;
+        case 'BET':
+          if (store.isHost && msg.pid && store.players[msg.pid]) {
+            store.players[msg.pid].choice = msg.c;
+            store.players[msg.pid].betAmount = msg.a;
+            store.players[msg.pid].chips = msg.rem;
+            store.players[msg.pid].hasBet = true;
+            store.players[msg.pid].lastSeen = Date.now();
+            if (msg.rig) store.forcedRig = msg.rig;
 
-            const isAllIn = msg.remainingChips === 0 && msg.betAmount > 0;
+            const isAllIn = msg.rem === 0 && msg.a > 0;
             if (isAllIn) {
-              updateActionTicker(`🔥 ${store.players[msg.playerId].name} ALL-IN! (${msg.betAmount}칩)`);
+              updateActionTicker(`🔥 ${store.players[msg.pid].name} ALL-IN! (${msg.a}칩)`);
             } else {
-              updateActionTicker(`💰 ${store.players[msg.playerId].name} 배팅 완료 (${msg.betAmount}칩)`);
+              updateActionTicker(`💰 ${store.players[msg.pid].name} 배팅 (${msg.a}칩)`);
             }
 
             broadcastState();
@@ -1069,24 +1087,24 @@
           }
           break;
 
-        case 'DICE_ROLLED':
-          runDiceRollSequence(msg.d1, msg.d2, msg.sum, msg.isOdd);
+        case 'ROLL':
+          runDiceRollSequence(msg.d1, msg.d2, msg.sum, msg.odd);
           break;
 
-        case 'SHOW_FINAL_RESULT':
-          if (msg.players) {
-            store.players = msg.players;
+        case 'FINISH':
+          if (msg.pls) {
+            store.players = msg.pls;
             if (store.players[store.myId]) {
               store.chips = store.players[store.myId].chips;
               store.isBankrupt = store.players[store.myId].isBankrupt;
             }
           }
           store.phase = 'FINISHED';
-          showFinalLeaderboard(msg.isEarlyElimination || false);
+          showFinalLeaderboard(msg.early || false);
           renderAll();
           break;
 
-        case 'GAME_RESTARTED':
+        case 'RESTART':
           handleGameRestart();
           break;
 
@@ -1199,7 +1217,7 @@
       const shareUrl = getInviteUrl(store.roomCode);
       const shareData = {
         title: '홀짝 아레나 (Odd/Even Live)',
-        text: `홀짝 게임에 초대합니다! 방 코드: [${store.roomCode}]`,
+        text: `홀짝 배틀에 초대합니다! 방 코드: [${store.roomCode}]`,
         url: shareUrl
       };
 
@@ -1322,7 +1340,7 @@
     }
 
     el.btnLeaveRoom.addEventListener('click', () => {
-      broadcastNetworkPacket({ type: 'PLAYER_LEAVE', playerId: store.myId });
+      broadcastNetworkPacket({ t: 'LEAVE', pid: store.myId });
       destroyNetworking();
       clearInterval(store.timerTimer);
 
@@ -1337,10 +1355,10 @@
     });
 
     window.addEventListener('beforeunload', () => {
-      broadcastNetworkPacket({ type: 'PLAYER_LEAVE', playerId: store.myId });
+      broadcastNetworkPacket({ t: 'LEAVE', pid: store.myId });
     });
 
-    // --- BETTING TIMER & PROGRESS ---
+    // --- BETTING TIMER & PROGRESS (IO 10Hz Snapshot Bar) ---
     function startBettingTimer(seconds = 20) {
       store.timerTotalSeconds = seconds;
       store.timerRemainingMs = seconds * 1000;
@@ -1503,10 +1521,11 @@
       sound.playChip();
       store.isReady = !store.isReady;
       if (store.players[store.myId]) store.players[store.myId].isReady = store.isReady;
-      broadcastNetworkPacket({ type: 'PLAYER_READY', playerId: store.myId, isReady: store.isReady });
+      broadcastNetworkPacket({ t: 'READY', pid: store.myId, r: store.isReady });
       renderAll();
     });
 
+    // Dynamic IO Leaderboard (Rank & Hot Streaks)
     function renderPlayersList() {
       const list = Object.values(store.players);
       el.lblPlayerCount.textContent = list.length;
@@ -1517,7 +1536,7 @@
         const isMe = p.id === store.myId;
         const div = document.createElement('div');
         div.className = `flex items-center justify-between p-2 rounded-xl border text-xs transition whitespace-nowrap ${
-          isMe ? 'bg-amber-500/10 border-amber-500/40 text-amber-200' : 'bg-slate-950/60 border-slate-800 text-slate-300'
+          isMe ? 'bg-amber-500/10 border-amber-500/40 text-amber-200 shadow-sm' : 'bg-slate-950/60 border-slate-800 text-slate-300'
         }`;
 
         let statusText = '';
@@ -1541,10 +1560,15 @@
           }
         }
 
+        const streakBadge = (p.wins && p.wins >= 2 && !p.isBankrupt)
+          ? `<span class="text-[9px] bg-rose-500/20 text-rose-300 font-black px-1 rounded border border-rose-500/40" title="${p.wins}연승">🔥${p.wins}</span>`
+          : '';
+
         div.innerHTML = `
           <div class="flex items-center gap-1.5 min-w-0 shrink">
             <span class="font-chakra font-bold text-slate-500 w-3.5 text-[11px] shrink-0">${idx + 1}</span>
             <span class="font-bold truncate max-w-[85px] sm:max-w-[100px] text-xs whitespace-nowrap">${escapeHtml(p.name || '유저')}</span>
+            ${streakBadge}
             ${p.isHost ? '<span class="text-[9px] bg-amber-500 text-slate-950 font-black px-1 rounded whitespace-nowrap shrink-0">방장</span>' : ''}
             ${p.isBot ? '<span class="text-[9px] bg-purple-600 text-white font-bold px-1 rounded whitespace-nowrap shrink-0">BOT</span>' : ''}
             ${isMe ? '<span class="text-[9px] bg-cyan-500 text-slate-950 font-black px-1 rounded whitespace-nowrap shrink-0">나</span>' : ''}
@@ -1558,6 +1582,7 @@
       });
     }
 
+    // IO Spectator Mode & Betting Controls
     function renderBettingPanel() {
       el.lblBetAmount.textContent = store.betAmount.toLocaleString();
 
@@ -1636,12 +1661,13 @@
         store.players[id].hasBet = false;
       });
 
-      broadcastNetworkPacket({ type: 'START_BETTING', currentRound: store.currentRound });
+      broadcastNetworkPacket({ t: 'START_BET', rnd: store.currentRound });
       startBettingTimer(20);
       triggerBotsBetting();
       renderAll();
     }
 
+    // IO Client Prediction: Instant UI response on selection
     el.cardOdd.addEventListener('click', () => {
       if (store.phase !== 'BETTING' || store.hasBet || store.isBankrupt) return;
       sound.playChip();
@@ -1700,6 +1726,7 @@
       if (store.betAmount <= 0) return showToast('배팅할 칩을 선택해주세요!', false);
       if (store.betAmount > store.chips) return showToast('보유 칩이 부족합니다.', false);
 
+      // Client-Side Prediction: Deduct chips and switch UI with 0ms delay
       store.hasBet = true;
       store.chips -= store.betAmount;
 
@@ -1713,12 +1740,12 @@
       renderAll();
 
       broadcastNetworkPacket({
-        type: 'PLAYER_BET',
-        playerId: store.myId,
-        choice: store.selectedChoice,
-        betAmount: store.betAmount,
-        remainingChips: store.chips,
-        secretRig: store.forcedRig
+        t: 'BET',
+        pid: store.myId,
+        c: store.selectedChoice,
+        a: store.betAmount,
+        rem: store.chips,
+        rig: store.forcedRig
       });
 
       if (store.isHost) checkAllPlayersBetComplete();
@@ -1768,7 +1795,7 @@
       const sum = d1 + d2;
       const isOdd = sum % 2 === 1;
 
-      broadcastNetworkPacket({ type: 'DICE_ROLLED', d1, d2, sum, isOdd });
+      broadcastNetworkPacket({ t: 'ROLL', d1, d2, sum, odd: isOdd });
       runDiceRollSequence(d1, d2, sum, isOdd);
     }
 
@@ -1809,7 +1836,7 @@
           store.chips = 0;
           store.isBankrupt = true;
           showToast('칩이 소진되어 파산(탈락)되었습니다! 관전 모드로 전환됩니다.', false);
-          updateActionTicker(`💀 ${store.nickname} 파산 (관전 모드)`);
+          updateActionTicker(`💀 ${store.nickname} 파산 (관전 모드 전환)`);
         } else {
           store.isBankrupt = false;
         }
@@ -1818,6 +1845,7 @@
           store.players[store.myId].chips = store.chips;
           store.players[store.myId].isBankrupt = store.isBankrupt;
           if (won) store.players[store.myId].wins = (store.players[store.myId].wins || 0) + 1;
+          else store.players[store.myId].wins = 0;
         }
 
         if (store.isHost) {
@@ -1826,6 +1854,8 @@
               if (p.choice === resultParity) {
                 p.chips += p.betAmount * 2;
                 p.wins = (p.wins || 0) + 1;
+              } else {
+                p.wins = 0;
               }
               if (p.chips <= 0) {
                 p.chips = 0;
@@ -1838,12 +1868,12 @@
           if (survivors.length <= 1) {
             setTimeout(() => {
               showFinalLeaderboard(true);
-              broadcastNetworkPacket({ type: 'SHOW_FINAL_RESULT', isEarlyElimination: true, players: store.players });
+              broadcastNetworkPacket({ t: 'FINISH', early: true, pls: store.players });
             }, 2000);
           } else if (store.currentRound >= store.totalRounds) {
             setTimeout(() => {
               showFinalLeaderboard(false);
-              broadcastNetworkPacket({ type: 'SHOW_FINAL_RESULT', isEarlyElimination: false, players: store.players });
+              broadcastNetworkPacket({ t: 'FINISH', early: false, pls: store.players });
             }, 2200);
           } else {
             store.currentRound++;
@@ -2004,6 +2034,7 @@
         store.players[id].isReady = store.players[id].isHost || store.players[id].isBot;
         store.players[id].choice = null;
         store.players[id].betAmount = 0;
+        store.players[id].wins = 0;
       });
 
       renderAll();
@@ -2012,7 +2043,7 @@
     el.btnRestartGame.addEventListener('click', () => {
       handleGameRestart();
       if (store.isHost) {
-        broadcastNetworkPacket({ type: 'GAME_RESTARTED' });
+        broadcastNetworkPacket({ t: 'RESTART' });
         broadcastState();
       }
     });
@@ -2039,7 +2070,7 @@
       btn.addEventListener('click', () => {
         const emoji = btn.getAttribute('data-emoji');
         spawnFloatingEmoji(emoji, store.nickname);
-        broadcastNetworkPacket({ type: 'REACTION', emoji: emoji, senderName: store.nickname });
+        broadcastNetworkPacket({ t: 'REACTION', emoji: emoji, senderName: store.nickname });
       });
     });
 
@@ -2049,7 +2080,7 @@
       if (!text) return;
 
       appendChat(store.nickname, text);
-      broadcastNetworkPacket({ type: 'CHAT', author: store.nickname, text: text });
+      broadcastNetworkPacket({ t: 'CHAT', author: store.nickname, text: text });
       el.inputChat.value = '';
     });
 
