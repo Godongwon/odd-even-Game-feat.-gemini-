@@ -534,11 +534,35 @@
               </div>
             </div>
 
-            <!-- Betting Complete Button -->
-            <button id="btnConfirmBet" class="w-full py-3 sm:py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:brightness-110 active:scale-98 text-slate-950 font-black text-sm sm:text-base tracking-wide transition shadow-xl shadow-amber-500/25 flex items-center justify-center gap-2 cursor-pointer border-t border-amber-200/50 select-none">
-              <i class="ph-bold ph-check-circle text-xl" id="iconConfirmBet"></i>
-              <span id="textConfirmBet">배팅완료</span>
-            </button>
+            <!-- Betting Action Bar: 좌측(선택 홀/짝 & 배팅금액 확인) + 우측(배팅완료 버튼) -->
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-2.5 items-stretch pt-0.5">
+              <!-- 좌측: 현재 선택한 홀/짝 & 배팅금액 실시간 요약 카드 -->
+              <div class="sm:col-span-7 bg-slate-950/90 border-2 border-slate-800 px-3 py-2 rounded-2xl flex items-center justify-between shadow-inner">
+                <!-- 선택한 홀/짝 태그 -->
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider hidden xs:inline">선택:</span>
+                  <div id="summaryChoiceBadge" class="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-700/80 text-xs font-black font-chakra text-slate-400 transition-all flex items-center gap-1">
+                    <span id="summaryChoiceIcon" class="text-xs">⚪</span>
+                    <span id="summaryChoiceText">미선택</span>
+                  </div>
+                </div>
+
+                <!-- 배팅할 금액 확인 -->
+                <div class="flex flex-col items-end pl-2">
+                  <span class="text-[9px] uppercase font-bold text-slate-400 tracking-wider">배팅 확정액</span>
+                  <div class="flex items-baseline gap-1">
+                    <span id="summaryBetAmount" class="font-chakra text-base sm:text-lg font-black text-amber-300 tracking-tight">0</span>
+                    <span class="text-[10px] text-amber-500 font-bold">칩</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 우측: 배팅완료 버튼 -->
+              <button id="btnConfirmBet" class="sm:col-span-5 w-full py-3 sm:py-0 min-h-[48px] rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:brightness-110 active:scale-98 text-slate-950 font-black text-sm sm:text-base tracking-wide transition shadow-xl shadow-amber-500/25 flex items-center justify-center gap-2 cursor-pointer border-t border-amber-200/50 select-none">
+                <i class="ph-bold ph-check-circle text-xl" id="iconConfirmBet"></i>
+                <span id="textConfirmBet">배팅완료</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -693,7 +717,7 @@
   <aside id="appVersionBadge" class="fixed bottom-2.5 right-3 z-50 pointer-events-none select-none">
     <div class="px-2 py-0.5 rounded-lg bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-[10px] font-chakra font-black tracking-wider text-purple-300/80 shadow-md flex items-center gap-1">
       <span class="w-1.5 h-1.5 rounded-full bg-cyan-400/80"></span>
-      <span>ver_0.2.7</span>
+      <span>ver_0.2.8</span>
     </div>
   </aside>
 
@@ -857,6 +881,10 @@
       checkEven: document.getElementById('checkEven'),
       lblBetAmount: document.getElementById('lblBetAmount'),
       lblBetRatioPercent: document.getElementById('lblBetRatioPercent'),
+      summaryChoiceBadge: document.getElementById('summaryChoiceBadge'),
+      summaryChoiceIcon: document.getElementById('summaryChoiceIcon'),
+      summaryChoiceText: document.getElementById('summaryChoiceText'),
+      summaryBetAmount: document.getElementById('summaryBetAmount'),
       btnConfirmBet: document.getElementById('btnConfirmBet'),
       textConfirmBet: document.getElementById('textConfirmBet'),
       iconConfirmBet: document.getElementById('iconConfirmBet'),
@@ -2035,6 +2063,26 @@
 
     function renderBettingPanel() {
       el.lblBetAmount.textContent = store.betAmount.toLocaleString();
+      if (el.summaryBetAmount) {
+        el.summaryBetAmount.textContent = store.betAmount.toLocaleString();
+      }
+
+      // 좌측 배팅 요약 카드 홀/짝 뱃지 갱신
+      if (el.summaryChoiceBadge) {
+        if (store.selectedChoice === 'ODD') {
+          el.summaryChoiceBadge.className = 'px-2.5 py-1 rounded-xl bg-cyan-950/90 border-2 border-cyan-400 text-xs font-black font-chakra text-cyan-300 shadow-md shadow-cyan-500/30 flex items-center gap-1 animate-pulse';
+          el.summaryChoiceIcon.textContent = '⚡';
+          el.summaryChoiceText.textContent = '홀 (ODD)';
+        } else if (store.selectedChoice === 'EVEN') {
+          el.summaryChoiceBadge.className = 'px-2.5 py-1 rounded-xl bg-rose-950/90 border-2 border-rose-400 text-xs font-black font-chakra text-rose-300 shadow-md shadow-rose-500/30 flex items-center gap-1 animate-pulse';
+          el.summaryChoiceIcon.textContent = '❄️';
+          el.summaryChoiceText.textContent = '짝 (EVEN)';
+        } else {
+          el.summaryChoiceBadge.className = 'px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-700/80 text-xs font-black font-chakra text-slate-400 flex items-center gap-1';
+          el.summaryChoiceIcon.textContent = '⚪';
+          el.summaryChoiceText.textContent = '미선택';
+        }
+      }
 
       // 배팅 비율 퍼센트 갱신
       if (el.lblBetRatioPercent) {
@@ -2045,9 +2093,9 @@
 
       if (store.isBankrupt) {
         el.btnConfirmBet.disabled = true;
-        el.btnConfirmBet.className = 'w-full py-3 sm:py-3.5 rounded-2xl bg-rose-950/40 border border-rose-500/30 text-rose-400 font-black text-sm flex items-center justify-center gap-1.5 cursor-not-allowed';
+        el.btnConfirmBet.className = 'sm:col-span-5 w-full py-3 sm:py-0 min-h-[48px] rounded-2xl bg-rose-950/40 border border-rose-500/30 text-rose-400 font-black text-sm flex items-center justify-center gap-1.5 cursor-not-allowed';
         el.iconConfirmBet.className = 'ph-bold ph-skull text-base text-rose-400';
-        el.textConfirmBet.textContent = '파산 (배팅 불가 / 관전 중)';
+        el.textConfirmBet.textContent = '파산 (관전 중)';
 
         el.cardOdd.className = 'py-3 px-2.5 rounded-2xl bg-slate-950/40 border-2 border-slate-800 opacity-40 flex flex-col items-center justify-center gap-1 cursor-not-allowed';
         el.cardEven.className = 'py-3 px-2.5 rounded-2xl bg-slate-950/40 border-2 border-slate-800 opacity-40 flex flex-col items-center justify-center gap-1 cursor-not-allowed';
@@ -2058,7 +2106,7 @@
 
       if (store.phase === 'BETTING' && !store.hasBet) {
         el.btnConfirmBet.disabled = false;
-        el.btnConfirmBet.className = 'w-full py-3 sm:py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:brightness-110 active:scale-98 text-slate-950 font-black text-sm sm:text-base tracking-wide transition shadow-xl shadow-amber-500/30 flex items-center justify-center gap-2 cursor-pointer border-t border-amber-200/50';
+        el.btnConfirmBet.className = 'sm:col-span-5 w-full py-3 sm:py-0 min-h-[48px] rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:brightness-110 active:scale-98 text-slate-950 font-black text-sm sm:text-base tracking-wide transition shadow-xl shadow-amber-500/30 flex items-center justify-center gap-2 cursor-pointer border-t border-amber-200/50';
         el.iconConfirmBet.className = 'ph-bold ph-check-circle text-xl';
         el.textConfirmBet.textContent = '배팅완료';
 
@@ -2081,15 +2129,15 @@
         el.btnConfirmBet.disabled = true;
         const isAllIn = store.chips === 0 && store.betAmount > 0;
         el.btnConfirmBet.className = isAllIn
-          ? 'w-full py-3 sm:py-3.5 rounded-2xl bg-gradient-to-r from-amber-600 via-rose-600 to-amber-600 text-white font-black text-sm sm:text-base transition flex items-center justify-center gap-2 cursor-default shadow-xl shadow-rose-500/40 border border-amber-400/50'
-          : 'w-full py-3 sm:py-3.5 rounded-2xl bg-emerald-600 text-white font-black text-sm sm:text-base transition flex items-center justify-center gap-2 cursor-default shadow-lg shadow-emerald-600/30';
+          ? 'sm:col-span-5 w-full py-3 sm:py-0 min-h-[48px] rounded-2xl bg-gradient-to-r from-amber-600 via-rose-600 to-amber-600 text-white font-black text-sm sm:text-base transition flex items-center justify-center gap-2 cursor-default shadow-xl shadow-rose-500/40 border border-amber-400/50'
+          : 'sm:col-span-5 w-full py-3 sm:py-0 min-h-[48px] rounded-2xl bg-emerald-600 text-white font-black text-sm sm:text-base transition flex items-center justify-center gap-2 cursor-default shadow-lg shadow-emerald-600/30';
         el.iconConfirmBet.className = isAllIn ? 'ph-bold ph-fire text-xl text-amber-200 animate-pulse' : 'ph-bold ph-check-circle text-xl text-emerald-200';
-        el.textConfirmBet.textContent = isAllIn ? '🔥 올인 배팅완료!' : '✓ 배팅완료됨';
+        el.textConfirmBet.textContent = isAllIn ? '🔥 올인완료' : '✓ 배팅완료';
       } else {
         el.btnConfirmBet.disabled = true;
-        el.btnConfirmBet.className = 'w-full py-3 sm:py-3.5 rounded-2xl bg-slate-800 text-slate-500 font-bold text-sm sm:text-base flex items-center justify-center gap-2 cursor-not-allowed border border-slate-700/50';
+        el.btnConfirmBet.className = 'sm:col-span-5 w-full py-3 sm:py-0 min-h-[48px] rounded-2xl bg-slate-800 text-slate-500 font-bold text-sm sm:text-base flex items-center justify-center gap-2 cursor-not-allowed border border-slate-700/50';
         el.iconConfirmBet.className = 'ph-bold ph-lock text-lg';
-        el.textConfirmBet.textContent = '배팅 대기 중';
+        el.textConfirmBet.textContent = '배팅 대기';
       }
     }
 
