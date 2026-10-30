@@ -47,6 +47,20 @@
       border-color: #f43f5e !important;
     }
 
+    /* 배팅 패널 고시인성 네온 글로우 및 애니메이션 */
+    .card-odd-active {
+      background: linear-gradient(145deg, rgba(8, 145, 178, 0.25) 0%, rgba(6, 182, 212, 0.12) 100%) !important;
+      border-color: #22d3ee !important;
+      box-shadow: 0 0 28px rgba(34, 211, 238, 0.35), inset 0 0 16px rgba(34, 211, 238, 0.2) !important;
+      transform: translateY(-2px);
+    }
+    .card-even-active {
+      background: linear-gradient(145deg, rgba(225, 29, 72, 0.25) 0%, rgba(244, 63, 94, 0.12) 100%) !important;
+      border-color: #fb7185 !important;
+      box-shadow: 0 0 28px rgba(251, 113, 133, 0.35), inset 0 0 16px rgba(251, 113, 133, 0.2) !important;
+      transform: translateY(-2px);
+    }
+
     /* 3D Dice Simulation */
     .dice-scene {
       perspective: 800px;
@@ -444,57 +458,85 @@
             </div>
           </div>
 
-          <!-- Betting Controls Section -->
-          <div class="bg-slate-900/90 border border-purple-500/20 rounded-3xl p-3 sm:p-4 space-y-2.5 sm:space-y-3 shadow-xl shrink-0">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-1.5">
-                <i class="ph-bold ph-hand-coins text-amber-400 text-base"></i>
-                <h3 class="font-bold text-xs sm:text-sm text-slate-200">배팅 패널</h3>
+          <!-- Betting Controls Section (고시인성 강화 디자인) -->
+          <div class="bg-gradient-to-b from-slate-900/95 to-slate-950/95 border-2 border-purple-500/30 rounded-3xl p-3.5 sm:p-4 space-y-3 shadow-2xl shrink-0 backdrop-blur-xl">
+            <!-- Header: 보유 칩 & 배팅 비중 게이지 -->
+            <div class="flex items-center justify-between bg-slate-950/80 px-3 py-2 rounded-2xl border border-slate-800/90 shadow-inner">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                  <i class="ph-bold ph-coins text-base"></i>
+                </div>
+                <div class="flex flex-col">
+                  <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">내 보유 칩</span>
+                  <div class="flex items-baseline gap-1">
+                    <span id="lblUserChips" class="font-chakra font-black text-amber-300 text-base sm:text-lg tracking-tight">1,000</span>
+                    <span class="text-[10px] text-amber-500/90 font-bold">CHIPS</span>
+                  </div>
+                </div>
               </div>
-              <div class="text-xs text-slate-400">
-                보유 칩: <span id="lblUserChips" class="font-bold font-chakra text-amber-400 text-sm">1,000</span>
+
+              <!-- 현재 배팅액 요약 칩 배지 -->
+              <div class="flex items-center gap-1.5 bg-slate-900/90 border border-purple-500/30 px-2.5 py-1 rounded-xl">
+                <span class="text-[10px] text-slate-400 font-semibold">배팅 비율</span>
+                <span id="lblBetRatioPercent" class="text-xs font-chakra font-black text-purple-300">0%</span>
               </div>
             </div>
 
-            <!-- Odd vs Even Select Cards -->
-            <div class="grid grid-cols-2 gap-2.5">
-              <button id="cardOdd" class="py-2.5 px-2 rounded-2xl bg-slate-950/70 border-2 border-slate-700 hover:border-cyan-500 transition-all flex flex-col items-center justify-center gap-0.5 group relative cursor-pointer">
-                <span class="text-xl sm:text-2xl font-black font-chakra text-cyan-400 group-hover:scale-105 transition-transform">홀 (ODD)</span>
-                <span class="text-[10px] text-slate-400">합 1, 3, 5, 7, 9, 11</span>
-                <div id="checkOdd" class="hidden absolute top-2 right-2 text-cyan-400 text-sm">
+            <!-- Odd vs Even Select Cards (대형 고시인성 선택 패널) -->
+            <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
+              <button id="cardOdd" type="button" class="py-3 px-2.5 rounded-2xl bg-slate-950/85 border-2 border-slate-700/80 hover:border-cyan-400/80 transition-all flex flex-col items-center justify-center gap-1 group relative cursor-pointer shadow-md select-none">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-cyan-400 text-base sm:text-lg">⚡</span>
+                  <span class="text-2xl sm:text-3xl font-black font-chakra text-cyan-400 tracking-tight group-hover:scale-105 transition-transform">홀 (ODD)</span>
+                </div>
+                <div class="px-2 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-500/30 text-[10px] sm:text-[11px] font-chakra font-bold text-cyan-300">
+                  합 1, 3, 5, 7, 9, 11
+                </div>
+                <div id="checkOdd" class="hidden absolute top-2 right-2 text-cyan-300 text-base sm:text-lg animate-bounce">
                   <i class="ph-fill ph-check-circle"></i>
                 </div>
               </button>
 
-              <button id="cardEven" class="py-2.5 px-2 rounded-2xl bg-slate-950/70 border-2 border-slate-700 hover:border-rose-500 transition-all flex flex-col items-center justify-center gap-0.5 group relative cursor-pointer">
-                <span class="text-xl sm:text-2xl font-black font-chakra text-rose-400 group-hover:scale-105 transition-transform">짝 (EVEN)</span>
-                <span class="text-[10px] text-slate-400">합 2, 4, 6, 8, 10, 12</span>
-                <div id="checkEven" class="hidden absolute top-2 right-2 text-rose-400 text-sm">
+              <button id="cardEven" type="button" class="py-3 px-2.5 rounded-2xl bg-slate-950/85 border-2 border-slate-700/80 hover:border-rose-400/80 transition-all flex flex-col items-center justify-center gap-1 group relative cursor-pointer shadow-md select-none">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-rose-400 text-base sm:text-lg">❄️</span>
+                  <span class="text-2xl sm:text-3xl font-black font-chakra text-rose-400 tracking-tight group-hover:scale-105 transition-transform">짝 (EVEN)</span>
+                </div>
+                <div class="px-2 py-0.5 rounded-full bg-rose-950/80 border border-rose-500/30 text-[10px] sm:text-[11px] font-chakra font-bold text-rose-300">
+                  합 2, 4, 6, 8, 10, 12
+                </div>
+                <div id="checkEven" class="hidden absolute top-2 right-2 text-rose-300 text-base sm:text-lg animate-bounce">
                   <i class="ph-fill ph-check-circle"></i>
                 </div>
               </button>
             </div>
 
             <!-- Chip Increments & Amount Display -->
-            <div class="space-y-1.5 bg-slate-950/50 p-2 sm:p-2.5 rounded-2xl border border-slate-800">
-              <div class="flex items-center justify-between">
-                <span class="text-[10px] font-semibold text-slate-400">배팅액:</span>
-                <div class="font-chakra text-base sm:text-lg font-black text-amber-300">
-                  <span id="lblBetAmount">0</span> <span class="text-xs text-amber-500 font-semibold">칩</span>
+            <div class="space-y-2 bg-slate-950/80 p-2.5 sm:p-3 rounded-2xl border border-slate-800 shadow-inner">
+              <div class="flex items-center justify-between px-1">
+                <div class="flex items-center gap-1.5 text-xs font-bold text-slate-300">
+                  <i class="ph-bold ph-hand-coins text-amber-400"></i>
+                  <span>배팅할 금액</span>
+                </div>
+                <div class="flex items-baseline gap-1.5">
+                  <span id="lblBetAmount" class="font-chakra text-xl sm:text-2xl font-black text-amber-300 tracking-tight">0</span>
+                  <span class="text-xs text-amber-500 font-bold uppercase font-chakra">칩</span>
                 </div>
               </div>
-              <div class="grid grid-cols-5 gap-1.5">
-                <button class="chip-add-btn py-1 text-xs font-chakra font-bold rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 transition" data-amount="100">+100</button>
-                <button class="chip-add-btn py-1 text-xs font-chakra font-bold rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 transition" data-amount="500">+500</button>
-                <button class="chip-add-btn py-1 text-xs font-chakra font-bold rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 transition" data-amount="1000">+1000</button>
-                <button class="chip-add-btn py-1 text-xs font-chakra font-bold rounded-lg bg-purple-900/40 hover:bg-purple-800/50 active:scale-95 text-purple-300 border border-purple-700/50 transition" data-amount="max">올인</button>
-                <button class="chip-add-btn py-1 text-xs font-chakra font-bold rounded-lg bg-rose-950/40 hover:bg-rose-900/50 active:scale-95 text-rose-300 border border-rose-800/50 transition" data-amount="reset">초기화</button>
+
+              <!-- 고대비 칩 증감 버튼 그리드 -->
+              <div class="grid grid-cols-5 gap-1.5 sm:gap-2">
+                <button class="chip-add-btn py-2 text-xs sm:text-sm font-chakra font-extrabold rounded-xl bg-slate-900 hover:bg-slate-800 active:scale-95 text-slate-100 border border-slate-700 shadow transition" data-amount="100">+100</button>
+                <button class="chip-add-btn py-2 text-xs sm:text-sm font-chakra font-extrabold rounded-xl bg-slate-900 hover:bg-slate-800 active:scale-95 text-slate-100 border border-slate-700 shadow transition" data-amount="500">+500</button>
+                <button class="chip-add-btn py-2 text-xs sm:text-sm font-chakra font-extrabold rounded-xl bg-slate-900 hover:bg-slate-800 active:scale-95 text-slate-100 border border-slate-700 shadow transition" data-amount="1000">+1K</button>
+                <button class="chip-add-btn py-2 text-xs sm:text-sm font-chakra font-black rounded-xl bg-purple-900/60 hover:bg-purple-800/80 active:scale-95 text-purple-200 border border-purple-500/50 shadow-md shadow-purple-900/20 transition" data-amount="max">올인</button>
+                <button class="chip-add-btn py-2 text-xs sm:text-sm font-chakra font-bold rounded-xl bg-rose-950/60 hover:bg-rose-900/80 active:scale-95 text-rose-300 border border-rose-800/60 shadow transition" data-amount="reset">리셋</button>
               </div>
             </div>
 
             <!-- Betting Complete Button -->
-            <button id="btnConfirmBet" class="w-full py-2.5 sm:py-3 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:brightness-110 active:scale-98 text-slate-950 font-black text-sm sm:text-base transition shadow-xl shadow-amber-500/20 flex items-center justify-center gap-1.5 cursor-pointer">
-              <i class="ph-bold ph-check-circle text-lg" id="iconConfirmBet"></i>
+            <button id="btnConfirmBet" class="w-full py-3 sm:py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:brightness-110 active:scale-98 text-slate-950 font-black text-sm sm:text-base tracking-wide transition shadow-xl shadow-amber-500/25 flex items-center justify-center gap-2 cursor-pointer border-t border-amber-200/50 select-none">
+              <i class="ph-bold ph-check-circle text-xl" id="iconConfirmBet"></i>
               <span id="textConfirmBet">배팅완료</span>
             </button>
           </div>
@@ -651,7 +693,7 @@
   <aside id="appVersionBadge" class="fixed bottom-2.5 right-3 z-50 pointer-events-none select-none">
     <div class="px-2 py-0.5 rounded-lg bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-[10px] font-chakra font-black tracking-wider text-purple-300/80 shadow-md flex items-center gap-1">
       <span class="w-1.5 h-1.5 rounded-full bg-cyan-400/80"></span>
-      <span>ver_0.2.6</span>
+      <span>ver_0.2.7</span>
     </div>
   </aside>
 
@@ -814,6 +856,7 @@
       checkOdd: document.getElementById('checkOdd'),
       checkEven: document.getElementById('checkEven'),
       lblBetAmount: document.getElementById('lblBetAmount'),
+      lblBetRatioPercent: document.getElementById('lblBetRatioPercent'),
       btnConfirmBet: document.getElementById('btnConfirmBet'),
       textConfirmBet: document.getElementById('textConfirmBet'),
       iconConfirmBet: document.getElementById('iconConfirmBet'),
@@ -1993,14 +2036,21 @@
     function renderBettingPanel() {
       el.lblBetAmount.textContent = store.betAmount.toLocaleString();
 
+      // 배팅 비율 퍼센트 갱신
+      if (el.lblBetRatioPercent) {
+        const totalAvail = store.chips + (store.hasBet ? store.betAmount : 0);
+        const ratio = totalAvail > 0 ? Math.round((store.betAmount / totalAvail) * 100) : 0;
+        el.lblBetRatioPercent.textContent = `${ratio}%`;
+      }
+
       if (store.isBankrupt) {
         el.btnConfirmBet.disabled = true;
-        el.btnConfirmBet.className = 'w-full py-2.5 sm:py-3 rounded-2xl bg-rose-950/40 border border-rose-500/30 text-rose-400 font-black text-sm flex items-center justify-center gap-1.5 cursor-not-allowed';
+        el.btnConfirmBet.className = 'w-full py-3 sm:py-3.5 rounded-2xl bg-rose-950/40 border border-rose-500/30 text-rose-400 font-black text-sm flex items-center justify-center gap-1.5 cursor-not-allowed';
         el.iconConfirmBet.className = 'ph-bold ph-skull text-base text-rose-400';
         el.textConfirmBet.textContent = '파산 (배팅 불가 / 관전 중)';
 
-        el.cardOdd.className = 'py-2.5 px-2 rounded-2xl bg-slate-950/40 border-2 border-slate-800 opacity-50 flex flex-col items-center justify-center gap-0.5 cursor-not-allowed';
-        el.cardEven.className = 'py-2.5 px-2 rounded-2xl bg-slate-950/40 border-2 border-slate-800 opacity-50 flex flex-col items-center justify-center gap-0.5 cursor-not-allowed';
+        el.cardOdd.className = 'py-3 px-2.5 rounded-2xl bg-slate-950/40 border-2 border-slate-800 opacity-40 flex flex-col items-center justify-center gap-1 cursor-not-allowed';
+        el.cardEven.className = 'py-3 px-2.5 rounded-2xl bg-slate-950/40 border-2 border-slate-800 opacity-40 flex flex-col items-center justify-center gap-1 cursor-not-allowed';
         el.checkOdd.classList.add('hidden');
         el.checkEven.classList.add('hidden');
         return;
@@ -2008,36 +2058,36 @@
 
       if (store.phase === 'BETTING' && !store.hasBet) {
         el.btnConfirmBet.disabled = false;
-        el.btnConfirmBet.className = 'w-full py-2.5 sm:py-3 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:brightness-110 active:scale-98 text-slate-950 font-black text-sm sm:text-base transition shadow-xl shadow-amber-500/20 flex items-center justify-center gap-1.5 cursor-pointer';
-        el.iconConfirmBet.className = 'ph-bold ph-check-circle text-lg';
+        el.btnConfirmBet.className = 'w-full py-3 sm:py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:brightness-110 active:scale-98 text-slate-950 font-black text-sm sm:text-base tracking-wide transition shadow-xl shadow-amber-500/30 flex items-center justify-center gap-2 cursor-pointer border-t border-amber-200/50';
+        el.iconConfirmBet.className = 'ph-bold ph-check-circle text-xl';
         el.textConfirmBet.textContent = '배팅완료';
 
         if (store.selectedChoice === 'ODD') {
-          el.cardOdd.className = 'py-2.5 px-2 rounded-2xl bg-cyan-950/70 border-2 neon-odd transition-all flex flex-col items-center justify-center gap-0.5 group relative cursor-pointer';
+          el.cardOdd.className = 'py-3 px-2.5 rounded-2xl border-2 card-odd-active flex flex-col items-center justify-center gap-1 group relative cursor-pointer select-none';
           el.checkOdd.classList.remove('hidden');
         } else {
-          el.cardOdd.className = 'py-2.5 px-2 rounded-2xl bg-slate-950/70 border-2 border-slate-700 hover:border-cyan-500 transition-all flex flex-col items-center justify-center gap-0.5 group relative cursor-pointer';
+          el.cardOdd.className = 'py-3 px-2.5 rounded-2xl bg-slate-950/85 border-2 border-slate-700/80 hover:border-cyan-400/80 transition-all flex flex-col items-center justify-center gap-1 group relative cursor-pointer shadow-md select-none';
           el.checkOdd.classList.add('hidden');
         }
 
         if (store.selectedChoice === 'EVEN') {
-          el.cardEven.className = 'py-2.5 px-2 rounded-2xl bg-rose-950/70 border-2 neon-even transition-all flex flex-col items-center justify-center gap-0.5 group relative cursor-pointer';
+          el.cardEven.className = 'py-3 px-2.5 rounded-2xl border-2 card-even-active flex flex-col items-center justify-center gap-1 group relative cursor-pointer select-none';
           el.checkEven.classList.remove('hidden');
         } else {
-          el.cardEven.className = 'py-2.5 px-2 rounded-2xl bg-slate-950/70 border-2 border-slate-700 hover:border-rose-500 transition-all flex flex-col items-center justify-center gap-0.5 group relative cursor-pointer';
+          el.cardEven.className = 'py-3 px-2.5 rounded-2xl bg-slate-950/85 border-2 border-slate-700/80 hover:border-rose-400/80 transition-all flex flex-col items-center justify-center gap-1 group relative cursor-pointer shadow-md select-none';
           el.checkEven.classList.add('hidden');
         }
       } else if (store.hasBet) {
         el.btnConfirmBet.disabled = true;
         const isAllIn = store.chips === 0 && store.betAmount > 0;
         el.btnConfirmBet.className = isAllIn
-          ? 'w-full py-2.5 sm:py-3 rounded-2xl bg-gradient-to-r from-amber-600 to-rose-600 text-white font-black text-sm sm:text-base transition flex items-center justify-center gap-1.5 cursor-default shadow-lg shadow-rose-500/30'
-          : 'w-full py-2.5 sm:py-3 rounded-2xl bg-emerald-600 text-white font-black text-sm sm:text-base transition flex items-center justify-center gap-1.5 cursor-default';
-        el.iconConfirmBet.className = isAllIn ? 'ph-bold ph-fire text-lg text-amber-200' : 'ph-bold ph-check-circle text-lg text-emerald-200';
-        el.textConfirmBet.textContent = isAllIn ? '올인 배팅완료!' : '배팅완료됨';
+          ? 'w-full py-3 sm:py-3.5 rounded-2xl bg-gradient-to-r from-amber-600 via-rose-600 to-amber-600 text-white font-black text-sm sm:text-base transition flex items-center justify-center gap-2 cursor-default shadow-xl shadow-rose-500/40 border border-amber-400/50'
+          : 'w-full py-3 sm:py-3.5 rounded-2xl bg-emerald-600 text-white font-black text-sm sm:text-base transition flex items-center justify-center gap-2 cursor-default shadow-lg shadow-emerald-600/30';
+        el.iconConfirmBet.className = isAllIn ? 'ph-bold ph-fire text-xl text-amber-200 animate-pulse' : 'ph-bold ph-check-circle text-xl text-emerald-200';
+        el.textConfirmBet.textContent = isAllIn ? '🔥 올인 배팅완료!' : '✓ 배팅완료됨';
       } else {
         el.btnConfirmBet.disabled = true;
-        el.btnConfirmBet.className = 'w-full py-2.5 sm:py-3 rounded-2xl bg-slate-800 text-slate-500 font-bold text-sm sm:text-base flex items-center justify-center gap-1.5 cursor-not-allowed';
+        el.btnConfirmBet.className = 'w-full py-3 sm:py-3.5 rounded-2xl bg-slate-800 text-slate-500 font-bold text-sm sm:text-base flex items-center justify-center gap-2 cursor-not-allowed border border-slate-700/50';
         el.iconConfirmBet.className = 'ph-bold ph-lock text-lg';
         el.textConfirmBet.textContent = '배팅 대기 중';
       }
