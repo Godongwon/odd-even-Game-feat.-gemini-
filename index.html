@@ -561,12 +561,29 @@
                   </div>
                 </div>
 
-                <!-- 배팅할 금액 확인 -->
-                <div class="flex flex-col items-end pl-2">
-                  <span class="text-[9px] uppercase font-bold text-slate-400 tracking-wider">배팅 확정액</span>
-                  <div class="flex items-baseline gap-1">
-                    <span id="summaryBetAmount" class="font-chakra text-base sm:text-lg font-black text-amber-300 tracking-tight">0</span>
-                    <span class="text-[10px] text-amber-500 font-bold">칩</span>
+                <!-- 배팅할 금액 & 맞출 시 예상 획득 칩 확인 -->
+                <div class="flex items-center gap-2.5 sm:gap-3 pl-2">
+                  <!-- 배팅 확정액 -->
+                  <div class="flex flex-col items-end">
+                    <span class="text-[9px] uppercase font-bold text-slate-400 tracking-wider">배팅 확정액</span>
+                    <div class="flex items-baseline gap-1">
+                      <span id="summaryBetAmount" class="font-chakra text-base sm:text-lg font-black text-amber-300 tracking-tight">0</span>
+                      <span class="text-[10px] text-amber-500 font-bold">칩</span>
+                    </div>
+                  </div>
+
+                  <span class="w-[1px] h-7 bg-slate-800 shrink-0"></span>
+
+                  <!-- 맞출 시 예상 획득 칩 -->
+                  <div class="flex flex-col items-end">
+                    <div class="flex items-center gap-1">
+                      <span class="text-[9px] uppercase font-bold text-emerald-400 tracking-wider">적중 시 획득</span>
+                      <span id="summaryWinOddsMultiplier" class="text-[9px] font-chakra font-black text-emerald-400/80">(x0.0)</span>
+                    </div>
+                    <div class="flex items-baseline gap-1">
+                      <span id="summaryEstimatedWinAmount" class="font-chakra text-base sm:text-lg font-black text-emerald-300 tracking-tight">0</span>
+                      <span class="text-[10px] text-emerald-400 font-bold">칩</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -731,7 +748,7 @@
   <aside id="appVersionBadge" class="fixed bottom-2.5 right-3 z-50 pointer-events-none select-none">
     <div class="px-2 py-0.5 rounded-lg bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-[10px] font-chakra font-black tracking-wider text-purple-300/80 shadow-md flex items-center gap-1">
       <span class="w-1.5 h-1.5 rounded-full bg-cyan-400/80"></span>
-      <span>ver_0.2.9</span>
+      <span>ver_0.3.0</span>
     </div>
   </aside>
 
@@ -905,6 +922,8 @@
       summaryChoiceIcon: document.getElementById('summaryChoiceIcon'),
       summaryChoiceText: document.getElementById('summaryChoiceText'),
       summaryBetAmount: document.getElementById('summaryBetAmount'),
+      summaryWinOddsMultiplier: document.getElementById('summaryWinOddsMultiplier'),
+      summaryEstimatedWinAmount: document.getElementById('summaryEstimatedWinAmount'),
       btnConfirmBet: document.getElementById('btnConfirmBet'),
       textConfirmBet: document.getElementById('textConfirmBet'),
       iconConfirmBet: document.getElementById('iconConfirmBet'),
@@ -2140,6 +2159,25 @@
       }
 
       renderOddsDisplay();
+
+      // 맞출 시 예상 획득 칩 및 배당 배수 실시간 계산
+      if (el.summaryEstimatedWinAmount && el.summaryWinOddsMultiplier) {
+        const { oddOdds, evenOdds } = calculatePariMutuelOdds();
+        let targetOdds = 0;
+        if (store.selectedChoice === 'ODD') targetOdds = oddOdds;
+        else if (store.selectedChoice === 'EVEN') targetOdds = evenOdds;
+
+        if (store.selectedChoice && store.betAmount > 0) {
+          const estimatedWin = Math.round(store.betAmount * targetOdds);
+          el.summaryEstimatedWinAmount.textContent = estimatedWin.toLocaleString();
+          el.summaryWinOddsMultiplier.textContent = `(x${targetOdds.toFixed(2)})`;
+          el.summaryEstimatedWinAmount.className = 'font-chakra text-base sm:text-lg font-black text-emerald-300 tracking-tight animate-pulse';
+        } else {
+          el.summaryEstimatedWinAmount.textContent = '0';
+          el.summaryWinOddsMultiplier.textContent = '(x0.0)';
+          el.summaryEstimatedWinAmount.className = 'font-chakra text-base sm:text-lg font-black text-slate-500 tracking-tight';
+        }
+      }
 
       if (el.summaryChoiceBadge) {
         if (store.selectedChoice === 'ODD') {
