@@ -748,7 +748,7 @@
   <aside id="appVersionBadge" class="fixed bottom-2.5 right-3 z-50 pointer-events-none select-none">
     <div class="px-2 py-0.5 rounded-lg bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-[10px] font-chakra font-black tracking-wider text-purple-300/80 shadow-md flex items-center gap-1">
       <span class="w-1.5 h-1.5 rounded-full bg-cyan-400/80"></span>
-      <span>ver_0.3.0</span>
+      <span>ver_0.3.1</span>
     </div>
   </aside>
 
@@ -836,6 +836,9 @@
       players: {},
       isNetConnected: false,
       roundHistory: [],
+      // 배팅 종료 시점의 확정 배당률 보존 (정산 왜곡 방지)
+      lockedOddOdds: 2.0,
+      lockedEvenOdds: 2.0,
       
       chatMessages: [],
       isChatExpanded: false,
@@ -1489,6 +1492,8 @@
           store.betAmount = 0;
           store.forcedRig = null;
           store.isReady = false;
+          store.lockedOddOdds = 2.0;
+          store.lockedEvenOdds = 2.0;
 
           Object.keys(store.players).forEach(id => {
             store.players[id].choice = null;
@@ -2102,6 +2107,7 @@
         }
       });
 
+      // 내가 아직 배팅완료를 누르지 않았을 때 입력 중인 금액 가상 반영
       if (store.phase === 'BETTING' && !store.hasBet && store.selectedChoice && store.betAmount > 0) {
         if (store.selectedChoice === 'ODD') oddPool += store.betAmount;
         else if (store.selectedChoice === 'EVEN') evenPool += store.betAmount;
@@ -2113,14 +2119,17 @@
 
       if (totalPool > 0) {
         if (oddPool > 0 && evenPool > 0) {
+          // 승리 시 원금 포함 환급 배당률 (최소 1.05배 보장)
           oddOdds = Math.max(1.05, +(totalPool / oddPool).toFixed(2));
           evenOdds = Math.max(1.05, +(totalPool / evenPool).toFixed(2));
         } else if (oddPool > 0 && evenPool === 0) {
-          oddOdds = 1.05;
-          evenOdds = 5.0;
+          // 전원 홀에 건 경우: 원금 100% 보장 (1.00배)
+          oddOdds = 1.00;
+          evenOdds = 5.00;
         } else if (evenPool > 0 && oddPool === 0) {
-          evenOdds = 1.05;
-          oddOdds = 5.0;
+          // 전원 짝에 건 경우: 원금 100% 보장 (1.00배)
+          evenOdds = 1.00;
+          oddOdds = 5.00;
         }
       }
 
@@ -2410,6 +2419,11 @@
     function rollTheDice() {
       clearInterval(store.timerTimer);
 
+      // 주사위 롤링 직전 최종 패리뮤추얼 배당률 락(Lock)
+      const { oddOdds, evenOdds } = calculatePariMutuelOdds();
+      store.lockedOddOdds = oddOdds;
+      store.lockedEvenOdds = evenOdds;
+
       let targetParity = store.forcedRig || (Math.random() < 0.5 ? 'ODD' : 'EVEN');
       let d1 = 1 + Math.floor(Math.random() * 6);
       let d2 = 1 + Math.floor(Math.random() * 6);
@@ -2421,11 +2435,19 @@
       const sum = d1 + d2;
       const isOdd = sum % 2 === 1;
 
-      broadcastNetworkPacket({ t: 'ROLL', d1, d2, sum, odd: isOdd });
-      runDiceRollSequence(d1, d2, sum, isOdd);
+      broadcastNetworkPacket({
+        t: 'ROLL',
+        d1,
+        d2,
+        sum,
+        odd: isOdd,
+        oddOdds: store.lockedOddOdds,
+        evenOdds: store.lockedEvenOdds
+      });
+      runDiceRollSequence(d1, d2, sum, isOdd, store.lockedOddOdds, store.lockedEvenOdds);
     }
 
-    function runDiceRollSequence(d1, d2, sum, isOdd) {
+    function runDiceRollSequence(d1, d2, sum, isOdd, snapOddOdds = null, snapEvenOdds = null) {
       store.phase = 'ROLLING';
       renderAll();
 
@@ -2454,11 +2476,14 @@
         el.lblResultMain.textContent = isOdd ? '결과: [홀] ODD' : '결과: [짝] EVEN';
         el.lblResultMain.className = `text-2xl sm:text-3xl font-black font-chakra mt-0.5 text-center leading-snug ${isOdd ? 'text-cyan-400' : 'text-rose-400'}`;
 
-        const { oddOdds, evenOdds } = calculatePariMutuelOdds();
-        const winningOdds = isOdd ? oddOdds : evenOdds;
+        // 롤링 시점에 잠가둔 확정 배당률 사용 (정산 시 배당 축소 버그 방지)
+        const finalOddOdds = snapOddOdds || store.lockedOddOdds || 2.0;
+        const finalEvenOdds = snapEvenOdds || store.lockedEvenOdds || 2.0;
+        const winningOdds = isOdd ? finalOddOdds : finalEvenOdds;
 
         const won = store.selectedChoice === resultParity;
         if (won) {
+          // 정확히 '적중 시 획득'으로 안내되었던 금액과 일치하게 계산
           const reward = Math.round(store.betAmount * winningOdds);
           store.chips += reward;
           confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
