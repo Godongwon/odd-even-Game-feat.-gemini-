@@ -613,7 +613,7 @@
   <aside id="appVersionBadge" class="fixed bottom-2.5 right-3 z-50 pointer-events-none select-none">
     <div class="px-2 py-0.5 rounded-lg bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-[10px] font-chakra font-black tracking-wider text-purple-300/80 shadow-md flex items-center gap-1">
       <span class="w-1.5 h-1.5 rounded-full bg-cyan-400/80"></span>
-      <span>ver_0.2.3</span>
+      <span>ver_0.2.4</span>
     </div>
   </aside>
 
@@ -1084,7 +1084,7 @@
         p: {
           id: store.myId,
           name: store.nickname,
-          chips: 1000,
+          chips: store.startingChips,
           choice: null,
           betAmount: 0,
           hasBet: false,
@@ -1176,14 +1176,20 @@
             const pid = msg.p.id;
             const isNew = !store.players[pid];
             msg.p.lastSeen = Date.now();
+
+            // 방장 기준 시작 칩 동기화
+            if (isNew && store.isHost) {
+              msg.p.chips = store.startingChips;
+            }
+
             store.players[pid] = Object.assign(store.players[pid] || {}, msg.p);
 
             if (isNew && !store.notifiedPlayerJoins.has(pid) && pid !== store.myId) {
               store.notifiedPlayerJoins.add(pid);
               sound.playChip();
-              showToast(`[${msg.p.name}] 님이 입장했습니다!`);
-              updateActionTicker(`🟢 ${msg.p.name} 님이 참가함`);
-              appendSystemChat(`${msg.p.name}님이 입장하였습니다.`);
+              showToast(`[${msg.p.name}] 님이 입장했습니다! (${store.startingChips.toLocaleString()}칩 지급)`);
+              updateActionTicker(`🟢 ${msg.p.name} 님이 참가함 (${store.startingChips.toLocaleString()}칩)`);
+              appendSystemChat(`${msg.p.name}님이 입장하였습니다. (시작 칩: ${store.startingChips.toLocaleString()})`);
             }
 
             if (store.isHost) {
@@ -1245,19 +1251,31 @@
             store.roomHostCheckTimer = null;
           }
 
+          const prevStartingChips = store.startingChips;
           store.phase = msg.ph || store.phase;
           store.currentRound = msg.rnd || store.currentRound;
           store.totalRounds = msg.tot || store.totalRounds;
           if (msg.sc) store.startingChips = msg.sc;
+
           if (msg.pls) {
             const myCurrent = store.players[store.myId] || {
               id: store.myId,
               name: store.nickname,
-              chips: store.chips,
-              isBankrupt: store.isBankrupt,
+              chips: store.startingChips,
+              isBankrupt: false,
               isReady: store.isReady,
               isHost: store.isHost
             };
+
+            // 처음 참가한 게스트인 경우 방장의 startingChips를 내 칩으로 최초 동기화
+            if (!store.isHost && (!store.players[store.myId] || (store.chips === 1000 && prevStartingChips !== store.startingChips && store.phase === 'WAITING' && !store.hasBet))) {
+              if (msg.pls[store.myId]) {
+                store.chips = msg.pls[store.myId].chips;
+              } else {
+                store.chips = store.startingChips;
+                myCurrent.chips = store.startingChips;
+              }
+            }
             
             Object.values(msg.pls).forEach(p => {
               if (p.id !== store.myId && !store.players[p.id] && !store.notifiedPlayerJoins.has(p.id)) {
@@ -2360,6 +2378,10 @@
         store.players[id].betAmount = 0;
         store.players[id].wins = 0;
       });
+
+      showToast(`새 게임이 시작되었습니다! 전원 ${store.startingChips.toLocaleString()}칩 지급`);
+      updateActionTicker(`🔄 새 게임 시작 (시작 칩: ${store.startingChips.toLocaleString()})`);
+      appendSystemChat(`🔄 새 게임이 시작되었습니다. 모든 참가자에게 ${store.startingChips.toLocaleString()}칩이 지급되었습니다.`);
 
       renderAll();
     }
