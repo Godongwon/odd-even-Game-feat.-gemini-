@@ -892,7 +892,12 @@
 
       if (store.mqttClient) {
         try {
-          if (store.mqttClient.isConnected()) store.mqttClient.disconnect();
+          if (store.mqttTopic) {
+            try { store.mqttClient.unsubscribe(store.mqttTopic); } catch(e) {}
+          }
+          if (store.mqttClient.isConnected()) {
+            store.mqttClient.disconnect();
+          }
         } catch(e) {}
         store.mqttClient = null;
       }
@@ -901,6 +906,9 @@
         try { store.localChannel.close(); } catch(e) {}
         store.localChannel = null;
       }
+
+      store.isNetConnected = false;
+      store.mqttTopic = '';
     }
 
     function broadcastNetworkPacket(packet) {
@@ -1361,9 +1369,20 @@
     }
 
     el.btnLeaveRoom.addEventListener('click', () => {
-      broadcastNetworkPacket({ t: 'LEAVE', pid: store.myId });
+      // 1. Send LEAVE packet to peers before tearing down socket
+      try {
+        broadcastNetworkPacket({ t: 'LEAVE', pid: store.myId });
+      } catch(e) {}
+
+      // 2. Completely terminate WebSocket, timers, and channel state
       destroyNetworking();
       clearInterval(store.timerTimer);
+
+      store.roomCode = '';
+      store.phase = 'WAITING';
+      store.isHost = false;
+      store.isReady = false;
+      store.forcedRig = null;
 
       el.viewRoom.classList.add('hidden');
       el.viewRoom.classList.remove('flex');
@@ -1373,6 +1392,7 @@
 
       cancelInviteMode();
       setNetStatus('disconnected', 'WS 대기 중');
+      updateActionTicker('로비 대기 중');
     });
 
     window.addEventListener('beforeunload', () => {
