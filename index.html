@@ -1394,8 +1394,11 @@
         }`;
 
         let statusText = '';
-        if (p.isBankrupt || p.chips <= 0) {
+        if (p.isBankrupt) {
           statusText = `<span class="px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-400 font-bold text-[10px] border border-rose-500/30">파산</span>`;
+        } else if (p.hasBet && p.chips === 0 && (p.betAmount > 0)) {
+          // Bet placed with all chips remaining 0 during round -> ALL IN, not Bankrupt!
+          statusText = `<span class="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-400 font-black text-[10px] border border-amber-500/40 animate-pulse">올인 (ALL-IN)</span>`;
         } else if (store.phase === 'BETTING') {
           statusText = p.hasBet 
             ? `<span class="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-semibold text-[10px] border border-emerald-500/30">배팅완료</span>`
@@ -1414,7 +1417,7 @@
           </div>
           <div class="flex items-center gap-2">
             ${statusText}
-            <span class="font-chakra font-black ${p.isBankrupt || p.chips <= 0 ? 'text-slate-500' : 'text-amber-400'}">${(p.chips || 0).toLocaleString()} <span class="text-[10px] text-amber-500 font-normal">칩</span></span>
+            <span class="font-chakra font-black ${p.isBankrupt ? 'text-slate-500' : 'text-amber-400'}">${(p.chips || 0).toLocaleString()} <span class="text-[10px] text-amber-500 font-normal">칩</span></span>
           </div>
         `;
         listPlayers.appendChild(div);
@@ -1424,7 +1427,7 @@
     function renderBettingPanel() {
       lblBetAmount.textContent = store.betAmount.toLocaleString();
 
-      if (store.isBankrupt || store.chips <= 0) {
+      if (store.isBankrupt) {
         btnConfirmBet.disabled = true;
         btnConfirmBet.className = 'w-full py-4 rounded-2xl bg-rose-950/40 border border-rose-500/30 text-rose-400 font-black text-sm flex items-center justify-center gap-2 cursor-not-allowed';
         iconConfirmBet.className = 'ph-bold ph-skull text-xl text-rose-400';
@@ -1460,9 +1463,12 @@
         }
       } else if (store.hasBet) {
         btnConfirmBet.disabled = true;
-        btnConfirmBet.className = 'w-full py-4 rounded-2xl bg-emerald-600 text-white font-black text-lg transition flex items-center justify-center gap-2 cursor-default';
-        iconConfirmBet.className = 'ph-bold ph-check-circle text-2xl text-emerald-200';
-        textConfirmBet.textContent = '배팅완료됨';
+        const isAllIn = store.chips === 0 && store.betAmount > 0;
+        btnConfirmBet.className = isAllIn
+          ? 'w-full py-4 rounded-2xl bg-gradient-to-r from-amber-600 to-rose-600 text-white font-black text-lg transition flex items-center justify-center gap-2 cursor-default shadow-lg shadow-rose-500/30'
+          : 'w-full py-4 rounded-2xl bg-emerald-600 text-white font-black text-lg transition flex items-center justify-center gap-2 cursor-default';
+        iconConfirmBet.className = isAllIn ? 'ph-bold ph-fire text-2xl text-amber-200' : 'ph-bold ph-check-circle text-2xl text-emerald-200';
+        textConfirmBet.textContent = isAllIn ? '올인 배팅완료!' : '배팅완료됨';
       } else {
         btnConfirmBet.disabled = true;
         btnConfirmBet.className = 'w-full py-4 rounded-2xl bg-slate-800 text-slate-500 font-bold text-lg flex items-center justify-center gap-2 cursor-not-allowed';
@@ -1701,10 +1707,13 @@
           }
         }
 
+        // Bankruptcy is confirmed only AFTER settlement if chips remain 0
         if (store.chips <= 0) {
           store.chips = 0;
           store.isBankrupt = true;
           showToast('칩이 모두 소진되어 파산(탈락)되었습니다! 관전 모드로 전환됩니다.', false);
+        } else {
+          store.isBankrupt = false;
         }
 
         if (store.players[store.myId]) {
