@@ -750,7 +750,7 @@
   <aside id="appVersionBadge" class="fixed bottom-2.5 right-3 z-50 pointer-events-none select-none">
     <div class="px-2 py-0.5 rounded-lg bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-[10px] font-chakra font-black tracking-wider text-purple-300/80 shadow-md flex items-center gap-1">
       <span class="w-1.5 h-1.5 rounded-full bg-cyan-400/80"></span>
-      <span>ver_0.3.9</span>
+      <span>ver_0.4.1</span>
     </div>
   </aside>
 
@@ -1654,10 +1654,13 @@
 
         case 'FINISH':
           if (msg.pls) {
-            store.players = msg.pls;
+            // 원격 명단을 수신하되 내 로컬에서 계산된 최종 칩과 상태를 보존하여 정산 누락 방지
+            const myLatestChips = store.chips;
+            const myLatestBankrupt = store.isBankrupt;
+            store.players = Object.assign({}, msg.pls);
             if (store.players[store.myId]) {
-              store.chips = store.players[store.myId].chips;
-              store.isBankrupt = store.players[store.myId].isBankrupt;
+              store.players[store.myId].chips = myLatestChips;
+              store.players[store.myId].isBankrupt = myLatestBankrupt;
             }
           }
           store.phase = 'FINISHED';
@@ -2276,16 +2279,16 @@
 
       if (totalPool > 0) {
         if (oddPool > 0 && evenPool > 0) {
-          // 승리 시 원금 포함 환급 배당률 (최소 1.05배 보장)
-          oddOdds = Math.max(1.05, +(totalPool / oddPool).toFixed(2));
-          evenOdds = Math.max(1.05, +(totalPool / evenPool).toFixed(2));
+          // 승리 시 환급 배당률 (1배 제거, 최소 1.50배 보장)
+          oddOdds = Math.max(1.50, +(totalPool / oddPool).toFixed(2));
+          evenOdds = Math.max(1.50, +(totalPool / evenPool).toFixed(2));
         } else if (oddPool > 0 && evenPool === 0) {
-          // 전원 홀에 건 경우: 원금 100% 보장 (1.00배)
-          oddOdds = 1.00;
+          // 전원 홀에 몰린 경우: 1.0배 제거 -> 최소 1.50배 보장
+          oddOdds = 1.50;
           evenOdds = 5.00;
         } else if (evenPool > 0 && oddPool === 0) {
-          // 전원 짝에 건 경우: 원금 100% 보장 (1.00배)
-          evenOdds = 1.00;
+          // 전원 짝에 몰린 경우: 1.0배 제거 -> 최소 1.50배 보장
+          evenOdds = 1.50;
           oddOdds = 5.00;
         }
       }
@@ -2672,7 +2675,8 @@
 
         const finalOddOdds = snapOddOdds || store.lockedOddOdds || 2.0;
         const finalEvenOdds = snapEvenOdds || store.lockedEvenOdds || 2.0;
-        const standardOdds = isOdd ? finalOddOdds : finalEvenOdds;
+        const rawOdds = isOdd ? finalOddOdds : finalEvenOdds;
+        const standardOdds = Math.max(1.50, rawOdds);
         const effectiveFirstBetterId = snapFirstBetter || store.firstBetterId;
 
         const won = store.selectedChoice === resultParity;
@@ -2729,20 +2733,34 @@
                 p.chips = 0;
                 p.isBankrupt = true;
               }
+            } else if (!p.isBot && p.id !== store.myId && !p.isBankrupt && p.choice) {
+              // 원격 사람 플레이어의 승리 시 방장 로컬에서도 지분 정산 반영
+              if (p.choice === resultParity) {
+                const isUserFirst = (effectiveFirstBetterId === p.id);
+                const userMultiplier = isUserFirst ? 5.0 : standardOdds;
+                p.chips += Math.round(p.betAmount * userMultiplier);
+                p.wins = (p.wins || 0) + 1;
+              } else {
+                p.wins = 0;
+              }
+              if (p.chips <= 0) {
+                p.chips = 0;
+                p.isBankrupt = true;
+              }
             }
           });
 
           const survivors = Object.values(store.players).filter(p => !p.isBankrupt && p.chips > 0);
           if (survivors.length <= 1) {
             setTimeout(() => {
-              showFinalLeaderboard(true);
               broadcastNetworkPacket({ t: 'FINISH', early: true, pls: store.players });
-            }, 2000);
+              showFinalLeaderboard(true);
+            }, 1800);
           } else if (store.currentRound >= store.totalRounds) {
             setTimeout(() => {
-              showFinalLeaderboard(false);
               broadcastNetworkPacket({ t: 'FINISH', early: false, pls: store.players });
-            }, 2200);
+              showFinalLeaderboard(false);
+            }, 1800);
           } else {
             store.currentRound++;
           }
@@ -2841,6 +2859,13 @@
     // --- LEADERBOARD & RESTART ---
     function showFinalLeaderboard(isEarlyElimination = false) {
       store.phase = 'FINISHED';
+      
+      // 내 로컬 플레이어 객체의 칩 정보가 항상 최신 상태인지 재확인
+      if (store.players[store.myId]) {
+        store.players[store.myId].chips = store.chips;
+        store.players[store.myId].isBankrupt = store.isBankrupt;
+      }
+
       el.modalFinalResult.classList.remove('hidden');
       el.modalFinalResult.classList.add('flex');
       confetti({ particleCount: 130, spread: 90, origin: { y: 0.5 } });
