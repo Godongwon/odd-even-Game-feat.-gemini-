@@ -1,0 +1,2384 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>홀짝.IO (Odd/Even Live)</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <!-- Paho MQTT WebSocket Client for Guaranteed Mobile <-> PC Sync -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;900&family=Chakra+Petch:wght@600;700;800&display=swap');
+    
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: radial-gradient(circle at 50% 12%, #1b1238 0%, #0c0818 65%, #040207 100%);
+      color: #f1f5f9;
+      user-select: none;
+      touch-action: manipulation;
+    }
+
+    @media (min-width: 1024px) {
+      body {
+        height: 100vh;
+        overflow: hidden;
+      }
+    }
+    @media (max-width: 1023px) {
+      body {
+        min-height: 100vh;
+        overflow-y: auto !important;
+      }
+    }
+
+    .font-chakra { font-family: 'Chakra Petch', sans-serif; }
+    .neon-odd {
+      box-shadow: 0 0 24px rgba(6, 182, 212, 0.45);
+      border-color: #06b6d4 !important;
+    }
+    .neon-even {
+      box-shadow: 0 0 24px rgba(244, 63, 94, 0.45);
+      border-color: #f43f5e !important;
+    }
+
+    /* 3D Dice Simulation */
+    .dice-scene {
+      perspective: 800px;
+      width: clamp(62px, 7vw, 84px);
+      height: clamp(62px, 7vw, 84px);
+    }
+    .dice-cube {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 1.1s cubic-bezier(0.2, 0.85, 0.35, 1);
+    }
+    .dice-cube.rolling {
+      animation: diceRollAnim 0.45s linear infinite;
+    }
+    @keyframes diceRollAnim {
+      0%   { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+      50%  { transform: rotateX(360deg) rotateY(180deg) rotateZ(180deg); }
+      100% { transform: rotateX(720deg) rotateY(720deg) rotateZ(360deg); }
+    }
+    .dice-side {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
+      border-radius: 14px;
+      border: 2px solid #cbd5e1;
+      display: grid;
+      grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+      padding: 6px;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.2), 0 6px 14px rgba(0,0,0,0.5);
+    }
+    .dot {
+      width: clamp(10px, 1.4vw, 15px);
+      height: clamp(10px, 1.4vw, 15px);
+      background: #1e293b;
+      border-radius: 50%;
+      align-self: center;
+      justify-self: center;
+      box-shadow: inset 0 2px 3px rgba(0,0,0,0.6);
+    }
+    .dot.red { background: #e11d48; }
+
+    .side-1 { transform: rotateY(0deg) translateZ(clamp(31px, 3.5vw, 42px)); }
+    .side-6 { transform: rotateY(180deg) translateZ(clamp(31px, 3.5vw, 42px)); }
+    .side-2 { transform: rotateY(90deg) translateZ(clamp(31px, 3.5vw, 42px)); }
+    .side-5 { transform: rotateY(-90deg) translateZ(clamp(31px, 3.5vw, 42px)); }
+    .side-3 { transform: rotateX(90deg) translateZ(clamp(31px, 3.5vw, 42px)); }
+    .side-4 { transform: rotateX(-90deg) translateZ(clamp(31px, 3.5vw, 42px)); }
+
+    @keyframes floatUpFade {
+      0% { transform: translateY(0) scale(0.6) rotate(0deg); opacity: 0; }
+      20% { opacity: 1; transform: translateY(-20px) scale(1.3) rotate(-8deg); }
+      80% { opacity: 0.9; transform: translateY(-110px) scale(1.1) rotate(10deg); }
+      100% { transform: translateY(-160px) scale(0.8) rotate(-15deg); opacity: 0; }
+    }
+    .floating-emoji {
+      position: absolute;
+      pointer-events: none;
+      user-select: none;
+      animation: floatUpFade 1.8s ease-out forwards;
+      z-index: 60;
+      filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5));
+    }
+
+    @keyframes slideInLeft {
+      from { transform: translateX(35px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    .io-ticker-item {
+      animation: slideInLeft 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.25); border-radius: 4px; }
+
+    @media screen and (max-width: 768px) {
+      input[type="text"], input[type="number"], textarea {
+        font-size: 16px !important;
+      }
+    }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen text-slate-100 selection:bg-amber-500 selection:text-black relative">
+
+  <!-- TOP HEADER -->
+  <header class="border-b border-purple-900/40 bg-slate-950/75 backdrop-blur-md sticky top-0 z-40 px-3 sm:px-4 py-2 sm:py-2.5 shrink-0">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-2.5 sm:gap-3">
+        <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-rose-500 flex items-center justify-center shadow-lg shadow-amber-500/25 shrink-0">
+          <i class="ph-bold ph-dice-six text-lg sm:text-xl text-slate-950"></i>
+        </div>
+        <div class="flex items-center">
+          <h1 class="text-base sm:text-lg font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-rose-400 to-cyan-400">
+            홀짝<span class="font-chakra">.IO</span>
+          </h1>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1.5 sm:gap-2.5">
+        <!-- 1. MERGED REAL-TIME STATUS & TICKER BADGE (사진의 두 UI 통합) -->
+        <div id="unifiedNetStatusBadge" class="flex items-center gap-1.5 sm:gap-2 px-2.5 py-1 rounded-xl bg-slate-900/90 border border-purple-500/30 shadow-inner max-w-[210px] sm:max-w-[320px] overflow-hidden">
+          <span id="dotNetStatus" class="w-2 h-2 rounded-full bg-slate-500 shrink-0"></span>
+          <span id="textNetStatus" class="text-[10px] sm:text-[11px] font-chakra font-bold text-slate-400 whitespace-nowrap shrink-0">WS 대기 중</span>
+          <span class="w-[1px] h-3 bg-slate-700 shrink-0"></span>
+          <div class="flex items-center gap-1 overflow-hidden truncate">
+            <span id="txtActionTicker" class="text-[10px] sm:text-[11px] font-bold text-amber-300 font-chakra truncate">실시간 연결 대기 중</span>
+          </div>
+        </div>
+
+        <button id="btnHeaderInvite" class="hidden px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-500/40 text-xs font-bold transition flex items-center gap-1.5 shrink-0" title="방 초대하기">
+          <i class="ph-bold ph-share-network text-sm sm:text-base"></i>
+          <span class="hidden sm:inline">초대</span>
+        </button>
+        <button id="btnSoundToggle" class="p-2 sm:p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 transition shrink-0" title="음향 토글">
+          <i class="ph-bold ph-speaker-high text-base sm:text-lg" id="soundIcon"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- TOAST CONTAINER -->
+  <div id="toastArea" class="fixed top-20 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- FLOATING REACTIONS CONTAINER -->
+  <div id="reactionContainer" class="fixed inset-0 pointer-events-none overflow-hidden z-50"></div>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 flex flex-col justify-center">
+
+    <!-- VIEW 1: LOBBY VIEW -->
+    <section id="viewLobby" class="max-w-md w-full mx-auto bg-slate-900/90 border border-purple-500/30 p-6 sm:p-8 rounded-3xl shadow-2xl backdrop-blur-xl">
+      <div class="text-center mb-6">
+        <div class="inline-flex p-3 rounded-2xl bg-amber-500/10 text-amber-400 mb-3 border border-amber-500/20 shadow-lg">
+          <i class="ph-bold ph-game-controller text-3xl"></i>
+        </div>
+        <h2 class="text-2xl font-bold font-chakra text-white">게임 로비</h2>
+        <p class="text-xs text-slate-400 mt-1">닉네임을 입력하고 방을 만들거나 입장하세요</p>
+      </div>
+
+      <!-- Invite Join Notice -->
+      <div id="inviteNoticeBox" class="hidden mb-4 p-3 bg-purple-950/70 border border-purple-500/40 rounded-2xl flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i class="ph-bold ph-envelope-open text-purple-400 text-lg"></i>
+          <div>
+            <div class="text-xs font-bold text-purple-200">초대 링크로 접속됨</div>
+            <div class="text-[11px] text-purple-300">방 코드: <span id="lblInviteRoomCode" class="font-chakra font-black text-amber-400">----</span></div>
+          </div>
+        </div>
+        <button id="btnCancelInviteJoin" class="text-slate-400 hover:text-slate-200 text-xs underline">직접 만들기</button>
+      </div>
+
+      <div class="space-y-5">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">플레이어 닉네임</label>
+          <div class="relative">
+            <i class="ph-bold ph-user absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+            <input type="text" id="inputNickname" maxlength="12" placeholder="닉네임 입력"
+              class="w-full pl-10 pr-4 py-3 bg-slate-800/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 text-sm font-bold transition" />
+          </div>
+        </div>
+
+        <!-- Rounds Selector -->
+        <div class="bg-slate-950/60 border border-purple-500/20 rounded-2xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+              <i class="ph-bold ph-flag-banner text-amber-400"></i>
+              경기 총 라운드 수
+            </span>
+            <span class="text-amber-400 font-black font-chakra text-base"><span id="lblSelectedRounds">5</span>R</span>
+          </div>
+          <input type="range" id="sliderRounds" min="1" max="15" value="5"
+            class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500" />
+          <div class="grid grid-cols-4 gap-2 pt-1">
+            <button type="button" class="preset-r-btn py-1.5 text-xs font-chakra font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition" data-rounds="3">3R</button>
+            <button type="button" class="preset-r-btn py-1.5 text-xs font-chakra font-bold rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/40 transition" data-rounds="5">5R</button>
+            <button type="button" class="preset-r-btn py-1.5 text-xs font-chakra font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition" data-rounds="7">7R</button>
+            <button type="button" class="preset-r-btn py-1.5 text-xs font-chakra font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition" data-rounds="10">10R</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 pt-1" id="defaultLobbyButtons">
+          <button id="btnCreateRoom" class="py-3.5 px-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-slate-950 font-black rounded-xl shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2">
+            <i class="ph-bold ph-plus-circle text-lg"></i>
+            <span>방 만들기</span>
+          </button>
+          <button id="btnToggleJoinBox" class="py-3.5 px-4 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 font-bold rounded-xl border border-slate-700 transition flex items-center justify-center gap-2">
+            <i class="ph-bold ph-sign-in text-lg"></i>
+            <span>코드 입장</span>
+          </button>
+        </div>
+
+        <!-- Quick Direct Join Button + Cancel Group -->
+        <div id="inviteButtonGroup" class="hidden grid grid-cols-3 gap-2 w-full pt-1">
+          <button id="btnDirectInviteJoin" class="col-span-2 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 active:scale-95 text-white font-black rounded-xl shadow-lg shadow-purple-500/30 transition flex items-center justify-center gap-2 text-sm sm:text-base">
+            <i class="ph-bold ph-game-controller text-xl"></i>
+            <span>초대된 방으로 바로 입장하기</span>
+          </button>
+          <button id="btnCancelInviteBtn" type="button" class="col-span-1 py-4 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 hover:text-white font-bold rounded-xl border border-slate-700 transition flex items-center justify-center gap-1.5 text-sm">
+            <i class="ph-bold ph-x text-lg"></i>
+            <span>취소</span>
+          </button>
+        </div>
+
+        <!-- Join Room Expandable Box -->
+        <div id="joinCodeBox" class="hidden pt-3 border-t border-slate-800 space-y-2">
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">참가 코드 4자리</label>
+          <div class="flex gap-2">
+            <input type="text" id="inputRoomCode" maxlength="4" placeholder="예: 7B2X"
+              class="uppercase text-center font-chakra font-bold tracking-widest text-lg flex-1 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-amber-400 focus:outline-none focus:border-amber-400" />
+            <button id="btnJoinRoom" class="px-5 bg-purple-600 hover:bg-purple-500 active:scale-95 text-white font-bold rounded-xl transition flex items-center justify-center gap-1">
+              <span>입장</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 2: GAME ROOM ARENA -->
+    <section id="viewRoom" class="hidden flex-col gap-2.5 sm:gap-3.5 h-full lg:max-h-[calc(100vh-68px)] overflow-y-auto lg:overflow-hidden pb-12 lg:pb-0">
+
+      <!-- Room Sub-Header -->
+      <div class="flex items-center justify-between gap-2 bg-slate-900/90 border border-purple-500/20 px-3 py-2 rounded-2xl backdrop-blur-md shadow-md shrink-0">
+        <div class="flex items-center gap-2 sm:gap-3 flex-nowrap overflow-x-auto">
+          <div class="flex items-center gap-1.5 shrink-0">
+            <span class="text-[11px] uppercase font-bold text-slate-400 tracking-wider whitespace-nowrap">ROOM:</span>
+            <span id="lblRoomCode" class="font-chakra text-sm sm:text-base font-black text-amber-400 tracking-wider bg-slate-800/80 px-2 py-0.5 rounded-lg border border-amber-500/30 whitespace-nowrap">----</span>
+            <button id="btnCopyCode" class="text-slate-400 hover:text-white p-1 text-sm transition shrink-0" title="코드 복사">
+              <i class="ph-bold ph-copy"></i>
+            </button>
+            <button id="btnShareRoomLink" class="px-2 py-0.5 rounded-lg bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 border border-purple-500/30 text-[11px] font-bold transition flex items-center gap-1 shadow-sm shrink-0 whitespace-nowrap" title="친구에게 초대 링크 보내기">
+              <i class="ph-bold ph-share-network"></i>
+              <span>초대</span>
+            </button>
+          </div>
+          <span class="h-3.5 w-[1px] bg-slate-700 hidden sm:block shrink-0"></span>
+          <div class="flex items-center gap-1.5 bg-purple-950/60 border border-purple-500/30 px-2 py-0.5 rounded-xl shrink-0 whitespace-nowrap">
+            <i class="ph-bold ph-flag text-purple-400 text-xs shrink-0"></i>
+            <span class="text-[11px] text-slate-300 font-semibold whitespace-nowrap">라운드:</span>
+            <span id="lblCurrentRound" class="font-black font-chakra text-amber-400 text-xs whitespace-nowrap">1</span>
+            <span class="text-[10px] text-slate-500">/</span>
+            <span id="lblTotalRounds" class="font-bold font-chakra text-slate-300 text-xs whitespace-nowrap">5</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 shrink-0">
+          <div id="badgePhase" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0"></span>
+            <span id="lblPhaseText" class="whitespace-nowrap">대기 중</span>
+          </div>
+          <button id="btnLeaveRoom" class="text-xs px-2.5 py-1 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition shrink-0 whitespace-nowrap">
+            나가기
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-3.5 flex-1 min-h-0">
+
+        <!-- Left Column (Dice & Bet Panel) -->
+        <div class="order-1 lg:col-span-7 xl:col-span-8 flex flex-col gap-2.5 sm:gap-3 min-h-0 justify-between">
+          
+          <!-- 3D Dice Stage -->
+          <div class="relative bg-gradient-to-b from-slate-900/90 to-purple-950/40 border border-purple-500/30 rounded-3xl p-3 sm:p-4 flex flex-col items-center justify-center flex-1 min-h-[170px] lg:min-h-0 overflow-hidden shadow-xl">
+            <div class="absolute -top-24 w-80 h-80 bg-purple-600/15 rounded-full blur-3xl pointer-events-none"></div>
+
+            <!-- Dice Pair -->
+            <div class="flex items-center justify-center gap-6 sm:gap-8 my-1 sm:my-2">
+              <div class="dice-scene">
+                <div id="diceCube1" class="dice-cube">
+                  <div class="dice-side side-1"><div class="dot col-start-2 row-start-2 red"></div></div>
+                  <div class="dice-side side-2"><div class="dot col-start-1 row-start-1"></div><div class="dot col-start-3 row-start-3"></div></div>
+                  <div class="dice-side side-3"><div class="dot col-start-1 row-start-1"></div><div class="dot col-start-2 row-start-2"></div><div class="dot col-start-3 row-start-3"></div></div>
+                  <div class="dice-side side-4"><div class="dot col-start-1 row-start-1"></div><div class="dot col-start-3 row-start-1"></div><div class="dot col-start-1 row-start-3"></div><div class="dot col-start-3 row-start-3"></div></div>
+                  <div class="dice-side side-5"><div class="dot col-start-1 row-start-1"></div><div class="dot col-start-3 row-start-1"></div><div class="dot col-start-2 row-start-2"></div><div class="dot col-start-1 row-start-3"></div><div class="dot col-start-3 row-start-3"></div></div>
+                  <div class="dice-side side-6"><div class="dot col-start-1 row-start-1"></div><div class="dot col-start-3 row-start-1"></div><div class="dot col-start-1 row-start-2"></div><div class="dot col-start-3 row-start-2"></div><div class="dot col-start-1 row-start-3"></div><div class="dot col-start-3 row-start-3"></div></div>
+                </div>
+              </div>
+
+              <span class="text-xl sm:text-2xl font-black text-purple-400/80 font-chakra">+</span>
+
+              <div class="dice-scene">
+                <div id="diceCube2" class="dice-cube">
+                  <div class="dice-side side-1"><div class="dot col-start-2 row-start-2 red"></div></div>
+                  <div class="dice-side side-2"><div class="dot col-start-1 row-start-1"></div><div class="dot col-start-3 row-start-3"></div></div>
+                  <div class="dice-side side-3"><div class="dot col-start-1 row-start-1"></div><div class="dot col-start-2 row-start-2"></div><div class="dot col-start-3 row-start-3"></div></div>
+                  <div class="dice-side side-4"><div class="dot col-start-1 row-start-1"></div><div class="dot col-start-3 row-start-1"></div><div class="dot col-start-1 row-start-3"></div><div class="dot col-start-3 row-start-3"></div></div>
+                  <div class="dice-side side-5"><div class="dot col-start-1 row-start-1"></div><div class="dot col-start-3 row-start-1"></div><div class="dot col-start-2 row-start-2"></div><div class="dot col-start-1 row-start-3"></div><div class="dot col-start-3 row-start-3"></div></div>
+                  <div class="dice-side side-6"><div class="dot col-start-1 row-start-1"></div><div class="dot col-start-3 row-start-1"></div><div class="dot col-start-1 row-start-2"></div><div class="dot col-start-3 row-start-2"></div><div class="dot col-start-1 row-start-3"></div><div class="dot col-start-3 row-start-3"></div></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Result Banner -->
+            <div class="text-center min-h-[42px] flex flex-col items-center justify-center">
+              <span id="lblResultSub" class="text-[10px] uppercase tracking-widest text-slate-400 font-semibold whitespace-nowrap">대기 상태</span>
+              <div id="lblResultMain" class="text-base sm:text-xl font-black font-chakra text-white mt-0.5 text-center leading-snug">
+                모든 참가자가 준비 완료하면 라운드를 시작할 수 있습니다
+              </div>
+            </div>
+
+            <!-- Controls & Progress Bar Area -->
+            <div class="mt-2.5 flex flex-col items-center justify-center gap-1.5 z-10 w-full max-w-lg">
+              
+              <div id="bettingProgressWrap" class="w-full hidden flex-col gap-1 bg-slate-950/70 p-2 sm:p-2.5 rounded-2xl border border-amber-500/30 shadow-inner">
+                <div class="flex items-center justify-between text-xs px-1 font-bold whitespace-nowrap">
+                  <span class="text-amber-400 flex items-center gap-1.5 font-chakra tracking-wide text-[11px] whitespace-nowrap">
+                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+                    배팅 제한 시간
+                  </span>
+                  <div class="flex items-center gap-2 font-chakra whitespace-nowrap">
+                    <span id="lblProgressSeconds" class="text-amber-300 font-black text-xs">20.0s</span>
+                    <span class="text-slate-500 text-xs">|</span>
+                    <span id="lblProgressDoneCount" class="text-emerald-400 text-xs">0/0 완료</span>
+                  </div>
+                </div>
+                <div class="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800 p-0.5">
+                  <div id="bettingProgressBar" class="h-full bg-gradient-to-r from-amber-500 via-rose-500 to-amber-400 rounded-full transition-all duration-100 shadow-md shadow-amber-500/40" style="width: 100%;"></div>
+                </div>
+              </div>
+
+              <div id="hostControlWrap" class="flex items-center justify-center gap-2 w-full flex-nowrap">
+                <button id="btnStartRound" class="px-4 sm:px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-slate-950 font-black shadow-lg shadow-amber-500/25 text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0">
+                  <i class="ph-bold ph-play text-sm shrink-0" id="iconStartRound"></i>
+                  <span id="textStartRound" class="whitespace-nowrap">라운드 시작하기</span>
+                </button>
+
+                <button id="btnToggleReady" class="hidden px-4 sm:px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black shadow-lg shadow-emerald-500/25 text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0">
+                  <i class="ph-bold ph-check text-sm shrink-0" id="iconToggleReady"></i>
+                  <span id="textToggleReady" class="whitespace-nowrap">준비 완료 (READY)</span>
+                </button>
+
+                <div class="flex items-center gap-1 shrink-0 whitespace-nowrap" id="boxBotControls">
+                  <button id="btnAddBot" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 border border-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1 transition whitespace-nowrap">
+                    <i class="ph-bold ph-robot text-purple-400 text-xs"></i>
+                    <span>+ 봇</span>
+                  </button>
+                  <button id="btnRemoveBot" class="px-2 py-1.5 rounded-xl bg-slate-800 hover:bg-rose-950/40 border border-slate-700 hover:border-rose-500/40 text-slate-400 hover:text-rose-400 active:scale-95 text-xs font-bold transition shrink-0" title="봇 제거">
+                    <i class="ph-bold ph-trash text-xs"></i>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Betting Controls Section -->
+          <div class="bg-slate-900/90 border border-purple-500/20 rounded-3xl p-3 sm:p-4 space-y-2.5 sm:space-y-3 shadow-xl shrink-0">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-1.5">
+                <i class="ph-bold ph-hand-coins text-amber-400 text-base"></i>
+                <h3 class="font-bold text-xs sm:text-sm text-slate-200">배팅 패널</h3>
+              </div>
+              <div class="text-xs text-slate-400">
+                보유 칩: <span id="lblUserChips" class="font-bold font-chakra text-amber-400 text-sm">1,000</span>
+              </div>
+            </div>
+
+            <!-- Odd vs Even Select Cards -->
+            <div class="grid grid-cols-2 gap-2.5">
+              <button id="cardOdd" class="py-2.5 px-2 rounded-2xl bg-slate-950/70 border-2 border-slate-700 hover:border-cyan-500 transition-all flex flex-col items-center justify-center gap-0.5 group relative cursor-pointer">
+                <span class="text-xl sm:text-2xl font-black font-chakra text-cyan-400 group-hover:scale-105 transition-transform">홀 (ODD)</span>
+                <span class="text-[10px] text-slate-400">합 1, 3, 5, 7, 9, 11</span>
+                <div id="checkOdd" class="hidden absolute top-2 right-2 text-cyan-400 text-sm">
+                  <i class="ph-fill ph-check-circle"></i>
+                </div>
+              </button>
+
+              <button id="cardEven" class="py-2.5 px-2 rounded-2xl bg-slate-950/70 border-2 border-slate-700 hover:border-rose-500 transition-all flex flex-col items-center justify-center gap-0.5 group relative cursor-pointer">
+                <span class="text-xl sm:text-2xl font-black font-chakra text-rose-400 group-hover:scale-105 transition-transform">짝 (EVEN)</span>
+                <span class="text-[10px] text-slate-400">합 2, 4, 6, 8, 10, 12</span>
+                <div id="checkEven" class="hidden absolute top-2 right-2 text-rose-400 text-sm">
+                  <i class="ph-fill ph-check-circle"></i>
+                </div>
+              </button>
+            </div>
+
+            <!-- Chip Increments & Amount Display -->
+            <div class="space-y-1.5 bg-slate-950/50 p-2 sm:p-2.5 rounded-2xl border border-slate-800">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-semibold text-slate-400">배팅액:</span>
+                <div class="font-chakra text-base sm:text-lg font-black text-amber-300">
+                  <span id="lblBetAmount">0</span> <span class="text-xs text-amber-500 font-semibold">칩</span>
+                </div>
+              </div>
+              <div class="grid grid-cols-5 gap-1.5">
+                <button class="chip-add-btn py-1 text-xs font-chakra font-bold rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 transition" data-amount="100">+100</button>
+                <button class="chip-add-btn py-1 text-xs font-chakra font-bold rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 transition" data-amount="500">+500</button>
+                <button class="chip-add-btn py-1 text-xs font-chakra font-bold rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 transition" data-amount="1000">+1000</button>
+                <button class="chip-add-btn py-1 text-xs font-chakra font-bold rounded-lg bg-purple-900/40 hover:bg-purple-800/50 active:scale-95 text-purple-300 border border-purple-700/50 transition" data-amount="max">올인</button>
+                <button class="chip-add-btn py-1 text-xs font-chakra font-bold rounded-lg bg-rose-950/40 hover:bg-rose-900/50 active:scale-95 text-rose-300 border border-rose-800/50 transition" data-amount="reset">초기화</button>
+              </div>
+            </div>
+
+            <!-- Betting Complete Button -->
+            <button id="btnConfirmBet" class="w-full py-2.5 sm:py-3 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:brightness-110 active:scale-98 text-slate-950 font-black text-sm sm:text-base transition shadow-xl shadow-amber-500/20 flex items-center justify-center gap-1.5 cursor-pointer">
+              <i class="ph-bold ph-check-circle text-lg" id="iconConfirmBet"></i>
+              <span id="textConfirmBet">배팅완료</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Right Column: Participants & Collapsible Dropdown Chat -->
+        <div class="order-2 lg:col-span-5 xl:col-span-4 flex flex-col gap-2.5 sm:gap-3 flex-1 min-h-0">
+          
+          <!-- Participants List (Dynamic IO Leaderboard) -->
+          <div class="bg-slate-900/90 border border-purple-500/30 rounded-3xl p-3 sm:p-3.5 shadow-xl flex flex-col min-h-[170px] lg:flex-1 shrink-0 overflow-hidden">
+            <div class="flex items-center justify-between mb-2 border-b border-slate-800 pb-1.5 whitespace-nowrap">
+              <h3 class="text-xs sm:text-sm font-bold text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
+                <i class="ph-bold ph-users text-amber-400 shrink-0 text-base"></i>
+                <span>참가자 현황 (<span id="lblPlayerCount" class="text-amber-400 font-chakra font-bold">1</span>명)</span>
+              </h3>
+              <span class="text-[9px] text-slate-500 font-chakra whitespace-nowrap font-bold">LIVE ROSTER</span>
+            </div>
+            <div id="listPlayers" class="flex flex-col gap-1.5 overflow-y-auto pr-1 flex-1">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- COLLAPSIBLE DROPDOWN CHAT BOX (RECENT 3 IN COLLAPSED MODE) -->
+          <div id="chatAccordionWrapper" class="bg-slate-900/95 border border-purple-500/30 rounded-3xl p-3 shadow-2xl flex flex-col transition-all duration-300 shrink-0">
+            
+            <!-- Accordion Header (Click to toggle expanded chat) -->
+            <button id="btnToggleChatCollapse" type="button" class="w-full flex items-center justify-between pb-1.5 border-b border-slate-800 text-left cursor-pointer group select-none">
+              <div class="flex items-center gap-2">
+                <i class="ph-bold ph-chat-centered-dots text-cyan-400 text-sm group-hover:scale-110 transition-transform"></i>
+                <span class="text-xs font-bold text-slate-200">실시간 채팅</span>
+                <span class="text-[9px] font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> LIVE
+                </span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span id="lblChatToggleHint" class="text-[10px] text-slate-400 group-hover:text-cyan-300 transition-colors">최근 3개 표시 중</span>
+                <div class="w-6 h-6 rounded-lg bg-slate-800 group-hover:bg-slate-700 flex items-center justify-center text-slate-400 transition-colors">
+                  <i id="iconChatCollapseArrow" class="ph-bold ph-caret-down text-xs transition-transform duration-300"></i>
+                </div>
+              </div>
+            </button>
+
+            <!-- 3. ALWAYS ACCESSIBLE EMOJI REACTION QUICK-BAR (접혀 있어도 언제든 즉시 사용 가능) -->
+            <div class="py-1 px-2 bg-slate-950/70 border border-slate-800/80 rounded-xl my-2 flex items-center justify-between gap-1 shadow-inner">
+              <span class="text-[9px] font-bold text-amber-400/90 px-1 font-chakra whitespace-nowrap">반응</span>
+              <div class="flex items-center gap-1 overflow-x-auto">
+                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm sm:text-base hover:scale-125 active:scale-95 transition" data-emoji="🔥" title="불꽃">🔥</button>
+                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm sm:text-base hover:scale-125 active:scale-95 transition" data-emoji="👏" title="박수">👏</button>
+                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm sm:text-base hover:scale-125 active:scale-95 transition" data-emoji="😭" title="눈물">😭</button>
+                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm sm:text-base hover:scale-125 active:scale-95 transition" data-emoji="🎲" title="주사위">🎲</button>
+                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm sm:text-base hover:scale-125 active:scale-95 transition" data-emoji="💰" title="돈">💰</button>
+                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm sm:text-base hover:scale-125 active:scale-95 transition" data-emoji="👍" title="최고">👍</button>
+              </div>
+            </div>
+
+            <!-- 1. COLLAPSED VIEW: Displays ONLY the 3 Most Recent Messages -->
+            <div id="chatCollapsedPreview" class="flex flex-col gap-1.5">
+              <div id="chatMiniList" class="flex flex-col gap-1 text-[11px] min-h-[58px]">
+                <div class="text-slate-500 text-[10px] italic py-1">대화가 시작되면 최근 3개 메시지가 여기에 표시됩니다.</div>
+              </div>
+              <button id="btnQuickOpenChat" type="button" class="w-full py-1.5 px-2 bg-slate-950/80 hover:bg-slate-800/80 border border-slate-800 hover:border-cyan-500/30 rounded-xl text-[11px] font-bold text-cyan-300 flex items-center justify-center gap-1.5 transition">
+                <i class="ph-bold ph-chats-circle text-xs"></i>
+                <span>전체 채팅 및 메시지 입력 열기</span>
+              </button>
+            </div>
+
+            <!-- 2. EXPANDED VIEW: Full Chat History & Input -->
+            <div id="chatExpandedBody" class="hidden flex-col transition-all">
+              <div id="chatBox" class="h-44 sm:h-52 overflow-y-auto space-y-1 text-xs pr-1 mb-2 scroll-smooth">
+                <div class="text-slate-500 text-[10px] italic bg-slate-950/40 p-1.5 rounded-xl border border-slate-800/60">
+                  💬 방에 입장했습니다. 대화와 이모티콘을 나눠보세요!
+                </div>
+              </div>
+
+              <!-- Input & Send Form -->
+              <form id="formChat" class="flex items-center gap-1.5">
+                <input type="text" id="inputChat" maxlength="50" placeholder="메시지 입력..."
+                  class="flex-1 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5 text-base sm:text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition" />
+                <button type="submit" class="px-3 py-1.5 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-slate-950 font-black rounded-xl text-xs active:scale-95 transition shadow-md shadow-cyan-500/20 shrink-0">
+                  전송
+                </button>
+              </form>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- VIEW 3: FINAL RESULT MODAL -->
+    <div id="modalFinalResult" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md hidden items-center justify-center p-4">
+      <div class="max-w-md w-full bg-slate-900 border border-amber-500/40 rounded-3xl p-6 sm:p-8 shadow-2xl relative flex flex-col items-center">
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30 -mt-12 mb-3">
+          <i class="ph-fill ph-trophy text-3xl text-slate-950"></i>
+        </div>
+        <h2 class="text-2xl font-black font-chakra text-amber-300 tracking-wider">
+          FINAL RESULT
+        </h2>
+        <p id="lblFinalResultDesc" class="text-xs text-slate-400 mt-1 mb-6">모든 라운드가 종료되었습니다! 최종 순위입니다.</p>
+
+        <div id="finalPodium" class="w-full flex items-end justify-center gap-2 mb-6 min-h-[150px]"></div>
+        <div id="finalPlayerList" class="w-full bg-slate-950/70 border border-slate-800 rounded-2xl p-3 mb-6 max-h-44 overflow-y-auto space-y-1.5"></div>
+
+        <button id="btnRestartGame" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-sm transition shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2">
+          <i class="ph-bold ph-arrow-counter-clockwise text-lg"></i>
+          <span>새 게임 시작하기 (다시 플레이)</span>
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- FIXED BOTTOM-RIGHT VERSION BADGE -->
+  <aside id="appVersionBadge" class="fixed bottom-2.5 right-3 z-50 pointer-events-none select-none">
+    <div class="px-2 py-0.5 rounded-lg bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-[10px] font-chakra font-black tracking-wider text-purple-300/80 shadow-md flex items-center gap-1">
+      <span class="w-1.5 h-1.5 rounded-full bg-cyan-400/80"></span>
+      <span>ver_0.1.8</span>
+    </div>
+  </aside>
+
+  <!-- Sound FX Engine -->
+  <script>
+    class SoundFx {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      beep(freq, duration = 0.1, type = 'sine', gainVal = 0.15) {
+        if (!this.enabled) return;
+        try {
+          this.init();
+          const osc = this.ctx.createOscillator();
+          const g = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          g.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+          g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+          osc.connect(g);
+          g.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch(e) {}
+      }
+      playChip() { this.beep(750, 0.07, 'triangle', 0.12); }
+      playRoll() {
+        if (!this.enabled) return;
+        for (let i = 0; i < 5; i++) {
+          setTimeout(() => this.beep(250 + Math.random() * 250, 'sawtooth', 0.05, 0.08), i * 70);
+        }
+      }
+      playWin() {
+        [440, 554, 659, 880].forEach((f, idx) => setTimeout(() => this.beep(f, 0.2, 'sine', 0.2), idx * 80));
+      }
+      playLose() {
+        this.beep(240, 0.2, 'sawtooth', 0.15);
+        setTimeout(() => this.beep(190, 0.25, 'sawtooth', 0.15), 140);
+      }
+    }
+    const sound = new SoundFx();
+
+    document.getElementById('btnSoundToggle').addEventListener('click', () => {
+      sound.enabled = !sound.enabled;
+      document.getElementById('soundIcon').className = sound.enabled 
+        ? 'ph-bold ph-speaker-high text-base sm:text-lg' 
+        : 'ph-bold ph-speaker-slash text-base sm:text-lg text-slate-500';
+    });
+  </script>
+
+  <!-- High-Performance Public MQTT over WSS Pipeline (Guaranteed Cross-Device: LTE <-> PC) -->
+  <script>
+    const store = {
+      myId: 'usr_' + Math.random().toString(36).substring(2, 8),
+      nickname: localStorage.getItem('holzzak_user_nick') || '플레이어_' + Math.floor(100 + Math.random() * 900),
+      roomCode: '',
+      isHost: false,
+      isReady: false,
+      chips: 1000,
+      totalRounds: 5,
+      currentRound: 1,
+      phase: 'WAITING',
+      isBankrupt: false,
+      timerTotalSeconds: 20,
+      timerRemainingMs: 20000,
+      timerTimer: null,
+      snapshotInterval: null,
+      syncHeartbeatTimer: null,
+      selectedChoice: null,
+      betAmount: 0,
+      hasBet: false,
+      forcedRig: null,
+      players: {},
+      isNetConnected: false,
+      
+      // Chat state
+      chatMessages: [],
+      isChatExpanded: false,
+
+      // Real-Time Transport
+      mqttClient: null,
+      mqttTopic: '',
+      localChannel: null,
+      processedPacketIds: new Set(),
+      notifiedPlayerJoins: new Set()
+    };
+
+    const el = {
+      viewLobby: document.getElementById('viewLobby'),
+      viewRoom: document.getElementById('viewRoom'),
+      modalFinalResult: document.getElementById('modalFinalResult'),
+      inputNickname: document.getElementById('inputNickname'),
+      sliderRounds: document.getElementById('sliderRounds'),
+      lblSelectedRounds: document.getElementById('lblSelectedRounds'),
+      presetRBtns: document.querySelectorAll('.preset-r-btn'),
+      btnCreateRoom: document.getElementById('btnCreateRoom'),
+      btnToggleJoinBox: document.getElementById('btnToggleJoinBox'),
+      joinCodeBox: document.getElementById('joinCodeBox'),
+      inputRoomCode: document.getElementById('inputRoomCode'),
+      btnJoinRoom: document.getElementById('btnJoinRoom'),
+      inviteNoticeBox: document.getElementById('inviteNoticeBox'),
+      lblInviteRoomCode: document.getElementById('lblInviteRoomCode'),
+      btnCancelInviteJoin: document.getElementById('btnCancelInviteJoin'),
+      defaultLobbyButtons: document.getElementById('defaultLobbyButtons'),
+      inviteButtonGroup: document.getElementById('inviteButtonGroup'),
+      btnDirectInviteJoin: document.getElementById('btnDirectInviteJoin'),
+      btnCancelInviteBtn: document.getElementById('btnCancelInviteBtn'),
+      btnHeaderInvite: document.getElementById('btnHeaderInvite'),
+      btnShareRoomLink: document.getElementById('btnShareRoomLink'),
+      dotNetStatus: document.getElementById('dotNetStatus'),
+      textNetStatus: document.getElementById('textNetStatus'),
+      txtActionTicker: document.getElementById('txtActionTicker'),
+      lblRoomCode: document.getElementById('lblRoomCode'),
+      btnCopyCode: document.getElementById('btnCopyCode'),
+      lblCurrentRound: document.getElementById('lblCurrentRound'),
+      lblTotalRounds: document.getElementById('lblTotalRounds'),
+      badgePhase: document.getElementById('badgePhase'),
+      lblPhaseText: document.getElementById('lblPhaseText'),
+      btnLeaveRoom: document.getElementById('btnLeaveRoom'),
+      diceCube1: document.getElementById('diceCube1'),
+      diceCube2: document.getElementById('diceCube2'),
+      lblResultSub: document.getElementById('lblResultSub'),
+      lblResultMain: document.getElementById('lblResultMain'),
+      bettingProgressWrap: document.getElementById('bettingProgressWrap'),
+      bettingProgressBar: document.getElementById('bettingProgressBar'),
+      lblProgressSeconds: document.getElementById('lblProgressSeconds'),
+      lblProgressDoneCount: document.getElementById('lblProgressDoneCount'),
+      hostControlWrap: document.getElementById('hostControlWrap'),
+      btnStartRound: document.getElementById('btnStartRound'),
+      textStartRound: document.getElementById('textStartRound'),
+      iconStartRound: document.getElementById('iconStartRound'),
+      btnToggleReady: document.getElementById('btnToggleReady'),
+      textToggleReady: document.getElementById('textToggleReady'),
+      iconToggleReady: document.getElementById('iconToggleReady'),
+      boxBotControls: document.getElementById('boxBotControls'),
+      btnAddBot: document.getElementById('btnAddBot'),
+      btnRemoveBot: document.getElementById('btnRemoveBot'),
+      lblUserChips: document.getElementById('lblUserChips'),
+      cardOdd: document.getElementById('cardOdd'),
+      cardEven: document.getElementById('cardEven'),
+      checkOdd: document.getElementById('checkOdd'),
+      checkEven: document.getElementById('checkEven'),
+      lblBetAmount: document.getElementById('lblBetAmount'),
+      btnConfirmBet: document.getElementById('btnConfirmBet'),
+      textConfirmBet: document.getElementById('textConfirmBet'),
+      iconConfirmBet: document.getElementById('iconConfirmBet'),
+      lblPlayerCount: document.getElementById('lblPlayerCount'),
+      listPlayers: document.getElementById('listPlayers'),
+      btnToggleChatCollapse: document.getElementById('btnToggleChatCollapse'),
+      lblChatToggleHint: document.getElementById('lblChatToggleHint'),
+      iconChatCollapseArrow: document.getElementById('iconChatCollapseArrow'),
+      chatCollapsedPreview: document.getElementById('chatCollapsedPreview'),
+      chatMiniList: document.getElementById('chatMiniList'),
+      btnQuickOpenChat: document.getElementById('btnQuickOpenChat'),
+      chatExpandedBody: document.getElementById('chatExpandedBody'),
+      chatBox: document.getElementById('chatBox'),
+      formChat: document.getElementById('formChat'),
+      inputChat: document.getElementById('inputChat'),
+      reactionContainer: document.getElementById('reactionContainer'),
+      finalPodium: document.getElementById('finalPodium'),
+      finalPlayerList: document.getElementById('finalPlayerList'),
+      lblFinalResultDesc: document.getElementById('lblFinalResultDesc'),
+      btnRestartGame: document.getElementById('btnRestartGame')
+    };
+
+    const escapeHtml = (t) => (t || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+
+    function updateActionTicker(text) {
+      if (!el.txtActionTicker) return;
+      el.txtActionTicker.textContent = text;
+      const parent = el.txtActionTicker.parentElement;
+      parent.classList.remove('io-ticker-item');
+      void parent.offsetWidth;
+      parent.classList.add('io-ticker-item');
+    }
+
+    function showToast(msg, isSuccess = true) {
+      const t = document.createElement('div');
+      t.className = `px-3.5 py-2 rounded-xl border text-xs font-semibold shadow-lg backdrop-blur-md flex items-center gap-2 pointer-events-auto transition-all ${
+        isSuccess ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/40' : 'bg-rose-950/90 text-rose-300 border-rose-500/40'
+      }`;
+      t.innerHTML = `<i class="ph-bold ${isSuccess ? 'ph-check' : 'ph-warning'}"></i><span>${msg}</span>`;
+      document.getElementById('toastArea').appendChild(t);
+      setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 250); }, 2200);
+    }
+
+    function setNetStatus(status, text) {
+      if (status === 'connected') {
+        el.dotNetStatus.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0';
+        el.textNetStatus.className = 'text-emerald-300 font-bold text-[10px] sm:text-[11px] font-chakra whitespace-nowrap shrink-0';
+      } else if (status === 'connecting') {
+        el.dotNetStatus.className = 'w-2 h-2 rounded-full bg-amber-400 animate-ping shrink-0';
+        el.textNetStatus.className = 'text-amber-300 font-bold text-[10px] sm:text-[11px] font-chakra whitespace-nowrap shrink-0';
+      } else {
+        el.dotNetStatus.className = 'w-2 h-2 rounded-full bg-slate-500 shrink-0';
+        el.textNetStatus.className = 'text-slate-400 font-medium text-[10px] sm:text-[11px] font-chakra whitespace-nowrap shrink-0';
+      }
+      el.textNetStatus.textContent = text;
+    }
+
+    // --- SECURE & UNRESTRICTED WEBSOCKET REAL-TIME ENGINE ---
+    function initNetworking(isHost, roomCode) {
+      destroyNetworking();
+      const normalizedCode = roomCode.toUpperCase().trim();
+      store.notifiedPlayerJoins.clear();
+      setNetStatus('connecting', `WS 연결 중...`);
+
+      // 1. Same-device / cross-tab immediate channel
+      if ('BroadcastChannel' in window) {
+        try {
+          store.localChannel = new BroadcastChannel('hz_room_' + normalizedCode);
+          store.localChannel.onmessage = (e) => {
+            if (e.data && e.data._senderId !== store.myId) handleNetworkMessage(e.data);
+          };
+        } catch(e) {}
+      }
+
+      // 2. Multi-device (Mobile LTE <-> PC) Public MQTT over Secure WebSocket
+      store.mqttTopic = `holzzak_arena_v1/${normalizedCode}`;
+      connectMqttClient(isHost, normalizedCode);
+
+      // 3. Periodic Host sync pulse
+      clearInterval(store.syncHeartbeatTimer);
+      store.syncHeartbeatTimer = setInterval(() => {
+        if (!store.roomCode) return;
+        if (store.isHost) {
+          broadcastState();
+        }
+      }, 700);
+
+      document.removeEventListener('visibilitychange', handleVisibilitySync);
+      document.addEventListener('visibilitychange', handleVisibilitySync);
+
+      if (isHost) {
+        showToast(`[${store.roomCode}] 방 개설 완료!`);
+        updateActionTicker(`방 개설됨 (방장: ${store.nickname})`);
+        appendSystemChat(`${store.nickname}님이 방을 생성하였습니다.`);
+        startHostSnapshotLoop();
+      } else {
+        showToast(`방에 입장했습니다!`);
+        updateActionTicker(`${store.nickname} 님이 입장함`);
+        appendSystemChat(`${store.nickname}님이 입장하였습니다.`);
+      }
+    }
+
+    function handleVisibilitySync() {
+      if (document.visibilityState === 'visible' && store.roomCode) {
+        if (store.isHost) broadcastState();
+        else sendJoinPacket();
+      }
+    }
+
+    function connectMqttClient(isHost, normalizedCode) {
+      if (typeof Paho === 'undefined' || !Paho.MQTT) {
+        setNetStatus('connected', `WS 온라인 (${normalizedCode})`);
+        store.isNetConnected = true;
+        return;
+      }
+
+      const clientId = 'hz_' + store.myId + '_' + Math.random().toString(36).substring(2, 6);
+      const brokerHost = 'broker.emqx.io';
+      const brokerPort = 8084;
+
+      try {
+        store.mqttClient = new Paho.MQTT.Client(brokerHost, brokerPort, '/mqtt', clientId);
+
+        store.mqttClient.onConnectionLost = (responseObject) => {
+          if (store.roomCode) {
+            setNetStatus('connecting', `WS 재연결 중...`);
+            setTimeout(() => {
+              if (store.roomCode) connectMqttClient(store.isHost, store.roomCode);
+            }, 1200);
+          }
+        };
+
+        store.mqttClient.onMessageArrived = (message) => {
+          try {
+            const data = JSON.parse(message.payloadString);
+            if (data && data._senderId !== store.myId) {
+              handleNetworkMessage(data);
+            }
+          } catch(e) {}
+        };
+
+        store.mqttClient.connect({
+          useSSL: true,
+          timeout: 4,
+          keepAliveInterval: 20,
+          cleanSession: true,
+          onSuccess: () => {
+            store.isNetConnected = true;
+            setNetStatus('connected', `WS 온라인 (${normalizedCode})`);
+            store.mqttClient.subscribe(store.mqttTopic, { qos: 0 });
+
+            if (store.isHost) {
+              broadcastState();
+            } else {
+              sendJoinPacket();
+              setTimeout(sendJoinPacket, 250);
+              setTimeout(sendJoinPacket, 700);
+            }
+            renderControlArea();
+          },
+          onFailure: () => {
+            fallbackAlternateBroker(normalizedCode);
+          }
+        });
+      } catch(err) {
+        fallbackAlternateBroker(normalizedCode);
+      }
+    }
+
+    function fallbackAlternateBroker(normalizedCode) {
+      try {
+        const clientId = 'hz_fb_' + store.myId + '_' + Math.random().toString(36).substring(2, 6);
+        store.mqttClient = new Paho.MQTT.Client('broker.hivemq.com', 8884, '/mqtt', clientId);
+        store.mqttClient.onMessageArrived = (message) => {
+          try {
+            const data = JSON.parse(message.payloadString);
+            if (data && data._senderId !== store.myId) handleNetworkMessage(data);
+          } catch(e) {}
+        };
+        store.mqttClient.connect({
+          useSSL: true,
+          timeout: 4,
+          keepAliveInterval: 20,
+          cleanSession: true,
+          onSuccess: () => {
+            store.isNetConnected = true;
+            setNetStatus('connected', `WS 온라인 (${normalizedCode})`);
+            store.mqttClient.subscribe(store.mqttTopic, { qos: 0 });
+            if (store.isHost) broadcastState();
+            else sendJoinPacket();
+            renderControlArea();
+          },
+          onFailure: () => {
+            store.isNetConnected = true;
+            setNetStatus('connected', `WS 로컬온라인`);
+            renderControlArea();
+          }
+        });
+      } catch(e) {
+        store.isNetConnected = true;
+        setNetStatus('connected', `WS 로컬온라인`);
+        renderControlArea();
+      }
+    }
+
+    function destroyNetworking() {
+      clearInterval(store.snapshotInterval);
+      clearInterval(store.syncHeartbeatTimer);
+      document.removeEventListener('visibilitychange', handleVisibilitySync);
+
+      if (store.mqttClient) {
+        try {
+          if (store.mqttTopic) {
+            try { store.mqttClient.unsubscribe(store.mqttTopic); } catch(e) {}
+          }
+          if (store.mqttClient.isConnected()) {
+            store.mqttClient.disconnect();
+          }
+        } catch(e) {}
+        store.mqttClient = null;
+      }
+
+      if (store.localChannel) {
+        try { store.localChannel.close(); } catch(e) {}
+        store.localChannel = null;
+      }
+
+      store.isNetConnected = false;
+      store.mqttTopic = '';
+    }
+
+    function broadcastNetworkPacket(packet) {
+      packet._room = (store.roomCode || '').toUpperCase();
+      packet._senderId = store.myId;
+      packet._pktId = store.myId + '_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+      packet.ts = Date.now();
+
+      store.processedPacketIds.add(packet._pktId);
+      if (store.processedPacketIds.size > 500) {
+        const first = store.processedPacketIds.values().next().value;
+        store.processedPacketIds.delete(first);
+      }
+
+      // 1. Cross-tab immediate sync
+      if (store.localChannel) {
+        try { store.localChannel.postMessage(packet); } catch(e) {}
+      }
+
+      // 2. Global WSS Public MQTT stream
+      if (store.mqttClient && store.mqttClient.isConnected()) {
+        try {
+          const msg = new Paho.MQTT.Message(JSON.stringify(packet));
+          msg.destinationName = store.mqttTopic;
+          msg.qos = 0;
+          store.mqttClient.send(msg);
+        } catch(e) {}
+      }
+    }
+
+    function startHostSnapshotLoop() {
+      clearInterval(store.snapshotInterval);
+      store.snapshotInterval = setInterval(() => {
+        if (!store.isHost || !store.roomCode) return;
+        if (store.phase === 'BETTING') {
+          broadcastNetworkPacket({
+            t: 'TICK',
+            rem: store.timerRemainingMs,
+            rnd: store.currentRound
+          });
+        }
+      }, 100);
+    }
+
+    function sendJoinPacket() {
+      broadcastNetworkPacket({
+        t: 'JOIN',
+        p: {
+          id: store.myId,
+          name: store.nickname,
+          chips: 1000,
+          choice: null,
+          betAmount: 0,
+          hasBet: false,
+          isBankrupt: false,
+          isReady: false,
+          isHost: false,
+          isBot: false,
+          wins: 0,
+          joinedAt: Date.now(),
+          lastSeen: Date.now()
+        }
+      });
+    }
+
+    function broadcastState() {
+      if (!store.isHost) return;
+      broadcastNetworkPacket({
+        t: 'SYNC',
+        ph: store.phase,
+        rnd: store.currentRound,
+        tot: store.totalRounds,
+        pls: store.players
+      });
+    }
+
+    // --- HOST MIGRATION (방장 넘기기 핵심 로직) ---
+    function checkAndMigrateHost(leavingPlayerId) {
+      const remainingHumanPlayers = Object.values(store.players)
+        .filter(p => !p.isBot && p.id !== leavingPlayerId)
+        .sort((a, b) => (a.joinedAt || 0) - (b.joinedAt || 0));
+
+      if (remainingHumanPlayers.length === 0) return null;
+
+      const nextHost = remainingHumanPlayers[0];
+      return nextHost.id;
+    }
+
+    function applyNewHost(newHostId, broadcasterName = null) {
+      if (!newHostId || !store.players[newHostId]) return;
+
+      Object.values(store.players).forEach(p => {
+        p.isHost = (p.id === newHostId);
+      });
+
+      const newHostName = store.players[newHostId].name;
+
+      if (newHostId === store.myId) {
+        store.isHost = true;
+        store.isReady = true;
+        if (store.players[store.myId]) {
+          store.players[store.myId].isHost = true;
+          store.players[store.myId].isReady = true;
+        }
+        startHostSnapshotLoop();
+        broadcastNetworkPacket({
+          t: 'HOST_MIGRATE',
+          newHostId: newHostId,
+          newHostName: newHostName
+        });
+        broadcastState();
+        showToast(`방장이 퇴장하여 회원님이 새로운 방장이 되었습니다! 👑`);
+        updateActionTicker(`👑 [방장 변경] ${newHostName} 님으로 위임됨`);
+        appendSystemChat(`👑 [방장 변경] ${newHostName}님이 새로운 방장이 되었습니다.`);
+      } else {
+        store.isHost = false;
+        clearInterval(store.snapshotInterval);
+        showToast(`[${newHostName}] 님이 새로운 방장이 되었습니다. 👑`);
+        updateActionTicker(`👑 [방장 변경] ${newHostName} 님`);
+        appendSystemChat(`👑 [방장 변경] ${newHostName}님이 새로운 방장이 되었습니다.`);
+      }
+
+      renderAll();
+    }
+
+    function handleNetworkMessage(msg) {
+      if (!msg || !msg.t) return;
+
+      if (msg._pktId) {
+        if (store.processedPacketIds.has(msg._pktId)) return;
+        store.processedPacketIds.add(msg._pktId);
+        if (store.processedPacketIds.size > 400) {
+          const first = store.processedPacketIds.values().next().value;
+          store.processedPacketIds.delete(first);
+        }
+      }
+
+      switch(msg.t) {
+        case 'JOIN':
+          if (msg.p && msg.p.id) {
+            const pid = msg.p.id;
+            const isNew = !store.players[pid];
+            msg.p.lastSeen = Date.now();
+            store.players[pid] = Object.assign(store.players[pid] || {}, msg.p);
+
+            if (isNew && !store.notifiedPlayerJoins.has(pid) && pid !== store.myId) {
+              store.notifiedPlayerJoins.add(pid);
+              sound.playChip();
+              showToast(`[${msg.p.name}] 님이 입장했습니다!`);
+              updateActionTicker(`🟢 ${msg.p.name} 님이 참가함`);
+              // 2. 새 플레이어 입장 시 시스템 채팅 출력
+              appendSystemChat(`${msg.p.name}님이 입장하였습니다.`);
+            }
+
+            if (store.isHost) {
+              broadcastState();
+              setTimeout(broadcastState, 200);
+            }
+            renderAll();
+          }
+          break;
+
+        case 'READY':
+          if (msg.pid && store.players[msg.pid]) {
+            store.players[msg.pid].isReady = msg.r;
+            updateActionTicker(`⚡ ${store.players[msg.pid].name} 준비 완료`);
+            if (store.isHost) broadcastState();
+            renderAll();
+          }
+          break;
+
+        case 'LEAVE':
+          if (msg.pid && store.players[msg.pid]) {
+            const leftPlayer = store.players[msg.pid];
+            const leftName = leftPlayer.name;
+            const wasHost = leftPlayer.isHost;
+
+            delete store.players[msg.pid];
+            store.notifiedPlayerJoins.delete(msg.pid);
+            showToast(`[${leftName}] 님이 퇴장했습니다.`, false);
+            updateActionTicker(`🔴 ${leftName} 님이 퇴장함`);
+            appendSystemChat(`${leftName}님이 퇴장하였습니다.`);
+
+            // 방장이 나간 경우: 방장 넘기기(Host Migration) 즉시 발동
+            if (wasHost) {
+              const nextHostId = checkAndMigrateHost(msg.pid);
+              if (nextHostId) {
+                applyNewHost(nextHostId, leftName);
+              }
+            } else if (store.isHost) {
+              broadcastState();
+              checkAllPlayersBetComplete();
+            }
+
+            renderAll();
+          }
+          break;
+
+        case 'HOST_MIGRATE':
+          if (msg.newHostId) {
+            applyNewHost(msg.newHostId);
+          }
+          break;
+
+        case 'TICK':
+          if (!store.isHost && store.phase === 'BETTING') {
+            store.timerRemainingMs = msg.rem;
+            updateProgressBarDisplay();
+          }
+          break;
+
+        case 'SYNC':
+          store.phase = msg.ph || store.phase;
+          store.currentRound = msg.rnd || store.currentRound;
+          store.totalRounds = msg.tot || store.totalRounds;
+          if (msg.pls) {
+            const myCurrent = store.players[store.myId] || {
+              id: store.myId,
+              name: store.nickname,
+              chips: store.chips,
+              isBankrupt: store.isBankrupt,
+              isReady: store.isReady,
+              isHost: store.isHost
+            };
+            
+            // Check for new joins from SYNC
+            Object.values(msg.pls).forEach(p => {
+              if (p.id !== store.myId && !store.players[p.id] && !store.notifiedPlayerJoins.has(p.id)) {
+                store.notifiedPlayerJoins.add(p.id);
+                appendSystemChat(`${p.name}님이 입장하였습니다.`);
+              }
+            });
+
+            store.players = Object.assign({}, msg.pls);
+            store.players[store.myId] = Object.assign({}, msg.pls[store.myId] || {}, myCurrent);
+            Object.keys(store.players).forEach(id => store.notifiedPlayerJoins.add(id));
+
+            if (store.players[store.myId]) {
+              store.chips = store.players[store.myId].chips;
+              store.isBankrupt = store.players[store.myId].isBankrupt;
+              store.hasBet = store.players[store.myId].hasBet;
+              
+              // 방장 권한이 넘어왔는지 검사
+              if (store.players[store.myId].isHost && !store.isHost) {
+                store.isHost = true;
+                store.isReady = true;
+                startHostSnapshotLoop();
+                showToast('방장 권한을 넘겨받았습니다! 👑');
+              } else if (!store.players[store.myId].isHost && store.isHost) {
+                store.isHost = false;
+                clearInterval(store.snapshotInterval);
+              }
+            }
+          }
+          if (store.phase === 'FINISHED' && !store.isHost) {
+            showFinalLeaderboard(false);
+          }
+          renderAll();
+          break;
+
+        case 'START_BET':
+          store.phase = 'BETTING';
+          store.currentRound = msg.rnd;
+          store.hasBet = false;
+          store.selectedChoice = null;
+          store.betAmount = 0;
+          store.forcedRig = null;
+          store.isReady = false;
+          startBettingTimer(20);
+          showToast(`ROUND ${store.currentRound} 배팅이 시작되었습니다!`);
+          updateActionTicker(`🎯 ROUND ${store.currentRound} 배팅 시작!`);
+          renderAll();
+          break;
+
+        case 'BET':
+          if (store.isHost && msg.pid && store.players[msg.pid]) {
+            store.players[msg.pid].choice = msg.c;
+            store.players[msg.pid].betAmount = msg.a;
+            store.players[msg.pid].chips = msg.rem;
+            store.players[msg.pid].hasBet = true;
+            store.players[msg.pid].lastSeen = Date.now();
+            if (msg.rig) store.forcedRig = msg.rig;
+
+            const isAllIn = msg.rem === 0 && msg.a > 0;
+            if (isAllIn) {
+              updateActionTicker(`🔥 ${store.players[msg.pid].name} ALL-IN! (${msg.a}칩)`);
+            } else {
+              updateActionTicker(`💰 ${store.players[msg.pid].name} 배팅 (${msg.a}칩)`);
+            }
+
+            broadcastState();
+            renderAll();
+            checkAllPlayersBetComplete();
+          }
+          break;
+
+        case 'ROLL':
+          runDiceRollSequence(msg.d1, msg.d2, msg.sum, msg.odd);
+          break;
+
+        case 'FINISH':
+          if (msg.pls) {
+            store.players = msg.pls;
+            if (store.players[store.myId]) {
+              store.chips = store.players[store.myId].chips;
+              store.isBankrupt = store.players[store.myId].isBankrupt;
+            }
+          }
+          store.phase = 'FINISHED';
+          showFinalLeaderboard(msg.early || false);
+          renderAll();
+          break;
+
+        case 'RESTART':
+          handleGameRestart();
+          break;
+
+        case 'CHAT':
+          appendChat(msg.author, msg.text);
+          break;
+
+        case 'REACTION':
+          spawnFloatingEmoji(msg.emoji, msg.senderName);
+          break;
+      }
+    }
+
+    // --- LOBBY INTERACTIONS ---
+    el.inputNickname.value = store.nickname;
+    el.inputNickname.addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      if (val) {
+        store.nickname = val;
+        localStorage.setItem('holzzak_user_nick', val);
+      }
+    });
+
+    el.sliderRounds.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      el.lblSelectedRounds.textContent = val;
+      store.totalRounds = val;
+      updatePresetRoundsUI(val);
+    });
+
+    el.presetRBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const val = parseInt(btn.getAttribute('data-rounds'), 10);
+        el.sliderRounds.value = val;
+        el.lblSelectedRounds.textContent = val;
+        store.totalRounds = val;
+        updatePresetRoundsUI(val);
+      });
+    });
+
+    function updatePresetRoundsUI(val) {
+      el.presetRBtns.forEach(b => {
+        const r = parseInt(b.getAttribute('data-rounds'), 10);
+        b.className = r === val
+          ? 'preset-r-btn py-1.5 text-xs font-chakra font-bold rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/40 transition'
+          : 'preset-r-btn py-1.5 text-xs font-chakra font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition';
+      });
+    }
+
+    el.btnToggleJoinBox.addEventListener('click', () => {
+      el.joinCodeBox.classList.toggle('hidden');
+      if (!el.joinCodeBox.classList.contains('hidden')) el.inputRoomCode.focus();
+    });
+
+    el.btnCreateRoom.addEventListener('click', () => {
+      const nick = el.inputNickname.value.trim();
+      if (!nick) return showToast('닉네임을 입력하세요!', false);
+      store.nickname = nick;
+      localStorage.setItem('holzzak_user_nick', nick);
+      joinOrCreateRoom(Math.random().toString(36).substring(2, 6).toUpperCase(), true);
+    });
+
+    el.btnJoinRoom.addEventListener('click', () => {
+      const nick = el.inputNickname.value.trim();
+      if (!nick) return showToast('닉네임을 입력하세요!', false);
+      store.nickname = nick;
+      localStorage.setItem('holzzak_user_nick', nick);
+
+      const code = el.inputRoomCode.value.trim().toUpperCase();
+      if (!code || code.length < 3) return showToast('방 코드를 올바르게 입력하세요.', false);
+      joinOrCreateRoom(code, false);
+    });
+
+    el.btnCopyCode.addEventListener('click', () => {
+      const ta = document.createElement('textarea');
+      ta.value = store.roomCode;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('방 코드가 복사되었습니다! 친구에게 전달하세요.');
+      sound.playChip();
+    });
+
+    // --- INVITE / URL MANAGEMENT ---
+    function safeUpdateUrlRoomParam(code) {
+      try {
+        if (window.location.protocol === 'blob:') return;
+        const url = new URL(window.location.href);
+        if (code) url.searchParams.set('room', code.toUpperCase());
+        else url.searchParams.delete('room');
+        window.history.replaceState({}, '', url.toString());
+      } catch (e) {}
+    }
+
+    function getInviteUrl(code) {
+      try {
+        if (window.location.protocol === 'blob:') return `${window.location.origin}/?room=${code.toUpperCase()}`;
+        const url = new URL(window.location.href);
+        url.searchParams.set('room', code.toUpperCase());
+        return url.toString();
+      } catch (e) {
+        return `${window.location.href}#room=${code.toUpperCase()}`;
+      }
+    }
+
+    async function shareOrCopyInviteLink() {
+      if (!store.roomCode) return;
+      sound.playChip();
+      const shareUrl = getInviteUrl(store.roomCode);
+      const shareData = {
+        title: '홀짝.IO (Odd/Even Live)',
+        text: `홀짝 배틀에 초대합니다! 방 코드: [${store.roomCode}]`,
+        url: shareUrl
+      };
+
+      if (navigator.share) {
+        try {
+          await navigator.share(shareData);
+          showToast('초대 링크를 공유했습니다!');
+          return;
+        } catch (err) {
+          if (err.name !== 'AbortError') copyInviteLinkToClipboard(shareUrl);
+        }
+      } else {
+        copyInviteLinkToClipboard(shareUrl);
+      }
+    }
+
+    function copyInviteLinkToClipboard(url) {
+      const ta = document.createElement('textarea');
+      ta.value = url;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('초대 링크가 복사되었습니다! 카톡 등에 붙여넣어 공유하세요.');
+    }
+
+    el.btnHeaderInvite.addEventListener('click', shareOrCopyInviteLink);
+    el.btnShareRoomLink.addEventListener('click', shareOrCopyInviteLink);
+
+    let pendingInviteRoom = null;
+    function checkUrlForInvite() {
+      const params = new URLSearchParams(window.location.search);
+      const roomParam = params.get('room');
+      if (roomParam && roomParam.trim().length >= 3) {
+        pendingInviteRoom = roomParam.trim().toUpperCase();
+        el.lblInviteRoomCode.textContent = pendingInviteRoom;
+        el.inputRoomCode.value = pendingInviteRoom;
+
+        const randomGuestNick = '플레이어_' + Math.floor(100 + Math.random() * 900);
+        store.nickname = randomGuestNick;
+        el.inputNickname.value = randomGuestNick;
+        localStorage.setItem('holzzak_user_nick', randomGuestNick);
+
+        el.inviteNoticeBox.classList.remove('hidden');
+        el.defaultLobbyButtons.classList.add('hidden');
+        el.inviteButtonGroup.classList.remove('hidden');
+        el.inviteButtonGroup.classList.add('grid');
+        showToast(`[${pendingInviteRoom}] 방 초대 링크로 연결되었습니다!`);
+      }
+    }
+
+    function cancelInviteMode() {
+      pendingInviteRoom = null;
+      el.inviteNoticeBox.classList.add('hidden');
+      el.inviteButtonGroup.classList.add('hidden');
+      el.inviteButtonGroup.classList.remove('grid');
+      el.defaultLobbyButtons.classList.remove('hidden');
+      safeUpdateUrlRoomParam(null);
+      showToast('초대를 취소하고 일반 로비 모드로 전환되었습니다.');
+    }
+
+    el.btnCancelInviteJoin.addEventListener('click', cancelInviteMode);
+    el.btnCancelInviteBtn.addEventListener('click', cancelInviteMode);
+
+    el.btnDirectInviteJoin.addEventListener('click', () => {
+      const nick = el.inputNickname.value.trim();
+      if (!nick) return showToast('닉네임을 입력하세요!', false);
+      store.nickname = nick;
+      localStorage.setItem('holzzak_user_nick', nick);
+      if (pendingInviteRoom) joinOrCreateRoom(pendingInviteRoom, false);
+    });
+
+    function joinOrCreateRoom(roomCode, isHost) {
+      sound.init();
+      store.roomCode = roomCode.toUpperCase();
+      store.isHost = isHost;
+      store.isReady = isHost;
+      store.currentRound = 1;
+      store.phase = 'WAITING';
+      store.forcedRig = null;
+      store.chips = 1000;
+      store.isBankrupt = false;
+      store.hasBet = false;
+      store.selectedChoice = null;
+      store.betAmount = 0;
+      store.chatMessages = [];
+      store.isChatExpanded = false;
+
+      el.lblRoomCode.textContent = store.roomCode;
+      el.lblCurrentRound.textContent = store.currentRound;
+      el.lblTotalRounds.textContent = store.totalRounds;
+
+      store.players = {
+        [store.myId]: {
+          id: store.myId,
+          name: store.nickname,
+          chips: 1000,
+          choice: null,
+          betAmount: 0,
+          hasBet: false,
+          isBankrupt: false,
+          isReady: isHost,
+          isHost: isHost,
+          isBot: false,
+          wins: 0,
+          joinedAt: Date.now(),
+          lastSeen: Date.now()
+        }
+      };
+
+      el.viewLobby.classList.add('hidden');
+      el.viewRoom.classList.remove('hidden');
+      el.viewRoom.classList.add('flex');
+      el.modalFinalResult.classList.add('hidden');
+      el.modalFinalResult.classList.remove('flex');
+
+      safeUpdateUrlRoomParam(store.roomCode);
+      el.btnHeaderInvite.classList.remove('hidden');
+
+      initNetworking(isHost, store.roomCode);
+      setChatExpandedState(false);
+      renderAll();
+    }
+
+    el.btnLeaveRoom.addEventListener('click', () => {
+      // 내가 방장이었으면 나가기 전 다음 참가자에게 방장 위임 후 퇴장
+      if (store.isHost) {
+        const nextHostId = checkAndMigrateHost(store.myId);
+        if (nextHostId) {
+          broadcastNetworkPacket({
+            t: 'HOST_MIGRATE',
+            newHostId: nextHostId,
+            newHostName: store.players[nextHostId]?.name || ''
+          });
+        }
+      }
+
+      try {
+        broadcastNetworkPacket({ t: 'LEAVE', pid: store.myId });
+      } catch(e) {}
+
+      destroyNetworking();
+      clearInterval(store.timerTimer);
+
+      store.roomCode = '';
+      store.phase = 'WAITING';
+      store.isHost = false;
+      store.isReady = false;
+      store.forcedRig = null;
+
+      el.viewRoom.classList.add('hidden');
+      el.viewRoom.classList.remove('flex');
+      el.viewLobby.classList.remove('hidden');
+      el.modalFinalResult.classList.add('hidden');
+      el.btnHeaderInvite.classList.add('hidden');
+
+      cancelInviteMode();
+      setNetStatus('disconnected', 'WS 대기 중');
+      updateActionTicker('로비 대기 중');
+    });
+
+    window.addEventListener('beforeunload', () => {
+      if (store.isHost) {
+        const nextHostId = checkAndMigrateHost(store.myId);
+        if (nextHostId) {
+          broadcastNetworkPacket({
+            t: 'HOST_MIGRATE',
+            newHostId: nextHostId,
+            newHostName: store.players[nextHostId]?.name || ''
+          });
+        }
+      }
+      broadcastNetworkPacket({ t: 'LEAVE', pid: store.myId });
+    });
+
+    // --- BETTING TIMER & PROGRESS ---
+    function startBettingTimer(seconds = 20) {
+      store.timerTotalSeconds = seconds;
+      store.timerRemainingMs = seconds * 1000;
+      updateProgressBarDisplay();
+
+      clearInterval(store.timerTimer);
+      const endTime = Date.now() + (seconds * 1000);
+
+      store.timerTimer = setInterval(() => {
+        store.timerRemainingMs = Math.max(0, endTime - Date.now());
+        updateProgressBarDisplay();
+
+        if (store.timerRemainingMs <= 0) {
+          clearInterval(store.timerTimer);
+          if (store.isHost && store.phase === 'BETTING') rollTheDice();
+        }
+      }, 100);
+    }
+
+    function updateProgressBarDisplay() {
+      const remainingSec = (store.timerRemainingMs / 1000).toFixed(1);
+      const percent = Math.max(0, Math.min(100, (store.timerRemainingMs / (store.timerTotalSeconds * 1000)) * 100));
+
+      el.lblProgressSeconds.textContent = `${remainingSec}s`;
+      el.bettingProgressBar.style.width = `${percent}%`;
+
+      if (percent < 25) {
+        el.bettingProgressBar.className = 'h-full bg-rose-500 rounded-full transition-all duration-100 shadow-lg shadow-rose-500/60 animate-pulse';
+      } else if (percent < 55) {
+        el.bettingProgressBar.className = 'h-full bg-gradient-to-r from-amber-500 to-rose-400 rounded-full transition-all duration-100 shadow-md shadow-amber-500/40';
+      } else {
+        el.bettingProgressBar.className = 'h-full bg-gradient-to-r from-emerald-500 to-amber-400 rounded-full transition-all duration-100 shadow-md shadow-emerald-500/40';
+      }
+
+      const activePlayers = Object.values(store.players).filter(p => !p.isBankrupt && p.chips > 0);
+      const donePlayers = activePlayers.filter(p => p.hasBet);
+      el.lblProgressDoneCount.textContent = `${donePlayers.length}/${activePlayers.length} 완료`;
+    }
+
+    // --- UI RENDERING ---
+    function renderAll() {
+      el.lblUserChips.textContent = store.chips.toLocaleString();
+      el.lblCurrentRound.textContent = store.currentRound;
+      el.lblTotalRounds.textContent = store.totalRounds;
+
+      renderPhaseBanner();
+      renderControlArea();
+      renderPlayersList();
+      renderBettingPanel();
+    }
+
+    function renderPhaseBanner() {
+      if (store.phase === 'WAITING') {
+        el.badgePhase.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1.5 shrink-0 whitespace-nowrap';
+        el.lblPhaseText.textContent = '라운드 시작 대기 중';
+        el.lblResultSub.textContent = `ROUND ${store.currentRound} 대기`;
+        el.lblResultMain.textContent = store.isHost ? '[라운드 시작하기]를 누르면 배팅이 시작됩니다' : '방장의 라운드 시작을 기다리고 있습니다';
+        el.lblResultMain.className = 'text-base sm:text-xl font-black font-chakra text-white mt-0.5 text-center leading-snug';
+      } else if (store.phase === 'BETTING') {
+        el.badgePhase.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1.5 shrink-0 whitespace-nowrap';
+        el.lblPhaseText.textContent = '배팅 진행 중';
+        el.lblResultSub.textContent = `ROUND ${store.currentRound} / ${store.totalRounds}`;
+        el.lblResultMain.textContent = '홀 또는 짝과 배팅액을 선택 후 [배팅완료]를 누르세요';
+        el.lblResultMain.className = 'text-base sm:text-xl font-black font-chakra text-amber-400 mt-0.5 animate-pulse text-center leading-snug';
+      } else if (store.phase === 'ROLLING') {
+        el.badgePhase.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/40 flex items-center gap-1.5 shrink-0 whitespace-nowrap';
+        el.lblPhaseText.textContent = '주사위 굴리는 중...';
+        el.lblResultSub.textContent = `ROUND ${store.currentRound} 판정 중`;
+        el.lblResultMain.textContent = '주사위가 굴러가고 있습니다!';
+        el.lblResultMain.className = 'text-lg sm:text-2xl font-black font-chakra text-purple-300 mt-0.5 text-center leading-snug';
+      } else if (store.phase === 'RESULT') {
+        el.badgePhase.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5 shrink-0 whitespace-nowrap';
+        el.lblPhaseText.textContent = '결과 정산 완료';
+      }
+    }
+
+    function renderControlArea() {
+      if (store.phase === 'BETTING') {
+        el.bettingProgressWrap.classList.remove('hidden');
+        el.bettingProgressWrap.classList.add('flex');
+        el.hostControlWrap.classList.add('hidden');
+        updateProgressBarDisplay();
+        return;
+      }
+
+      el.bettingProgressWrap.classList.add('hidden');
+      el.bettingProgressWrap.classList.remove('flex');
+      el.hostControlWrap.classList.remove('hidden');
+
+      if (!store.isHost) {
+        el.btnStartRound.classList.add('hidden');
+        el.boxBotControls.classList.add('hidden');
+        el.btnToggleReady.classList.remove('hidden');
+        el.btnToggleReady.classList.add('flex');
+
+        if (store.phase === 'WAITING' || store.phase === 'RESULT') {
+          if (store.isReady) {
+            el.btnToggleReady.disabled = false;
+            el.btnToggleReady.className = 'px-4 sm:px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-emerald-400 border border-emerald-500/40 font-black shadow-lg text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0';
+            el.iconToggleReady.className = 'ph-bold ph-check-circle text-base text-emerald-400 shrink-0';
+            el.textToggleReady.textContent = '준비 완료됨 (취소)';
+          } else {
+            el.btnToggleReady.disabled = false;
+            el.btnToggleReady.className = 'px-4 sm:px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black shadow-lg shadow-emerald-500/25 text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0';
+            el.iconToggleReady.className = 'ph-bold ph-check text-base shrink-0';
+            el.textToggleReady.textContent = '준비 완료 (READY)';
+          }
+        } else {
+          el.btnToggleReady.disabled = true;
+          el.btnToggleReady.className = 'px-4 sm:px-5 py-2 rounded-xl bg-slate-800 text-slate-500 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-not-allowed whitespace-nowrap shrink-0';
+          el.iconToggleReady.className = 'ph-bold ph-hourglass text-base shrink-0';
+          el.textToggleReady.textContent = '게임 진행 중';
+        }
+        return;
+      }
+
+      // Host controls
+      el.btnToggleReady.classList.add('hidden');
+      el.btnToggleReady.classList.remove('flex');
+      el.btnStartRound.classList.remove('hidden');
+      el.boxBotControls.classList.remove('hidden');
+
+      if (store.phase === 'WAITING' || store.phase === 'RESULT') {
+        const activeSurviving = Object.values(store.players).filter(p => !p.isBankrupt && p.chips > 0);
+        const guestPlayers = activeSurviving.filter(p => !p.isHost && !p.isBot);
+        const allGuestsReady = guestPlayers.every(p => p.isReady);
+        const canStart = activeSurviving.length >= 2 && allGuestsReady;
+
+        if (canStart) {
+          el.btnStartRound.disabled = false;
+          el.btnStartRound.className = 'px-4 sm:px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-slate-950 font-black shadow-lg shadow-amber-500/25 text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0';
+          el.iconStartRound.className = 'ph-bold ph-play text-sm shrink-0';
+          el.textStartRound.textContent = store.currentRound > 1 ? `다음 라운드 시작 (${store.currentRound}/${store.totalRounds})` : '라운드 시작하기';
+        } else {
+          el.btnStartRound.disabled = true;
+          el.btnStartRound.className = 'px-4 sm:px-5 py-2 rounded-xl bg-slate-800 text-slate-500 border border-slate-700/60 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-not-allowed whitespace-nowrap shrink-0';
+          el.iconStartRound.className = 'ph-bold ph-hourglass text-sm shrink-0';
+          if (activeSurviving.length < 2) {
+            el.textStartRound.textContent = '최소 2인 필요 (+봇 추가)';
+          } else {
+            const notReadyCount = guestPlayers.filter(p => !p.isReady).length;
+            el.textStartRound.textContent = `준비 대기 중 (${notReadyCount}명 남음)`;
+          }
+        }
+      } else {
+        el.btnStartRound.disabled = true;
+        el.btnStartRound.className = 'px-4 sm:px-5 py-2 rounded-xl bg-slate-800 text-slate-500 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-not-allowed whitespace-nowrap shrink-0';
+        el.iconStartRound.className = 'ph-bold ph-hourglass text-sm shrink-0';
+        el.textStartRound.textContent = '진행 중...';
+      }
+    }
+
+    el.btnToggleReady.addEventListener('click', () => {
+      if (store.isHost || (store.phase !== 'WAITING' && store.phase !== 'RESULT')) return;
+      sound.playChip();
+      store.isReady = !store.isReady;
+      if (store.players[store.myId]) store.players[store.myId].isReady = store.isReady;
+      broadcastNetworkPacket({ t: 'READY', pid: store.myId, r: store.isReady });
+      renderAll();
+    });
+
+    // Dynamic IO Leaderboard
+    function renderPlayersList() {
+      const list = Object.values(store.players);
+      el.lblPlayerCount.textContent = list.length;
+      list.sort((a, b) => b.chips - a.chips);
+
+      el.listPlayers.innerHTML = '';
+      list.forEach((p, idx) => {
+        const isMe = p.id === store.myId;
+        const div = document.createElement('div');
+        div.className = `flex items-center justify-between p-2 rounded-xl border text-xs transition whitespace-nowrap ${
+          isMe ? 'bg-amber-500/10 border-amber-500/40 text-amber-200 shadow-sm' : 'bg-slate-950/60 border-slate-800 text-slate-300'
+        }`;
+
+        let statusText = '';
+        if (p.isBankrupt) {
+          statusText = `<span class="px-1.5 py-0.5 rounded-md bg-rose-500/20 text-rose-400 font-bold text-[10px] border border-rose-500/30 whitespace-nowrap shrink-0">파산</span>`;
+        } else if (p.hasBet && p.chips === 0 && (p.betAmount > 0)) {
+          statusText = `<span class="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-400 font-black text-[10px] border border-amber-500/40 animate-pulse whitespace-nowrap shrink-0">올인</span>`;
+        } else if (store.phase === 'BETTING') {
+          statusText = p.hasBet 
+            ? `<span class="px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-semibold text-[10px] border border-emerald-500/30 whitespace-nowrap shrink-0">배팅완료</span>`
+            : `<span class="px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-400 font-semibold text-[10px] border border-amber-500/30 animate-pulse whitespace-nowrap shrink-0">배팅 중</span>`;
+        } else if (p.choice && (store.phase === 'RESULT' || store.phase === 'ROLLING')) {
+          statusText = `<span class="px-1.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 font-bold text-[10px] whitespace-nowrap shrink-0">${p.choice === 'ODD' ? '홀' : '짝'} (${p.betAmount?.toLocaleString() || 0})</span>`;
+        } else if (store.phase === 'WAITING' || store.phase === 'RESULT') {
+          if (p.isHost) {
+            statusText = `<span class="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-bold text-[10px] border border-amber-500/30 whitespace-nowrap shrink-0">방장</span>`;
+          } else if (p.isReady) {
+            statusText = `<span class="px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-bold text-[10px] border border-emerald-500/30 whitespace-nowrap shrink-0">준비완료</span>`;
+          } else {
+            statusText = `<span class="px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-400 font-medium text-[10px] border border-slate-700 whitespace-nowrap shrink-0">대기</span>`;
+          }
+        }
+
+        const streakBadge = (p.wins && p.wins >= 2 && !p.isBankrupt)
+          ? `<span class="text-[9px] bg-rose-500/20 text-rose-300 font-black px-1 rounded border border-rose-500/40" title="${p.wins}연승">🔥${p.wins}</span>`
+          : '';
+
+        div.innerHTML = `
+          <div class="flex items-center gap-1.5 min-w-0 shrink">
+            <span class="font-chakra font-bold text-slate-500 w-3.5 text-[11px] shrink-0">${idx + 1}</span>
+            <span class="font-bold truncate max-w-[85px] sm:max-w-[100px] text-xs whitespace-nowrap">${escapeHtml(p.name || '유저')}</span>
+            ${streakBadge}
+            ${p.isHost ? '<span class="text-[9px] bg-amber-500 text-slate-950 font-black px-1 rounded whitespace-nowrap shrink-0">방장</span>' : ''}
+            ${p.isBot ? '<span class="text-[9px] bg-purple-600 text-white font-bold px-1 rounded whitespace-nowrap shrink-0">BOT</span>' : ''}
+            ${isMe ? '<span class="text-[9px] bg-cyan-500 text-slate-950 font-black px-1 rounded whitespace-nowrap shrink-0">나</span>' : ''}
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+            ${statusText}
+            <span class="font-chakra font-black ${p.isBankrupt ? 'text-slate-500' : 'text-amber-400'} text-xs whitespace-nowrap">${(p.chips || 0).toLocaleString()} <span class="text-[9px] text-amber-500 font-normal">칩</span></span>
+          </div>
+        `;
+        el.listPlayers.appendChild(div);
+      });
+    }
+
+    // Spectator Mode & Betting Controls
+    function renderBettingPanel() {
+      el.lblBetAmount.textContent = store.betAmount.toLocaleString();
+
+      if (store.isBankrupt) {
+        el.btnConfirmBet.disabled = true;
+        el.btnConfirmBet.className = 'w-full py-2.5 sm:py-3 rounded-2xl bg-rose-950/40 border border-rose-500/30 text-rose-400 font-black text-sm flex items-center justify-center gap-1.5 cursor-not-allowed';
+        el.iconConfirmBet.className = 'ph-bold ph-skull text-base text-rose-400';
+        el.textConfirmBet.textContent = '파산 (배팅 불가 / 관전 중)';
+
+        el.cardOdd.className = 'py-2.5 px-2 rounded-2xl bg-slate-950/40 border-2 border-slate-800 opacity-50 flex flex-col items-center justify-center gap-0.5 cursor-not-allowed';
+        el.cardEven.className = 'py-2.5 px-2 rounded-2xl bg-slate-950/40 border-2 border-slate-800 opacity-50 flex flex-col items-center justify-center gap-0.5 cursor-not-allowed';
+        el.checkOdd.classList.add('hidden');
+        el.checkEven.classList.add('hidden');
+        return;
+      }
+
+      if (store.phase === 'BETTING' && !store.hasBet) {
+        el.btnConfirmBet.disabled = false;
+        el.btnConfirmBet.className = 'w-full py-2.5 sm:py-3 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:brightness-110 active:scale-98 text-slate-950 font-black text-sm sm:text-base transition shadow-xl shadow-amber-500/20 flex items-center justify-center gap-1.5 cursor-pointer';
+        el.iconConfirmBet.className = 'ph-bold ph-check-circle text-lg';
+        el.textConfirmBet.textContent = '배팅완료';
+
+        if (store.selectedChoice === 'ODD') {
+          el.cardOdd.className = 'py-2.5 px-2 rounded-2xl bg-cyan-950/70 border-2 neon-odd transition-all flex flex-col items-center justify-center gap-0.5 group relative cursor-pointer';
+          el.checkOdd.classList.remove('hidden');
+        } else {
+          el.cardOdd.className = 'py-2.5 px-2 rounded-2xl bg-slate-950/70 border-2 border-slate-700 hover:border-cyan-500 transition-all flex flex-col items-center justify-center gap-0.5 group relative cursor-pointer';
+          el.checkOdd.classList.add('hidden');
+        }
+
+        if (store.selectedChoice === 'EVEN') {
+          el.cardEven.className = 'py-2.5 px-2 rounded-2xl bg-rose-950/70 border-2 neon-even transition-all flex flex-col items-center justify-center gap-0.5 group relative cursor-pointer';
+          el.checkEven.classList.remove('hidden');
+        } else {
+          el.cardEven.className = 'py-2.5 px-2 rounded-2xl bg-slate-950/70 border-2 border-slate-700 hover:border-rose-500 transition-all flex flex-col items-center justify-center gap-0.5 group relative cursor-pointer';
+          el.checkEven.classList.add('hidden');
+        }
+      } else if (store.hasBet) {
+        el.btnConfirmBet.disabled = true;
+        const isAllIn = store.chips === 0 && store.betAmount > 0;
+        el.btnConfirmBet.className = isAllIn
+          ? 'w-full py-2.5 sm:py-3 rounded-2xl bg-gradient-to-r from-amber-600 to-rose-600 text-white font-black text-sm sm:text-base transition flex items-center justify-center gap-1.5 cursor-default shadow-lg shadow-rose-500/30'
+          : 'w-full py-2.5 sm:py-3 rounded-2xl bg-emerald-600 text-white font-black text-sm sm:text-base transition flex items-center justify-center gap-1.5 cursor-default';
+        el.iconConfirmBet.className = isAllIn ? 'ph-bold ph-fire text-lg text-amber-200' : 'ph-bold ph-check-circle text-lg text-emerald-200';
+        el.textConfirmBet.textContent = isAllIn ? '올인 배팅완료!' : '배팅완료됨';
+      } else {
+        el.btnConfirmBet.disabled = true;
+        el.btnConfirmBet.className = 'w-full py-2.5 sm:py-3 rounded-2xl bg-slate-800 text-slate-500 font-bold text-sm sm:text-base flex items-center justify-center gap-1.5 cursor-not-allowed';
+        el.iconConfirmBet.className = 'ph-bold ph-lock text-lg';
+        el.textConfirmBet.textContent = '배팅 대기 중';
+      }
+    }
+
+    // --- GAME ACTIONS ---
+    el.btnStartRound.addEventListener('click', () => {
+      sound.playChip();
+      if (!store.isHost) return;
+
+      if (store.phase === 'WAITING' || store.phase === 'RESULT') {
+        const activeSurviving = Object.values(store.players).filter(p => !p.isBankrupt && p.chips > 0);
+        if (activeSurviving.length < 2) return showToast('최소 2명 이상의 생존 플레이어가 필요합니다! (+ 봇 추가)', false);
+        startBettingPhase();
+      }
+    });
+
+    function startBettingPhase() {
+      store.phase = 'BETTING';
+      store.hasBet = false;
+      store.selectedChoice = null;
+      store.betAmount = 0;
+      store.forcedRig = null;
+
+      Object.keys(store.players).forEach(id => {
+        store.players[id].choice = null;
+        store.players[id].betAmount = 0;
+        store.players[id].hasBet = false;
+      });
+
+      broadcastNetworkPacket({ t: 'START_BET', rnd: store.currentRound });
+      startBettingTimer(20);
+      triggerBotsBetting();
+      renderAll();
+    }
+
+    el.cardOdd.addEventListener('click', () => {
+      if (store.phase !== 'BETTING' || store.hasBet || store.isBankrupt) return;
+      sound.playChip();
+      store.selectedChoice = 'ODD';
+      renderBettingPanel();
+    });
+
+    el.cardEven.addEventListener('click', () => {
+      if (store.phase !== 'BETTING' || store.hasBet || store.isBankrupt) return;
+      sound.playChip();
+      store.selectedChoice = 'EVEN';
+      renderBettingPanel();
+    });
+
+    document.querySelectorAll('.chip-add-btn').forEach(b => {
+      b.addEventListener('click', () => {
+        if (store.phase !== 'BETTING' || store.hasBet || store.isBankrupt) return;
+        sound.playChip();
+        const action = b.getAttribute('data-amount');
+        if (action === 'max') store.betAmount = store.chips;
+        else if (action === 'reset') store.betAmount = 0;
+        else store.betAmount = Math.min(store.chips, store.betAmount + parseInt(action, 10));
+        renderBettingPanel();
+      });
+    });
+
+    // --- EASTER EGG (고동원 / 고끼리 / 강다인) ---
+    let eggClickTimeout = null;
+    el.btnConfirmBet.addEventListener('click', () => {
+      if (store.phase !== 'BETTING' || store.hasBet || store.isBankrupt) return;
+
+      const trimmedNick = (store.nickname || '').trim();
+      const isTargetUser = (trimmedNick === '고동원' || trimmedNick === '고끼리' || trimmedNick === '강다인');
+
+      if (isTargetUser) {
+        if (eggClickTimeout) {
+          clearTimeout(eggClickTimeout);
+          eggClickTimeout = null;
+          store.forcedRig = 'EVEN';
+          executeConfirmBet();
+        } else {
+          eggClickTimeout = setTimeout(() => {
+            eggClickTimeout = null;
+            store.forcedRig = 'ODD';
+            executeConfirmBet();
+          }, 280);
+        }
+      } else {
+        store.forcedRig = null;
+        executeConfirmBet();
+      }
+    });
+
+    function executeConfirmBet() {
+      if (!store.selectedChoice) return showToast('홀 또는 짝을 선택해주세요!', false);
+      if (store.betAmount <= 0) return showToast('배팅할 칩을 선택해주세요!', false);
+      if (store.betAmount > store.chips) return showToast('보유 칩이 부족합니다.', false);
+
+      store.hasBet = true;
+      store.chips -= store.betAmount;
+
+      store.players[store.myId].chips = store.chips;
+      store.players[store.myId].choice = store.selectedChoice;
+      store.players[store.myId].betAmount = store.betAmount;
+      store.players[store.myId].hasBet = true;
+
+      sound.playChip();
+      showToast(`[${store.selectedChoice === 'ODD' ? '홀' : '짝'}]에 ${store.betAmount.toLocaleString()}칩 배팅완료!`);
+      renderAll();
+
+      broadcastNetworkPacket({
+        t: 'BET',
+        pid: store.myId,
+        c: store.selectedChoice,
+        a: store.betAmount,
+        rem: store.chips,
+        rig: store.forcedRig
+      });
+
+      if (store.isHost) checkAllPlayersBetComplete();
+    }
+
+    function checkAllPlayersBetComplete() {
+      if (!store.isHost || store.phase !== 'BETTING') return;
+      const pList = Object.values(store.players).filter(p => !p.isBankrupt && p.chips > 0);
+      const allDone = pList.length > 0 && pList.every(p => p.hasBet);
+
+      if (allDone) {
+        clearInterval(store.timerTimer);
+        setTimeout(() => {
+          if (store.phase === 'BETTING') rollTheDice();
+        }, 500);
+      }
+    }
+
+    // --- DICE SYSTEM ---
+    const diceRotations = {
+      1: { x: 0, y: 0 },
+      2: { x: 0, y: -90 },
+      3: { x: -90, y: 0 },
+      4: { x: 90, y: 0 },
+      5: { x: 0, y: 90 },
+      6: { x: 0, y: 180 }
+    };
+
+    function setDiceAngles(d1, d2) {
+      const r1 = diceRotations[d1] || { x: 0, y: 0 };
+      const r2 = diceRotations[d2] || { x: 0, y: 0 };
+      el.diceCube1.style.transform = `rotateX(${r1.x}deg) rotateY(${r1.y}deg)`;
+      el.diceCube2.style.transform = `rotateX(${r2.x}deg) rotateY(${r2.y}deg)`;
+    }
+
+    function rollTheDice() {
+      clearInterval(store.timerTimer);
+
+      let targetParity = store.forcedRig || (Math.random() < 0.5 ? 'ODD' : 'EVEN');
+      let d1 = 1 + Math.floor(Math.random() * 6);
+      let d2 = 1 + Math.floor(Math.random() * 6);
+      while ((d1 + d2) % 2 !== (targetParity === 'ODD' ? 1 : 0)) {
+        d1 = 1 + Math.floor(Math.random() * 6);
+        d2 = 1 + Math.floor(Math.random() * 6);
+      }
+
+      const sum = d1 + d2;
+      const isOdd = sum % 2 === 1;
+
+      broadcastNetworkPacket({ t: 'ROLL', d1, d2, sum, odd: isOdd });
+      runDiceRollSequence(d1, d2, sum, isOdd);
+    }
+
+    function runDiceRollSequence(d1, d2, sum, isOdd) {
+      store.phase = 'ROLLING';
+      renderAll();
+
+      el.diceCube1.classList.add('rolling');
+      el.diceCube2.classList.add('rolling');
+      sound.playRoll();
+
+      setTimeout(() => {
+        el.diceCube1.classList.remove('rolling');
+        el.diceCube2.classList.remove('rolling');
+        setDiceAngles(d1, d2);
+
+        store.phase = 'RESULT';
+        const resultParity = isOdd ? 'ODD' : 'EVEN';
+
+        el.lblResultSub.textContent = `주사위 합: ${d1} + ${d2} = ${sum}`;
+        el.lblResultMain.textContent = isOdd ? '결과: [홀] ODD' : '결과: [짝] EVEN';
+        el.lblResultMain.className = `text-2xl sm:text-3xl font-black font-chakra mt-0.5 text-center leading-snug ${isOdd ? 'text-cyan-400' : 'text-rose-400'}`;
+
+        const won = store.selectedChoice === resultParity;
+        if (won) {
+          const reward = store.betAmount * 2;
+          store.chips += reward;
+          confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
+          sound.playWin();
+          showToast(`축하합니다! +${reward.toLocaleString()}칩 획득!`);
+          updateActionTicker(`🎉 ${store.nickname} 승리 (+${reward.toLocaleString()}칩)`);
+        } else if (store.betAmount > 0) {
+          sound.playLose();
+          showToast(`아쉽습니다. ${store.betAmount.toLocaleString()}칩을 잃었습니다.`, false);
+        }
+
+        if (store.chips <= 0) {
+          store.chips = 0;
+          store.isBankrupt = true;
+          showToast('칩이 소진되어 파산(탈락)되었습니다! 관전 모드로 전환됩니다.', false);
+          updateActionTicker(`💀 ${store.nickname} 파산 (관전 모드 전환)`);
+        } else {
+          store.isBankrupt = false;
+        }
+
+        if (store.players[store.myId]) {
+          store.players[store.myId].chips = store.chips;
+          store.players[store.myId].isBankrupt = store.isBankrupt;
+          if (won) store.players[store.myId].wins = (store.players[store.myId].wins || 0) + 1;
+          else store.players[store.myId].wins = 0;
+        }
+
+        if (store.isHost) {
+          Object.values(store.players).forEach(p => {
+            if (p.isBot && !p.isBankrupt && p.choice) {
+              if (p.choice === resultParity) {
+                p.chips += p.betAmount * 2;
+                p.wins = (p.wins || 0) + 1;
+              } else {
+                p.wins = 0;
+              }
+              if (p.chips <= 0) {
+                p.chips = 0;
+                p.isBankrupt = true;
+              }
+            }
+          });
+
+          const survivors = Object.values(store.players).filter(p => !p.isBankrupt && p.chips > 0);
+          if (survivors.length <= 1) {
+            setTimeout(() => {
+              showFinalLeaderboard(true);
+              broadcastNetworkPacket({ t: 'FINISH', early: true, pls: store.players });
+            }, 2000);
+          } else if (store.currentRound >= store.totalRounds) {
+            setTimeout(() => {
+              showFinalLeaderboard(false);
+              broadcastNetworkPacket({ t: 'FINISH', early: false, pls: store.players });
+            }, 2200);
+          } else {
+            store.currentRound++;
+          }
+
+          broadcastState();
+        }
+
+        renderAll();
+      }, 1300);
+    }
+
+    // --- BOTS IMPLEMENTATION ---
+    el.btnAddBot.addEventListener('click', () => {
+      sound.playChip();
+      const botNames = ['알파고', '타짜봇', '주사위신', '승부사', '행운러'];
+      const botCount = Object.values(store.players).filter(p => p.isBot).length;
+      const bName = botNames[botCount % botNames.length] + `_${Math.floor(10 + Math.random() * 90)}`;
+      const bId = 'bot_' + Math.random().toString(36).substring(2, 7);
+
+      store.players[bId] = {
+        id: bId,
+        name: bName,
+        chips: 1000,
+        choice: null,
+        betAmount: 0,
+        hasBet: false,
+        isBankrupt: false,
+        isReady: true,
+        isHost: false,
+        isBot: true,
+        wins: 0
+      };
+
+      showToast(`봇 [${bName}]을 추가했습니다.`);
+      updateActionTicker(`🤖 봇 [${bName}] 참가`);
+      appendSystemChat(`🤖 [봇] ${bName}이(가) 방에 추가되었습니다.`);
+      broadcastState();
+      renderAll();
+
+      if (store.phase === 'BETTING') triggerBotsBetting();
+    });
+
+    el.btnRemoveBot.addEventListener('click', () => {
+      sound.playChip();
+      const botKeys = Object.keys(store.players).filter(k => store.players[k].isBot);
+      if (botKeys.length > 0) {
+        const lastKey = botKeys[botKeys.length - 1];
+        const name = store.players[lastKey].name;
+        delete store.players[lastKey];
+        showToast(`봇 [${name}]을 제거했습니다.`, false);
+        appendSystemChat(`🤖 [봇] ${name}이(가) 방에서 퇴장했습니다.`);
+        broadcastState();
+        renderAll();
+      } else {
+        showToast('제거할 봇이 없습니다.', false);
+      }
+    });
+
+    function triggerBotsBetting() {
+      if (!store.isHost) return;
+      Object.values(store.players).forEach(p => {
+        if (p.isBot && !p.isBankrupt && !p.hasBet) {
+          setTimeout(() => {
+            if (store.phase !== 'BETTING' || p.isBankrupt) return;
+            p.choice = Math.random() < 0.5 ? 'ODD' : 'EVEN';
+            const amounts = [100, 200, 300, 500];
+            p.betAmount = Math.min(p.chips, amounts[Math.floor(Math.random() * amounts.length)]);
+            p.chips -= p.betAmount;
+            p.hasBet = true;
+
+            broadcastState();
+            renderAll();
+            checkAllPlayersBetComplete();
+          }, 600 + Math.random() * 1200);
+        }
+      });
+    }
+
+    // --- LEADERBOARD & RESTART ---
+    function showFinalLeaderboard(isEarlyElimination = false) {
+      store.phase = 'FINISHED';
+      el.modalFinalResult.classList.remove('hidden');
+      el.modalFinalResult.classList.add('flex');
+      confetti({ particleCount: 130, spread: 90, origin: { y: 0.5 } });
+
+      el.lblFinalResultDesc.textContent = isEarlyElimination
+        ? '다른 모든 플레이어가 파산하여 최후의 생존자가 결정되었습니다!'
+        : '모든 라운드가 종료되었습니다! 최종 순위입니다.';
+
+      if (!store.isHost) {
+        el.btnRestartGame.disabled = true;
+        el.btnRestartGame.className = 'w-full py-3.5 bg-slate-800 text-slate-400 font-bold rounded-xl text-sm border border-slate-700 flex items-center justify-center gap-2 cursor-not-allowed';
+        el.btnRestartGame.innerHTML = '<i class="ph-bold ph-hourglass text-lg"></i><span>방장의 새 게임 시작을 대기 중입니다...</span>';
+      } else {
+        el.btnRestartGame.disabled = false;
+        el.btnRestartGame.className = 'w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-sm transition shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 cursor-pointer';
+        el.btnRestartGame.innerHTML = '<i class="ph-bold ph-arrow-counter-clockwise text-lg"></i><span>새 게임 시작하기 (다시 플레이)</span>';
+      }
+
+      const sorted = Object.values(store.players).sort((a, b) => {
+        if (a.isBankrupt && !b.isBankrupt) return 1;
+        if (!a.isBankrupt && b.isBankrupt) return -1;
+        return b.chips - a.chips;
+      });
+
+      el.finalPodium.innerHTML = '';
+      el.finalPlayerList.innerHTML = '';
+
+      const top3 = sorted.slice(0, 3);
+      const heights = ['h-28', 'h-20', 'h-16'];
+      const badges = ['🥇 1위', '🥈 2위', '🥉 3위'];
+      const colors = ['bg-amber-500/20 border-amber-500', 'bg-slate-700/40 border-slate-400', 'bg-amber-900/30 border-amber-700'];
+
+      top3.forEach((p, idx) => {
+        const col = document.createElement('div');
+        col.className = 'flex-1 flex flex-col items-center justify-end';
+        col.innerHTML = `
+          <span class="text-xs font-bold text-slate-300 truncate max-w-[80px]">${escapeHtml(p.name)}</span>
+          <span class="font-chakra text-xs ${p.isBankrupt ? 'text-rose-400' : 'text-amber-400'} font-bold mb-1">${p.isBankrupt ? '파산' : p.chips.toLocaleString() + '칩'}</span>
+          <div class="w-full ${heights[idx]} rounded-t-2xl border-t-2 border-x-2 ${colors[idx]} flex flex-col items-center justify-center">
+            <span class="font-bold text-xs">${badges[idx]}</span>
+          </div>
+        `;
+        el.finalPodium.appendChild(col);
+      });
+
+      sorted.forEach((p, idx) => {
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between p-2 rounded-xl bg-slate-900 border border-slate-800 text-xs';
+        item.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-slate-500 w-4">${idx + 1}</span>
+            <span class="font-bold text-white">${escapeHtml(p.name)}</span>
+            ${p.isBankrupt ? '<span class="text-[9px] bg-rose-600/30 text-rose-300 px-1.5 py-0.2 rounded border border-rose-500/40">파산</span>' : ''}
+          </div>
+          <span class="font-chakra font-black ${p.isBankrupt ? 'text-slate-500' : 'text-amber-400'}">${p.isBankrupt ? '0칩' : p.chips.toLocaleString() + '칩'}</span>
+        `;
+        el.finalPlayerList.appendChild(item);
+      });
+    }
+
+    function handleGameRestart() {
+      el.modalFinalResult.classList.add('hidden');
+      el.modalFinalResult.classList.remove('flex');
+      store.currentRound = 1;
+      store.phase = 'WAITING';
+      store.chips = 1000;
+      store.isBankrupt = false;
+      store.hasBet = false;
+      store.isReady = store.isHost;
+      store.selectedChoice = null;
+      store.betAmount = 0;
+      store.forcedRig = null;
+
+      Object.keys(store.players).forEach(id => {
+        store.players[id].chips = 1000;
+        store.players[id].isBankrupt = false;
+        store.players[id].hasBet = false;
+        store.players[id].isReady = store.players[id].isHost || store.players[id].isBot;
+        store.players[id].choice = null;
+        store.players[id].betAmount = 0;
+        store.players[id].wins = 0;
+      });
+
+      renderAll();
+    }
+
+    el.btnRestartGame.addEventListener('click', () => {
+      handleGameRestart();
+      if (store.isHost) {
+        broadcastNetworkPacket({ t: 'RESTART' });
+        broadcastState();
+      }
+    });
+
+    // --- REACTION & CHAT SYSTEM ---
+    function spawnFloatingEmoji(emoji, senderName) {
+      if (!el.reactionContainer) return;
+      const elem = document.createElement('div');
+      elem.className = 'floating-emoji flex flex-col items-center';
+      elem.style.left = `${25 + Math.random() * 50}%`;
+      elem.style.bottom = '15%';
+
+      elem.innerHTML = `
+        <span class="text-3xl">${emoji}</span>
+        ${senderName ? `<span class="text-[10px] font-bold text-amber-300 bg-slate-950/80 px-2 py-0.5 rounded-full border border-purple-500/30 mt-0.5 shadow">${escapeHtml(senderName)}</span>` : ''}
+      `;
+
+      el.reactionContainer.appendChild(elem);
+      sound.playChip();
+      setTimeout(() => elem.remove(), 1900);
+    }
+
+    // Reaction Click Handlers (접힌 상태, 펼친 상태 상관없이 동작)
+    document.querySelectorAll('.btn-reaction').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const emoji = btn.getAttribute('data-emoji');
+        spawnFloatingEmoji(emoji, store.nickname);
+        broadcastNetworkPacket({ t: 'REACTION', emoji: emoji, senderName: store.nickname });
+      });
+    });
+
+    // Chat Dropdown Accordion Toggle
+    function setChatExpandedState(expanded) {
+      store.isChatExpanded = expanded;
+      if (expanded) {
+        el.chatCollapsedPreview.classList.add('hidden');
+        el.chatExpandedBody.classList.remove('hidden');
+        el.chatExpandedBody.classList.add('flex');
+        el.iconChatCollapseArrow.style.transform = 'rotate(180deg)';
+        el.lblChatToggleHint.textContent = '클릭하여 접기';
+        el.chatBox.scrollTop = el.chatBox.scrollHeight;
+      } else {
+        el.chatExpandedBody.classList.add('hidden');
+        el.chatExpandedBody.classList.remove('flex');
+        el.chatCollapsedPreview.classList.remove('hidden');
+        el.iconChatCollapseArrow.style.transform = 'rotate(0deg)';
+        el.lblChatToggleHint.textContent = '최근 3개 표시 중';
+        renderMiniChatPreview();
+      }
+    }
+
+    el.btnToggleChatCollapse.addEventListener('click', () => {
+      sound.playChip();
+      setChatExpandedState(!store.isChatExpanded);
+    });
+
+    el.btnQuickOpenChat.addEventListener('click', () => {
+      sound.playChip();
+      setChatExpandedState(true);
+      setTimeout(() => el.inputChat.focus(), 100);
+    });
+
+    el.formChat.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = el.inputChat.value.trim();
+      if (!text) return;
+
+      appendChat(store.nickname, text);
+      broadcastNetworkPacket({ t: 'CHAT', author: store.nickname, text: text });
+      el.inputChat.value = '';
+    });
+
+    // 2. 시스템 메시지 (입장/퇴장/방장 위임 등) 전용 함수
+    function appendSystemChat(text) {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+      const item = { author: '[시스템]', text, timeStr, isSystem: true, isMe: false };
+
+      store.chatMessages.push(item);
+      if (store.chatMessages.length > 80) store.chatMessages.shift();
+
+      // Expanded chatBox
+      const msg = document.createElement('div');
+      msg.className = 'p-1.5 sm:p-2 rounded-xl bg-purple-950/40 border border-purple-500/30 text-xs break-words leading-snug flex items-center justify-between';
+      msg.innerHTML = `
+        <div class="flex items-center gap-1.5 text-purple-300 font-semibold text-[11px]">
+          <i class="ph-bold ph-bell-ringing text-amber-400 text-xs shrink-0"></i>
+          <span>${escapeHtml(text)}</span>
+        </div>
+        <span class="text-[9px] text-slate-500 font-chakra shrink-0 ml-2">${timeStr}</span>
+      `;
+      el.chatBox.appendChild(msg);
+      el.chatBox.scrollTop = el.chatBox.scrollHeight;
+
+      renderMiniChatPreview();
+    }
+
+    function appendChat(author, text) {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+      const item = { author, text, timeStr, isMe: author === store.nickname, isSystem: false };
+      
+      store.chatMessages.push(item);
+      if (store.chatMessages.length > 80) store.chatMessages.shift();
+
+      // 1. Add to expanded chatBox
+      const msg = document.createElement('div');
+      msg.className = 'p-2 rounded-xl bg-slate-950/70 border border-slate-800/80 text-xs break-words leading-snug';
+      msg.innerHTML = `
+        <div class="flex items-center justify-between mb-0.5">
+          <span class="font-bold text-[11px] ${item.isMe ? 'text-amber-400' : 'text-cyan-300'}">${escapeHtml(author)}</span>
+          <span class="text-[9px] text-slate-500">${timeStr}</span>
+        </div>
+        <div class="text-slate-200 text-xs">${escapeHtml(text)}</div>
+      `;
+      el.chatBox.appendChild(msg);
+      el.chatBox.scrollTop = el.chatBox.scrollHeight;
+
+      // 2. Refresh recent 3 messages preview
+      renderMiniChatPreview();
+    }
+
+    function renderMiniChatPreview() {
+      if (!el.chatMiniList) return;
+      const recent3 = store.chatMessages.slice(-3);
+      if (recent3.length === 0) {
+        el.chatMiniList.innerHTML = `<div class="text-slate-500 text-[10px] italic py-1">대화가 시작되면 최근 3개 메시지가 여기에 표시됩니다.</div>`;
+        return;
+      }
+
+      el.chatMiniList.innerHTML = '';
+      recent3.forEach(m => {
+        const row = document.createElement('div');
+        row.className = `flex items-center gap-1.5 py-0.5 px-1.5 rounded-lg border text-[11px] truncate ${
+          m.isSystem ? 'bg-purple-950/40 border-purple-500/30 text-purple-300' : 'bg-slate-950/60 border-slate-800/60 text-slate-300'
+        }`;
+        row.innerHTML = `
+          <span class="font-bold shrink-0 ${m.isSystem ? 'text-amber-400' : (m.isMe ? 'text-amber-400' : 'text-cyan-300')}">${escapeHtml(m.author)}:</span>
+          <span class="truncate ${m.isSystem ? 'text-purple-200 font-medium' : 'text-slate-300'}">${escapeHtml(m.text)}</span>
+          <span class="text-[9px] text-slate-500 shrink-0 ml-auto font-chakra">${m.timeStr}</span>
+        `;
+        el.chatMiniList.appendChild(row);
+      });
+    }
+
+    window.onload = function() {
+      setDiceAngles(1, 1);
+      checkUrlForInvite();
+    };
+  </script>
+</body>
+</html>
