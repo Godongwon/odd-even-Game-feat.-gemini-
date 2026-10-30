@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>홀짝 아레나 (Odd/Even Live)</title>
+  <title>홀짝.IO (Odd/Even Live)</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Phosphor Icons -->
@@ -141,14 +141,10 @@
         <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-rose-500 flex items-center justify-center shadow-lg shadow-amber-500/25 shrink-0">
           <i class="ph-bold ph-dice-six text-lg sm:text-xl text-slate-950"></i>
         </div>
-        <div>
-          <div class="flex items-center gap-1.5">
-            <h1 class="text-base sm:text-lg font-black font-chakra tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-rose-400 to-cyan-400">
-              ODD/EVEN.IO
-            </h1>
-            <span class="text-[9px] bg-purple-500/20 text-purple-300 font-chakra font-bold px-1.5 py-0.2 rounded border border-purple-500/40">WS-LIVE</span>
-          </div>
-          <p class="text-[9px] sm:text-[10px] text-slate-400">초저지연 IO 실시간 배틀 아레나</p>
+        <div class="flex items-center">
+          <h1 class="text-base sm:text-lg font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-rose-400 to-cyan-400">
+            홀짝<span class="font-chakra">.IO</span>
+          </h1>
         </div>
       </div>
 
@@ -543,7 +539,7 @@
   <aside id="appVersionBadge" class="fixed bottom-2.5 right-3 z-50 pointer-events-none select-none">
     <div class="px-2 py-0.5 rounded-lg bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-[10px] font-chakra font-black tracking-wider text-purple-300/80 shadow-md flex items-center gap-1">
       <span class="w-1.5 h-1.5 rounded-full bg-cyan-400/80"></span>
-      <span>ver_0.1.2</span>
+      <span>ver_0.1.5</span>
     </div>
   </aside>
 
@@ -801,7 +797,6 @@
       }
 
       const clientId = 'hz_' + store.myId + '_' + Math.random().toString(36).substring(2, 6);
-      // EMQX and HiveMQ public multi-device brokers with WSS (standard port 8084 / 8884)
       const brokerHost = 'broker.emqx.io';
       const brokerPort = 8084;
 
@@ -846,7 +841,6 @@
             renderControlArea();
           },
           onFailure: () => {
-            // Fallback connection to alternate broker
             fallbackAlternateBroker(normalizedCode);
           }
         });
@@ -1243,7 +1237,7 @@
       sound.playChip();
       const shareUrl = getInviteUrl(store.roomCode);
       const shareData = {
-        title: '홀짝 아레나 (Odd/Even Live)',
+        title: '홀짝.IO (Odd/Even Live)',
         text: `홀짝 배틀에 초대합니다! 방 코드: [${store.roomCode}]`,
         url: shareUrl
       };
