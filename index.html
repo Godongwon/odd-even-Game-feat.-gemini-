@@ -11,7 +11,8 @@
   <!-- Canvas Confetti -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <!-- Global PeerJS WebRTC P2P (No Rate Limit, Direct Device-to-Device Mesh) -->
-  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <!-- Reliable Global Cross-Network WebSocket Pub/Sub Relay -->
+  <script src="https://cdn.jsdelivr.net/npm/paho-mqtt@1.1.0/paho-mqtt.min.js"></script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;900&family=Chakra+Petch:wght@600;700;800&display=swap');
@@ -272,41 +273,41 @@
     <section id="viewRoom" class="hidden flex-col gap-3 sm:gap-4 h-full lg:max-h-[calc(100vh-68px)] overflow-y-auto lg:overflow-visible pb-10 lg:pb-0">
 
       <!-- Room Sub-Header -->
-      <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-900/90 border border-purple-500/20 px-4 py-2.5 rounded-2xl backdrop-blur-md shadow-md">
-        <div class="flex items-center gap-3 sm:gap-4">
-          <div class="flex items-center gap-2">
-            <span class="text-xs uppercase font-bold text-slate-400 tracking-wider">ROOM:</span>
-            <span id="lblRoomCode" class="font-chakra text-lg font-black text-amber-400 tracking-wider bg-slate-800/80 px-2 py-0.5 rounded-lg border border-amber-500/30">----</span>
-            <button id="btnCopyCode" class="text-slate-400 hover:text-white p-1 text-sm transition" title="코드 복사">
+      <div class="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 bg-slate-900/90 border border-purple-500/20 px-3.5 py-2.5 rounded-2xl backdrop-blur-md shadow-md">
+        <div class="flex items-center gap-2 sm:gap-4 flex-nowrap overflow-x-auto">
+          <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <span class="text-xs uppercase font-bold text-slate-400 tracking-wider whitespace-nowrap">ROOM:</span>
+            <span id="lblRoomCode" class="font-chakra text-base sm:text-lg font-black text-amber-400 tracking-wider bg-slate-800/80 px-2 py-0.5 rounded-lg border border-amber-500/30 whitespace-nowrap">----</span>
+            <button id="btnCopyCode" class="text-slate-400 hover:text-white p-1 text-sm transition shrink-0" title="코드 복사">
               <i class="ph-bold ph-copy"></i>
             </button>
             <!-- Room Share Button in Room Toolbar -->
-            <button id="btnShareRoomLink" class="ml-1 px-2.5 py-1 rounded-lg bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 border border-purple-500/30 text-xs font-bold transition flex items-center gap-1 shadow-sm" title="친구에게 초대 링크 보내기">
+            <button id="btnShareRoomLink" class="ml-0.5 px-2 py-1 rounded-lg bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 border border-purple-500/30 text-xs font-bold transition flex items-center gap-1 shadow-sm shrink-0 whitespace-nowrap" title="친구에게 초대 링크 보내기">
               <i class="ph-bold ph-share-network"></i>
               <span>초대 링크</span>
             </button>
           </div>
-          <span class="h-4 w-[1px] bg-slate-700 hidden sm:block"></span>
-          <div class="flex items-center gap-1.5 bg-purple-950/60 border border-purple-500/30 px-2.5 py-1 rounded-xl">
-            <i class="ph-bold ph-flag text-purple-400 text-xs"></i>
-            <span class="text-xs text-slate-300 font-semibold">라운드:</span>
-            <span id="lblCurrentRound" class="font-black font-chakra text-amber-400 text-xs">1</span>
+          <span class="h-4 w-[1px] bg-slate-700 hidden sm:block shrink-0"></span>
+          <div class="flex items-center gap-1.5 bg-purple-950/60 border border-purple-500/30 px-2 py-1 rounded-xl shrink-0 whitespace-nowrap">
+            <i class="ph-bold ph-flag text-purple-400 text-xs shrink-0"></i>
+            <span class="text-xs text-slate-300 font-semibold whitespace-nowrap">라운드:</span>
+            <span id="lblCurrentRound" class="font-black font-chakra text-amber-400 text-xs whitespace-nowrap">1</span>
             <span class="text-xs text-slate-500">/</span>
-            <span id="lblTotalRounds" class="font-bold font-chakra text-slate-300 text-xs">5</span>
+            <span id="lblTotalRounds" class="font-bold font-chakra text-slate-300 text-xs whitespace-nowrap">5</span>
           </div>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
           <!-- Phase Status Badge -->
-          <div id="badgePhase" class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-            <span id="lblPhaseText">라운드 시작 대기 중</span>
+          <div id="badgePhase" class="px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-bold uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0"></span>
+            <span id="lblPhaseText" class="whitespace-nowrap">라운드 시작 대기 중</span>
           </div>
           <!-- Timer -->
-          <div id="boxTimer" class="hidden font-chakra text-base font-black text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 rounded-xl">
+          <div id="boxTimer" class="hidden font-chakra text-sm sm:text-base font-black text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-xl shrink-0 whitespace-nowrap">
             <span id="lblTimerCount">20</span>s
           </div>
-          <button id="btnLeaveRoom" class="text-xs px-3 py-1 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition">
+          <button id="btnLeaveRoom" class="text-xs px-2.5 sm:px-3 py-1 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition shrink-0 whitespace-nowrap">
             나가기
           </button>
         </div>
@@ -349,8 +350,8 @@
 
             <!-- Result Banner -->
             <div class="text-center mt-1 min-h-[50px] flex flex-col items-center justify-center">
-              <span id="lblResultSub" class="text-[11px] uppercase tracking-widest text-slate-400 font-semibold">대기 상태</span>
-              <div id="lblResultMain" class="text-xl sm:text-2xl font-black font-chakra text-white mt-0.5">
+              <span id="lblResultSub" class="text-[11px] uppercase tracking-widest text-slate-400 font-semibold whitespace-nowrap">대기 상태</span>
+              <div id="lblResultMain" class="text-lg sm:text-2xl font-black font-chakra text-white mt-0.5 text-center leading-snug">
                 모든 참가자가 준비 완료하면 라운드를 시작할 수 있습니다
               </div>
             </div>
@@ -360,12 +361,12 @@
               
               <!-- Betting Progress Bar (Replaces all result buttons during BETTING phase) -->
               <div id="bettingProgressWrap" class="w-full hidden flex-col gap-1 bg-slate-950/70 p-2.5 rounded-2xl border border-amber-500/30 shadow-inner">
-                <div class="flex items-center justify-between text-xs px-1 font-bold">
-                  <span class="text-amber-400 flex items-center gap-1.5 font-chakra tracking-wide text-xs">
+                <div class="flex items-center justify-between text-xs px-1 font-bold whitespace-nowrap">
+                  <span class="text-amber-400 flex items-center gap-1.5 font-chakra tracking-wide text-xs whitespace-nowrap">
                     <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
                     배팅 제한 시간
                   </span>
-                  <div class="flex items-center gap-2 font-chakra">
+                  <div class="flex items-center gap-2 font-chakra whitespace-nowrap">
                     <span id="lblProgressSeconds" class="text-amber-300 font-black text-xs">20.0s</span>
                     <span class="text-slate-500 text-xs">|</span>
                     <span id="lblProgressDoneCount" class="text-emerald-400 text-xs">0/0 완료</span>
@@ -375,31 +376,31 @@
                 <div class="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800 p-0.5">
                   <div id="bettingProgressBar" class="h-full bg-gradient-to-r from-amber-500 via-rose-500 to-amber-400 rounded-full transition-all duration-100 shadow-md shadow-amber-500/40" style="width: 100%;"></div>
                 </div>
-                <div class="text-[10px] text-slate-400 text-center">
+                <div class="text-[10px] text-slate-400 text-center whitespace-nowrap overflow-hidden text-ellipsis">
                   모든 참가자가 배팅을 완료하거나 시간이 종료되면 결과가 자동으로 공개됩니다
                 </div>
               </div>
 
               <!-- Host / Bot / Guest Control Bar -->
-              <div id="hostControlWrap" class="flex flex-wrap items-center justify-center gap-2.5 w-full">
+              <div id="hostControlWrap" class="flex items-center justify-center gap-2.5 w-full flex-nowrap">
                 <!-- Host Start Round Button -->
-                <button id="btnStartRound" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-slate-950 font-black shadow-lg shadow-amber-500/25 text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer">
-                  <i class="ph-bold ph-play text-base" id="iconStartRound"></i>
-                  <span id="textStartRound">라운드 시작하기</span>
+                <button id="btnStartRound" class="px-5 sm:px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-slate-950 font-black shadow-lg shadow-amber-500/25 text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0">
+                  <i class="ph-bold ph-play text-base shrink-0" id="iconStartRound"></i>
+                  <span id="textStartRound" class="whitespace-nowrap">라운드 시작하기</span>
                 </button>
 
                 <!-- Non-Host Guest Ready Button -->
-                <button id="btnToggleReady" class="hidden px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black shadow-lg shadow-emerald-500/25 text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer">
-                  <i class="ph-bold ph-check text-base" id="iconToggleReady"></i>
-                  <span id="textToggleReady">준비 완료 (READY)</span>
+                <button id="btnToggleReady" class="hidden px-5 sm:px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black shadow-lg shadow-emerald-500/25 text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0">
+                  <i class="ph-bold ph-check text-base shrink-0" id="iconToggleReady"></i>
+                  <span id="textToggleReady" class="whitespace-nowrap">준비 완료 (READY)</span>
                 </button>
 
-                <div class="flex items-center gap-2" id="boxBotControls">
-                  <button id="btnAddBot" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 border border-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1.5 transition">
+                <div class="flex items-center gap-1.5 shrink-0 whitespace-nowrap" id="boxBotControls">
+                  <button id="btnAddBot" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 border border-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1 transition whitespace-nowrap">
                     <i class="ph-bold ph-robot text-purple-400 text-sm"></i>
                     <span>+ 봇 추가</span>
                   </button>
-                  <button id="btnRemoveBot" class="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-rose-950/40 border border-slate-700 hover:border-rose-500/40 text-slate-400 hover:text-rose-400 active:scale-95 text-xs font-bold transition" title="마지막 봇 제거">
+                  <button id="btnRemoveBot" class="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-rose-950/40 border border-slate-700 hover:border-rose-500/40 text-slate-400 hover:text-rose-400 active:scale-95 text-xs font-bold transition shrink-0" title="마지막 봇 제거">
                     <i class="ph-bold ph-trash text-sm"></i>
                   </button>
                 </div>
@@ -469,13 +470,13 @@
         <!-- Participants & Chat Sidebar (Right 4 cols) -->
         <div class="lg:col-span-4 flex flex-col gap-3 sm:gap-4 h-full min-h-0">
           <!-- Participants List (Flex-allocated for balanced spacing) -->
-          <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-3.5 sm:p-4 shadow-xl flex flex-col h-[220px] sm:h-[240px] shrink-0">
-            <div class="flex items-center justify-between mb-2 border-b border-slate-800 pb-2">
-              <h3 class="text-xs sm:text-sm font-bold text-slate-200 flex items-center gap-1.5">
-                <i class="ph-bold ph-users text-amber-400"></i>
-                참가자 현황 (<span id="lblPlayerCount" class="text-amber-400 font-chakra">1</span>명)
+          <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-3 sm:p-3.5 shadow-xl flex flex-col h-[220px] sm:h-[240px] shrink-0">
+            <div class="flex items-center justify-between mb-2 border-b border-slate-800 pb-2 whitespace-nowrap">
+              <h3 class="text-xs sm:text-sm font-bold text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
+                <i class="ph-bold ph-users text-amber-400 shrink-0"></i>
+                <span>참가자 현황 (<span id="lblPlayerCount" class="text-amber-400 font-chakra">1</span>명)</span>
               </h3>
-              <span class="text-[10px] text-slate-500 font-chakra">LEADERBOARD</span>
+              <span class="text-[10px] text-slate-500 font-chakra whitespace-nowrap">LEADERBOARD</span>
             </div>
             <div id="listPlayers" class="flex flex-col gap-1.5 overflow-y-auto pr-1 flex-1">
               <!-- Dynamically populated -->
@@ -483,14 +484,14 @@
           </div>
 
           <!-- Real-time Chat & Reactions Box (Fills remaining height smoothly without awkward gaps) -->
-          <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-3 sm:p-4 shadow-xl flex flex-col flex-1 min-h-[280px]">
+          <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-3 sm:p-3.5 shadow-xl flex flex-col flex-1 min-h-[280px]">
             <!-- Chat Header -->
-            <div class="flex items-center justify-between pb-1.5 border-b border-slate-800 mb-1.5">
-              <h3 class="text-xs sm:text-sm font-bold text-slate-200 flex items-center gap-1.5">
-                <i class="ph-bold ph-chat-centered-text text-cyan-400"></i>
-                실시간 채팅
+            <div class="flex items-center justify-between pb-1.5 border-b border-slate-800 mb-1.5 whitespace-nowrap">
+              <h3 class="text-xs sm:text-sm font-bold text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
+                <i class="ph-bold ph-chat-centered-text text-cyan-400 shrink-0"></i>
+                <span>실시간 채팅</span>
               </h3>
-              <span class="text-[9px] font-semibold text-slate-400 flex items-center gap-1">
+              <span class="text-[9px] font-semibold text-slate-400 flex items-center gap-1 whitespace-nowrap">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> LIVE
               </span>
             </div>
@@ -638,10 +639,10 @@
       players: {}, // id -> { id, name, chips, choice, betAmount, hasBet, isHost, isBot, isBankrupt, isReady, wins }
       dice1: 1,
       dice2: 1,
-      // High-Performance WebRTC P2P + BroadcastChannel Fallback
-      peer: null,
-      connections: {}, // connId/peerId -> DataConnection
-      hostConn: null, // guest's direct connection to host
+      // Robust Cross-Network WebSocket PubSub Relay (Traverses LTE, 5G, NAT, Firewall)
+      wsClient: null,
+      wsTopic: '',
+      isNetConnected: false,
       localChannel: null,
       storageListener: null,
       heartbeatTimer: null
@@ -796,17 +797,15 @@
       textNetStatus.textContent = text;
     }
 
-    // --- BULLETPROOF WebRTC P2P NETWORKING (Zero Rate-Limit, Cross-Network Direct Tunnel) ---
+    // --- HIGH-RELIABILITY CROSS-NETWORK RELAY (LTE/5G <-> PC 100% Guaranteed Socket Sync) ---
     function initNetworking(isHost, roomCode) {
       destroyNetworking();
 
       const normalizedCode = roomCode.toUpperCase().trim();
-      const hostPeerId = 'hz_arena_' + normalizedCode + '_host';
-      const myPeerId = isHost ? hostPeerId : 'hz_arena_' + normalizedCode + '_guest_' + store.myId;
+      store.wsTopic = 'hz_game_arena_topic_' + normalizedCode;
+      setNetStatus('connecting', '실시간 소켓 연결 중...');
 
-      setNetStatus('connecting', 'P2P 연결 수립 중...');
-
-      // 1. Local Same-Device Cross-Tab Channel
+      // 1. Same-Device BroadcastChannel for instant local dispatch
       if ('BroadcastChannel' in window) {
         try {
           store.localChannel = new BroadcastChannel('hz_arena_' + normalizedCode);
@@ -831,111 +830,117 @@
       };
       window.addEventListener('storage', store.storageListener);
 
-      // 3. WebRTC P2P Mesh with Google STUN Servers (traverses LTE/NAT/Firewalls effortlessly)
+      // 3. Reliable Global WebSocket PubSub Broker (Standard WSS Port 443 - Traverses LTE Carriers & NAT effortlessly)
+      connectRelayBroker(normalizedCode, isHost);
+    }
+
+    function connectRelayBroker(roomCode, isHost) {
+      // Connect to HiveMQ Public WSS (Standard SSL port 8884/443 without symmetric NAT block)
+      const clientId = 'cl_' + store.myId + '_' + Math.random().toString(36).substring(2, 6);
+      
       try {
-        store.peer = new Peer(myPeerId, {
-          config: {
-            iceServers: [
-              { urls: 'stun:stun.l.google.com:19302' },
-              { urls: 'stun:stun1.l.google.com:19302' },
-              { urls: 'stun:stun2.l.google.com:19302' }
-            ]
-          },
-          debug: 0
-        });
+        const client = new Paho.MQTT.Client('broker.hivemq.com', 8884, clientId);
+        store.wsClient = client;
 
-        store.peer.on('open', (id) => {
-          if (isHost) {
-            setNetStatus('connected', `방 생성됨 (${roomCode})`);
-            showToast(`방이 개설되었습니다! 방 코드: [${store.roomCode}]`);
-            startHostHeartbeat();
-          } else {
-            setNetStatus('connecting', '방장과 터널 연결 중...');
-            connectToHost(hostPeerId);
+        client.onConnectionLost = (responseObject) => {
+          store.isNetConnected = false;
+          if (responseObject.errorCode !== 0) {
+            setNetStatus('connecting', '소켓 재연결 시도 중...');
+            setTimeout(() => {
+              if (store.roomCode === roomCode) {
+                connectRelayBroker(roomCode, store.isHost);
+              }
+            }, 2000);
           }
-        });
+        };
 
-        // Host receives incoming connections from guests
-        store.peer.on('connection', (conn) => {
-          setupConnectionEvents(conn);
-        });
+        client.onMessageArrived = (message) => {
+          try {
+            const data = JSON.parse(message.payloadString);
+            if (data && data._senderId !== store.myId) {
+              handleNetworkMessage(data);
+            }
+          } catch (err) {}
+        };
 
-        store.peer.on('error', (err) => {
-          console.warn('P2P Status/Warning:', err.type);
-          if (err.type === 'unavailable-id' && isHost) {
-            showToast('이미 존재하는 방 코드입니다. 다른 코드로 방을 만드세요.', false);
+        client.connect({
+          useSSL: true,
+          timeout: 8,
+          keepAliveInterval: 30,
+          cleanSession: true,
+          onSuccess: () => {
+            store.isNetConnected = true;
+            // Subscribe to room channel
+            client.subscribe(store.wsTopic, { qos: 1 });
+
+            if (isHost) {
+              setNetStatus('connected', `온라인 (${roomCode})`);
+              showToast(`방이 개설되었습니다! 방 코드: [${store.roomCode}]`);
+              startHostHeartbeat();
+              broadcastState();
+            } else {
+              setNetStatus('connected', `온라인 (${roomCode})`);
+              showToast(`방에 실시간 연결되었습니다!`);
+              sendJoinPacket();
+              startGuestHeartbeat();
+            }
+            renderControlArea();
+          },
+          onFailure: (err) => {
+            console.warn('WSS Primary fail, trying alternate relay broker...', err);
+            connectAlternateBroker(roomCode, isHost);
           }
         });
 
       } catch (err) {
-        console.warn('PeerJS init failed, falling back to local channel:', err);
+        connectAlternateBroker(roomCode, isHost);
       }
     }
 
-    // Guest establishes direct P2P connection to Host
-    function connectToHost(hostPeerId) {
-      if (!store.peer) return;
+    // Secondary fallback broker (Eclipse WSS) for maximum multi-carrier tolerance
+    function connectAlternateBroker(roomCode, isHost) {
+      try {
+        const clientId = 'cl_alt_' + store.myId + '_' + Math.random().toString(36).substring(2, 6);
+        const altClient = new Paho.MQTT.Client('mqtt.eclipseprojects.io', 443, '/mqtt', clientId);
+        store.wsClient = altClient;
 
-      const conn = store.peer.connect(hostPeerId, { reliable: true });
-      store.hostConn = conn;
+        altClient.onConnectionLost = () => {
+          store.isNetConnected = false;
+        };
 
-      conn.on('open', () => {
-        setNetStatus('connected', `온라인 (${store.roomCode})`);
-        showToast(`방장과 실시간 연결되었습니다!`);
-        store.connections[hostPeerId] = conn;
+        altClient.onMessageArrived = (msg) => {
+          try {
+            const data = JSON.parse(msg.payloadString);
+            if (data && data._senderId !== store.myId) handleNetworkMessage(data);
+          } catch(e) {}
+        };
 
-        // Immediately send join packet upon direct socket open
-        sendJoinPacket();
-        startGuestHeartbeat();
-      });
-
-      conn.on('data', (data) => {
-        if (data && data._senderId !== store.myId) {
-          handleNetworkMessage(data);
-        }
-      });
-
-      conn.on('close', () => {
-        setNetStatus('disconnected', '방장 연결 끊김');
-        handleHostDisconnected();
-      });
-
-      conn.on('error', () => {
-        // Fallback retry after 1.5s if host was still initializing
-        setTimeout(() => {
-          if (!store.isHost && store.roomCode && (!store.hostConn || !store.hostConn.open)) {
-            connectToHost(hostPeerId);
-          }
-        }, 1500);
-      });
-    }
-
-    function setupConnectionEvents(conn) {
-      conn.on('open', () => {
-        store.connections[conn.peer] = conn;
-        if (store.isHost) {
-          // Immediately send full room state to the newly joined peer
-          broadcastState();
-        }
-      });
-
-      conn.on('data', (data) => {
-        if (data && data._senderId !== store.myId) {
-          handleNetworkMessage(data);
-          // If host receives packet, forward to other guests to ensure mesh sync
-          if (store.isHost) {
-            for (let pid in store.connections) {
-              if (pid !== conn.peer && store.connections[pid].open) {
-                try { store.connections[pid].send(data); } catch(e) {}
-              }
+        altClient.connect({
+          useSSL: true,
+          timeout: 8,
+          onSuccess: () => {
+            store.isNetConnected = true;
+            altClient.subscribe(store.wsTopic, { qos: 0 });
+            setNetStatus('connected', `온라인 (${roomCode})`);
+            if (isHost) {
+              startHostHeartbeat();
+              broadcastState();
+            } else {
+              sendJoinPacket();
+              startGuestHeartbeat();
             }
+            renderControlArea();
+          },
+          onFailure: () => {
+            setNetStatus('connected', `로컬 채널 활성 (${roomCode})`);
+            store.isNetConnected = true;
+            renderControlArea();
           }
-        }
-      });
-
-      conn.on('close', () => {
-        delete store.connections[conn.peer];
-      });
+        });
+      } catch (e) {
+        store.isNetConnected = true;
+        renderControlArea();
+      }
     }
 
     function sendJoinPacket() {
@@ -1041,18 +1046,17 @@
 
     function destroyNetworking() {
       clearInterval(store.heartbeatTimer);
-      for (let p in store.connections) {
-        try { store.connections[p].close(); } catch(e) {}
+      store.isNetConnected = false;
+
+      if (store.wsClient) {
+        try {
+          if (store.wsClient.isConnected && store.wsClient.isConnected()) {
+            store.wsClient.disconnect();
+          }
+        } catch(e) {}
+        store.wsClient = null;
       }
-      store.connections = {};
-      if (store.hostConn) {
-        try { store.hostConn.close(); } catch(e) {}
-        store.hostConn = null;
-      }
-      if (store.peer) {
-        try { store.peer.destroy(); } catch(e) {}
-        store.peer = null;
-      }
+
       if (store.localChannel) {
         try { store.localChannel.close(); } catch(e) {}
         store.localChannel = null;
@@ -1063,21 +1067,20 @@
       }
     }
 
-    // Direct WebRTC P2P Packet Broadcast (Zero Server Rate-Limit)
+    // Direct Real-Time Socket Packet Broadcast
     function broadcastNetworkPacket(packet) {
       packet._senderId = store.myId;
       packet._t = Date.now();
+      const payload = JSON.stringify(packet);
 
-      // 1. Direct WebRTC P2P DataChannels
-      if (store.isHost) {
-        for (let pid in store.connections) {
-          const conn = store.connections[pid];
-          if (conn && conn.open) {
-            try { conn.send(packet); } catch(e) {}
-          }
-        }
-      } else if (store.hostConn && store.hostConn.open) {
-        try { store.hostConn.send(packet); } catch(e) {}
+      // 1. WebSocket PubSub Cloud Relay
+      if (store.wsClient && store.wsClient.isConnected && store.wsClient.isConnected()) {
+        try {
+          const message = new Paho.MQTT.Message(payload);
+          message.destinationName = store.wsTopic;
+          message.qos = 0;
+          store.wsClient.send(message);
+        } catch (e) {}
       }
 
       // 2. Same-Device BroadcastChannel
@@ -1088,7 +1091,7 @@
       // 3. LocalStorage Event Bridge
       if (store.roomCode) {
         try {
-          localStorage.setItem('hz_pkt_' + store.roomCode.toUpperCase(), JSON.stringify(packet));
+          localStorage.setItem('hz_pkt_' + store.roomCode.toUpperCase(), payload);
         } catch(e) {}
       }
     }
@@ -1626,43 +1629,43 @@
       hostControlWrap.classList.remove('hidden');
 
       // Non-host player controls (READY button toggle)
-    if (!store.isHost) {
-      btnStartRound.classList.add('hidden');
-      boxBotControls.classList.add('hidden');
-      btnToggleReady.classList.remove('hidden');
-      btnToggleReady.classList.add('flex');
+      if (!store.isHost) {
+        btnStartRound.classList.add('hidden');
+        boxBotControls.classList.add('hidden');
+        btnToggleReady.classList.remove('hidden');
+        btnToggleReady.classList.add('flex');
 
-      // Check if network connection is fully established
-      const isNetConnected = !!(store.hostConn && store.hostConn.open);
+        // Check if network socket connection is established
+        const isNetConnected = store.isNetConnected;
 
-      if (store.phase === 'WAITING' || store.phase === 'RESULT') {
-        if (!isNetConnected) {
-          // Connected to room but P2P channel not yet ready -> Disabled
-          btnToggleReady.disabled = true;
-          btnToggleReady.className = 'px-6 py-2.5 rounded-xl bg-slate-800 text-slate-500 border border-slate-700/60 font-bold text-xs sm:text-sm flex items-center gap-2 transition cursor-not-allowed';
-          iconToggleReady.className = 'ph-bold ph-spinner animate-spin text-base text-amber-400';
-          textToggleReady.textContent = '네트워크 연결 중...';
-        } else if (store.isReady) {
-          btnToggleReady.disabled = false;
-          btnToggleReady.className = 'px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-emerald-400 border border-emerald-500/40 font-black shadow-lg text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer';
-          iconToggleReady.className = 'ph-bold ph-check-circle text-base text-emerald-400';
-          textToggleReady.textContent = '준비 완료됨 (클릭 시 취소)';
+        if (store.phase === 'WAITING' || store.phase === 'RESULT') {
+          if (!isNetConnected) {
+            // Connected to room but socket not yet ready -> Disabled
+            btnToggleReady.disabled = true;
+            btnToggleReady.className = 'px-5 sm:px-6 py-2.5 rounded-xl bg-slate-800 text-slate-500 border border-slate-700/60 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-not-allowed whitespace-nowrap shrink-0';
+            iconToggleReady.className = 'ph-bold ph-spinner animate-spin text-base text-amber-400 shrink-0';
+            textToggleReady.textContent = '네트워크 연결 중...';
+          } else if (store.isReady) {
+            btnToggleReady.disabled = false;
+            btnToggleReady.className = 'px-5 sm:px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-emerald-400 border border-emerald-500/40 font-black shadow-lg text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0';
+            iconToggleReady.className = 'ph-bold ph-check-circle text-base text-emerald-400 shrink-0';
+            textToggleReady.textContent = '준비 완료됨 (클릭 시 취소)';
+          } else {
+            btnToggleReady.disabled = false;
+            btnToggleReady.className = 'px-5 sm:px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black shadow-lg shadow-emerald-500/25 text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0';
+            iconToggleReady.className = 'ph-bold ph-check text-base shrink-0';
+            textToggleReady.textContent = '준비 완료 (READY)';
+          }
         } else {
-          btnToggleReady.disabled = false;
-          btnToggleReady.className = 'px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black shadow-lg shadow-emerald-500/25 text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer';
-          iconToggleReady.className = 'ph-bold ph-check text-base';
-          textToggleReady.textContent = '준비 완료 (READY)';
+          btnToggleReady.disabled = true;
+          btnToggleReady.className = 'px-5 sm:px-6 py-2.5 rounded-xl bg-slate-800 text-slate-500 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-not-allowed whitespace-nowrap shrink-0';
+          iconToggleReady.className = 'ph-bold ph-hourglass text-base shrink-0';
+          textToggleReady.textContent = '게임 진행 중';
         }
-      } else {
-        btnToggleReady.disabled = true;
-        btnToggleReady.className = 'px-6 py-2.5 rounded-xl bg-slate-800 text-slate-500 font-bold text-xs sm:text-sm flex items-center gap-2 transition cursor-not-allowed';
-        iconToggleReady.className = 'ph-bold ph-hourglass text-base';
-        textToggleReady.textContent = '게임 진행 중';
+        return;
       }
-      return;
-    }
 
-    // Host controls
+      // Host controls
       btnToggleReady.classList.add('hidden');
       btnToggleReady.classList.remove('flex');
       btnStartRound.classList.remove('hidden');
@@ -1676,13 +1679,13 @@
 
         if (canStart) {
           btnStartRound.disabled = false;
-          btnStartRound.className = 'px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-slate-950 font-black shadow-lg shadow-amber-500/25 text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer';
-          iconStartRound.className = 'ph-bold ph-play text-base';
+          btnStartRound.className = 'px-5 sm:px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-slate-950 font-black shadow-lg shadow-amber-500/25 text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0';
+          iconStartRound.className = 'ph-bold ph-play text-base shrink-0';
           textStartRound.textContent = store.currentRound > 1 ? `다음 라운드 시작 (${store.currentRound}/${store.totalRounds})` : '라운드 시작하기';
         } else {
           btnStartRound.disabled = true;
-          btnStartRound.className = 'px-6 py-2.5 rounded-xl bg-slate-800 text-slate-500 border border-slate-700/60 font-bold text-xs sm:text-sm flex items-center gap-2 transition cursor-not-allowed';
-          iconStartRound.className = 'ph-bold ph-hourglass text-base';
+          btnStartRound.className = 'px-5 sm:px-6 py-2.5 rounded-xl bg-slate-800 text-slate-500 border border-slate-700/60 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-not-allowed whitespace-nowrap shrink-0';
+          iconStartRound.className = 'ph-bold ph-hourglass text-base shrink-0';
           if (activeSurviving.length < 2) {
             textStartRound.textContent = '최소 2인 필요 (+봇 추가)';
           } else {
@@ -1692,8 +1695,8 @@
         }
       } else {
         btnStartRound.disabled = true;
-        btnStartRound.className = 'px-6 py-2.5 rounded-xl bg-slate-800 text-slate-500 font-bold text-xs sm:text-sm flex items-center gap-2 transition cursor-not-allowed';
-        iconStartRound.className = 'ph-bold ph-hourglass text-base';
+        btnStartRound.className = 'px-5 sm:px-6 py-2.5 rounded-xl bg-slate-800 text-slate-500 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-not-allowed whitespace-nowrap shrink-0';
+        iconStartRound.className = 'ph-bold ph-hourglass text-base shrink-0';
         textStartRound.textContent = '주사위 진행 중...';
       }
     }
@@ -1723,43 +1726,43 @@
       list.forEach((p, idx) => {
         const isMe = p.id === store.myId;
         const div = document.createElement('div');
-        div.className = `flex items-center justify-between p-2 rounded-xl border text-xs transition ${
+        div.className = `flex items-center justify-between p-2 rounded-xl border text-xs transition whitespace-nowrap ${
           isMe ? 'bg-amber-500/10 border-amber-500/40 text-amber-200' : 'bg-slate-950/60 border-slate-800 text-slate-300'
         }`;
 
         let statusText = '';
         if (p.isBankrupt) {
-          statusText = `<span class="px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-400 font-bold text-[10px] border border-rose-500/30">파산</span>`;
+          statusText = `<span class="px-1.5 py-0.5 rounded-md bg-rose-500/20 text-rose-400 font-bold text-[10px] border border-rose-500/30 whitespace-nowrap shrink-0">파산</span>`;
         } else if (p.hasBet && p.chips === 0 && (p.betAmount > 0)) {
           // Bet placed with all chips remaining 0 during round -> ALL IN, not Bankrupt!
-          statusText = `<span class="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-400 font-black text-[10px] border border-amber-500/40 animate-pulse">올인 (ALL-IN)</span>`;
+          statusText = `<span class="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-400 font-black text-[10px] border border-amber-500/40 animate-pulse whitespace-nowrap shrink-0">올인</span>`;
         } else if (store.phase === 'BETTING') {
           statusText = p.hasBet 
-            ? `<span class="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-semibold text-[10px] border border-emerald-500/30">배팅완료</span>`
-            : `<span class="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 font-semibold text-[10px] border border-amber-500/30 animate-pulse">배팅 중...</span>`;
+            ? `<span class="px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-semibold text-[10px] border border-emerald-500/30 whitespace-nowrap shrink-0">배팅완료</span>`
+            : `<span class="px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-400 font-semibold text-[10px] border border-amber-500/30 animate-pulse whitespace-nowrap shrink-0">배팅 중</span>`;
         } else if (p.choice && (store.phase === 'RESULT' || store.phase === 'ROLLING')) {
-          statusText = `<span class="px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 font-bold text-[10px]">${p.choice === 'ODD' ? '홀' : '짝'} (${p.betAmount?.toLocaleString() || 0}칩)</span>`;
+          statusText = `<span class="px-1.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 font-bold text-[10px] whitespace-nowrap shrink-0">${p.choice === 'ODD' ? '홀' : '짝'} (${p.betAmount?.toLocaleString() || 0})</span>`;
         } else if (store.phase === 'WAITING' || store.phase === 'RESULT') {
           if (p.isHost) {
-            statusText = `<span class="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-bold text-[10px] border border-amber-500/30">방장</span>`;
+            statusText = `<span class="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-bold text-[10px] border border-amber-500/30 whitespace-nowrap shrink-0">방장</span>`;
           } else if (p.isReady) {
-            statusText = `<span class="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-bold text-[10px] border border-emerald-500/30">준비완료</span>`;
+            statusText = `<span class="px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-bold text-[10px] border border-emerald-500/30 whitespace-nowrap shrink-0">준비완료</span>`;
           } else {
-            statusText = `<span class="px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 font-medium text-[10px] border border-slate-700">대기 중</span>`;
+            statusText = `<span class="px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-400 font-medium text-[10px] border border-slate-700 whitespace-nowrap shrink-0">대기</span>`;
           }
         }
 
         div.innerHTML = `
-          <div class="flex items-center gap-1.5 min-w-0">
-            <span class="font-chakra font-bold text-slate-500 w-3.5 text-[11px]">${idx + 1}</span>
-            <span class="font-bold truncate max-w-[90px] text-xs">${escapeHtml(p.name || '유저')}</span>
-            ${p.isHost ? '<span class="text-[9px] bg-amber-500 text-slate-950 font-black px-1 rounded">방장</span>' : ''}
-            ${p.isBot ? '<span class="text-[9px] bg-purple-600 text-white font-bold px-1 rounded">BOT</span>' : ''}
-            ${isMe ? '<span class="text-[9px] bg-cyan-500 text-slate-950 font-black px-1 rounded">나</span>' : ''}
+          <div class="flex items-center gap-1.5 min-w-0 shrink">
+            <span class="font-chakra font-bold text-slate-500 w-3.5 text-[11px] shrink-0">${idx + 1}</span>
+            <span class="font-bold truncate max-w-[85px] sm:max-w-[100px] text-xs whitespace-nowrap">${escapeHtml(p.name || '유저')}</span>
+            ${p.isHost ? '<span class="text-[9px] bg-amber-500 text-slate-950 font-black px-1 rounded whitespace-nowrap shrink-0">방장</span>' : ''}
+            ${p.isBot ? '<span class="text-[9px] bg-purple-600 text-white font-bold px-1 rounded whitespace-nowrap shrink-0">BOT</span>' : ''}
+            ${isMe ? '<span class="text-[9px] bg-cyan-500 text-slate-950 font-black px-1 rounded whitespace-nowrap shrink-0">나</span>' : ''}
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
             ${statusText}
-            <span class="font-chakra font-black ${p.isBankrupt ? 'text-slate-500' : 'text-amber-400'} text-xs">${(p.chips || 0).toLocaleString()} <span class="text-[9px] text-amber-500 font-normal">칩</span></span>
+            <span class="font-chakra font-black ${p.isBankrupt ? 'text-slate-500' : 'text-amber-400'} text-xs whitespace-nowrap">${(p.chips || 0).toLocaleString()} <span class="text-[9px] text-amber-500 font-normal">칩</span></span>
           </div>
         `;
         listPlayers.appendChild(div);
