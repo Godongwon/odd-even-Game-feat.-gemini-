@@ -801,32 +801,32 @@
 
         store.sseEventSource.onopen = () => {
           setNetStatus('connected', isHost ? `방 생성됨 (${roomCode})` : `방 참여됨 (${roomCode})`);
+          if (!isHost) {
+            // Send join packet once SSE connection is ready
+            sendJoinPacket();
+          }
         };
 
         store.sseEventSource.onmessage = (event) => {
           try {
             const raw = JSON.parse(event.data);
-            // ntfy.sh delivers payload inside message field
             if (raw && raw.message) {
               const packet = JSON.parse(raw.message);
               if (packet && packet._senderId !== store.myId) {
                 handleNetworkMessage(packet);
               }
             }
-          } catch (e) {
-            // Not a JSON packet, ignore
-          }
+          } catch (e) {}
         };
 
         store.sseEventSource.onerror = () => {
-          // Fallback status indicator
           setNetStatus('connecting', '재연결 시도 중...');
         };
       } catch (err) {
         console.warn('SSE stream error, relying on local bridge:', err);
       }
 
-      // 2. Local Multi-Tab Channel (Instant 0ms latency for same-device tabs)
+      // 2. Local Multi-Tab Channel
       if ('BroadcastChannel' in window) {
         try {
           store.localChannel = new BroadcastChannel(channelTopic);
@@ -856,27 +856,30 @@
         startHostHeartbeat();
       } else {
         showToast(`방 [${store.roomCode}]에 입장했습니다!`);
-        // Announce join across global network
-        broadcastNetworkPacket({
-          type: 'PLAYER_JOIN',
-          player: {
-            id: store.myId,
-            name: store.nickname,
-            chips: 1000,
-            choice: null,
-            betAmount: 0,
-            hasBet: false,
-            isBankrupt: false,
-            isReady: false,
-            isHost: false,
-            isBot: false,
-            wins: 0,
-            joinedAt: Date.now(),
-            lastSeen: Date.now()
-          }
-        });
+        sendJoinPacket();
         startGuestHeartbeat();
       }
+    }
+
+    function sendJoinPacket() {
+      broadcastNetworkPacket({
+        type: 'PLAYER_JOIN',
+        player: {
+          id: store.myId,
+          name: store.nickname,
+          chips: 1000,
+          choice: null,
+          betAmount: 0,
+          hasBet: false,
+          isBankrupt: false,
+          isReady: false,
+          isHost: false,
+          isBot: false,
+          wins: 0,
+          joinedAt: Date.now(),
+          lastSeen: Date.now()
+        }
+      });
     }
 
     // Heartbeats and disconnection cleanup
@@ -906,16 +909,29 @@
           checkAllPlayersBetComplete();
         }
 
+        // Host sends periodic sync of entire room so all clients maintain exact player list
+        broadcastState();
         broadcastNetworkPacket({ type: 'HOST_PING', time: now });
-      }, 3000);
+      }, 2500);
     }
 
     function startGuestHeartbeat() {
       clearInterval(store.heartbeatTimer);
       store.heartbeatTimer = setInterval(() => {
         if (store.isHost) return;
-        broadcastNetworkPacket({ type: 'HEARTBEAT_PING', playerId: store.myId });
-      }, 3000);
+        broadcastNetworkPacket({ 
+          type: 'HEARTBEAT_PING', 
+          playerId: store.myId,
+          player: store.players[store.myId] || {
+            id: store.myId,
+            name: store.nickname,
+            chips: store.chips,
+            isBankrupt: store.isBankrupt,
+            isReady: store.isReady,
+            isHost: false
+          }
+        });
+      }, 2500);
     }
 
     function handleHostDisconnected() {
@@ -1012,12 +1028,14 @@
 
       switch(msg.type) {
         case 'PLAYER_JOIN':
-          if (store.isHost && msg.player) {
+          if (msg.player) {
             msg.player.lastSeen = Date.now();
             store.players[msg.player.id] = msg.player;
             sound.playChip();
             showToast(`[${msg.player.name}] 님이 입장했습니다!`);
-            broadcastState();
+            if (store.isHost) {
+              broadcastState();
+            }
             renderAll();
           }
           break;
@@ -1050,14 +1068,26 @@
           break;
 
         case 'HEARTBEAT_PING':
-          if (store.isHost && msg.playerId && store.players[msg.playerId]) {
-            store.players[msg.playerId].lastSeen = Date.now();
+          if (store.isHost && msg.playerId) {
+            if (store.players[msg.playerId]) {
+              store.players[msg.playerId].lastSeen = Date.now();
+            } else if (msg.player) {
+              // Re-register if missed during initial join
+              msg.player.lastSeen = Date.now();
+              store.players[msg.playerId] = msg.player;
+              broadcastState();
+              renderAll();
+            }
           }
           break;
 
         case 'HOST_PING':
           if (!store.isHost) {
-            broadcastNetworkPacket({ type: 'HEARTBEAT_PING', playerId: store.myId });
+            broadcastNetworkPacket({ 
+              type: 'HEARTBEAT_PING', 
+              playerId: store.myId,
+              player: store.players[store.myId]
+            });
           }
           break;
 
@@ -1075,7 +1105,12 @@
           store.currentRound = msg.currentRound || store.currentRound;
           store.totalRounds = msg.totalRounds || store.totalRounds;
           if (msg.players) {
-            store.players = msg.players;
+            // Keep my local state intact while merging the latest authoritative player list
+            const myCurrent = store.players[store.myId];
+            store.players = Object.assign({}, msg.players);
+            if (myCurrent) {
+              store.players[store.myId] = Object.assign({}, msg.players[store.myId] || {}, myCurrent);
+            }
             if (store.players[store.myId]) {
               store.chips = store.players[store.myId].chips;
               store.isBankrupt = store.players[store.myId].isBankrupt;
