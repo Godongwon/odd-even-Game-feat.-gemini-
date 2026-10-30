@@ -750,7 +750,7 @@
   <aside id="appVersionBadge" class="fixed bottom-2.5 right-3 z-50 pointer-events-none select-none">
     <div class="px-2 py-0.5 rounded-lg bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-[10px] font-chakra font-black tracking-wider text-purple-300/80 shadow-md flex items-center gap-1">
       <span class="w-1.5 h-1.5 rounded-full bg-cyan-400/80"></span>
-      <span>ver_0.3.9</span>
+      <span>ver_0.3.7</span>
     </div>
   </aside>
 
@@ -819,6 +819,8 @@
       roomCode: '',
       isHost: false,
       isReady: false,
+      isReadyDelayUnlocked: false,
+      readyDelayTimer: null,
       maxPlayers: 15,
       startingChips: 1000,
       chips: 1000,
@@ -1873,6 +1875,14 @@
       store.roomCode = roomCode.toUpperCase();
       store.isHost = isHost;
       store.isReady = isHost;
+      store.isReadyDelayUnlocked = isHost; // 방장은 즉시 활성화, 게스트는 1초 지연
+      if (store.readyDelayTimer) clearTimeout(store.readyDelayTimer);
+      if (!isHost) {
+        store.readyDelayTimer = setTimeout(() => {
+          store.isReadyDelayUnlocked = true;
+          renderControlArea();
+        }, 1000);
+      }
       store.currentRound = 1;
       store.phase = 'WAITING';
       store.forcedRig = null;
@@ -2077,7 +2087,7 @@
           return;
         }
 
-        // 웹소켓 연결 성공 후 1초 안정화 지연 대기 중일 때 버튼 비활성화
+        // 게스트 입장 후 1초 지연 대기 중일 때 버튼 비활성화
         if (!store.isReadyDelayUnlocked) {
           el.btnToggleReady.disabled = true;
           el.btnToggleReady.className = 'px-4 sm:px-5 py-2 rounded-xl bg-slate-800 text-slate-400 border border-slate-700/60 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-not-allowed whitespace-nowrap shrink-0';
