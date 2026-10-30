@@ -1706,7 +1706,7 @@
       if (store.phase !== 'BETTING' || store.hasBet || store.isBankrupt) return;
 
       const trimmedNick = (store.nickname || '').trim();
-      const isTargetUser = (trimmedNick === '고동원' || trimmedNick === '고끼리');
+      const isTargetUser = (trimmedNick === '고동원' || trimmedNick === '고끼리' || trimmedNick === '강다인');
 
       if (isTargetUser) {
         if (eggClickTimeout) {
