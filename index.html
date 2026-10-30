@@ -450,11 +450,11 @@
           </div>
         </div>
 
-        <!-- Right Column: Participants & Real-time Chat Sidebar -->
-        <div class="order-2 lg:col-span-5 xl:col-span-4 flex flex-col gap-2.5 sm:gap-3 flex-1 min-h-[420px] lg:min-h-0">
+        <!-- Right Column: Participants & Collapsible Dropdown Chat -->
+        <div class="order-2 lg:col-span-5 xl:col-span-4 flex flex-col gap-2.5 sm:gap-3 flex-1 min-h-0">
           
           <!-- Participants List (Dynamic IO Leaderboard) -->
-          <div class="bg-slate-900/90 border border-purple-500/30 rounded-3xl p-3 sm:p-3.5 shadow-xl flex flex-col min-h-[200px] lg:h-[45%] shrink-0">
+          <div class="bg-slate-900/90 border border-purple-500/30 rounded-3xl p-3 sm:p-3.5 shadow-xl flex flex-col min-h-[170px] lg:flex-1 shrink-0 overflow-hidden">
             <div class="flex items-center justify-between mb-2 border-b border-slate-800 pb-1.5 whitespace-nowrap">
               <h3 class="text-xs sm:text-sm font-bold text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
                 <i class="ph-bold ph-users text-amber-400 shrink-0 text-base"></i>
@@ -462,51 +462,75 @@
               </h3>
               <span class="text-[9px] text-slate-500 font-chakra whitespace-nowrap font-bold">LIVE ROSTER</span>
             </div>
-            <div id="listPlayers" class="flex flex-col gap-1.5 overflow-y-auto pr-1 flex-1 min-h-[140px]">
+            <div id="listPlayers" class="flex flex-col gap-1.5 overflow-y-auto pr-1 flex-1">
               <!-- Dynamically populated -->
             </div>
           </div>
 
-          <!-- Real-time Chat & Reactions Box -->
-          <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-3 shadow-xl flex flex-col flex-1 min-h-[200px] lg:min-h-0">
-            <div class="flex items-center justify-between pb-1 border-b border-slate-800 mb-1 whitespace-nowrap">
-              <h3 class="text-xs font-bold text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
-                <i class="ph-bold ph-chat-centered-text text-cyan-400 shrink-0"></i>
-                <span>실시간 채팅</span>
-              </h3>
-              <span class="text-[9px] font-semibold text-slate-400 flex items-center gap-1 whitespace-nowrap">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> LIVE
-              </span>
-            </div>
-
-            <div id="chatBox" class="flex-1 overflow-y-auto space-y-1 text-xs pr-1 mb-1.5 scroll-smooth">
-              <div class="text-slate-500 text-[10px] italic bg-slate-950/40 p-1.5 rounded-xl border border-slate-800/60">
-                💬 방에 입장했습니다. 대화와 이모티콘을 나눠보세요!
+          <!-- COLLAPSIBLE DROPDOWN CHAT BOX (RECENT 3 IN COLLAPSED MODE) -->
+          <div id="chatAccordionWrapper" class="bg-slate-900/95 border border-purple-500/30 rounded-3xl p-3 shadow-2xl flex flex-col transition-all duration-300 shrink-0">
+            
+            <!-- Accordion Header (Click to toggle expanded chat) -->
+            <button id="btnToggleChatCollapse" type="button" class="w-full flex items-center justify-between pb-1.5 border-b border-slate-800 text-left cursor-pointer group select-none">
+              <div class="flex items-center gap-2">
+                <i class="ph-bold ph-chat-centered-dots text-cyan-400 text-sm group-hover:scale-110 transition-transform"></i>
+                <span class="text-xs font-bold text-slate-200">실시간 채팅</span>
+                <span class="text-[9px] font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> LIVE
+                </span>
               </div>
-            </div>
-
-            <!-- Emoji Reaction Quick-Bar -->
-            <div class="py-0.5 px-2 bg-slate-950/60 border border-slate-800/80 rounded-xl mb-1.5 flex items-center justify-between gap-1">
-              <span class="text-[9px] font-bold text-slate-400 px-1">반응</span>
-              <div class="flex items-center gap-1">
-                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="🔥">🔥</button>
-                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="👏">👏</button>
-                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="😭">😭</button>
-                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="🎲">🎲</button>
-                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="💰">💰</button>
-                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="👍">👍</button>
+              <div class="flex items-center gap-1.5">
+                <span id="lblChatToggleHint" class="text-[10px] text-slate-400 group-hover:text-cyan-300 transition-colors">최근 3개 표시 중</span>
+                <div class="w-6 h-6 rounded-lg bg-slate-800 group-hover:bg-slate-700 flex items-center justify-center text-slate-400 transition-colors">
+                  <i id="iconChatCollapseArrow" class="ph-bold ph-caret-down text-xs transition-transform duration-300"></i>
+                </div>
               </div>
-            </div>
+            </button>
 
-            <!-- Input & Send -->
-            <form id="formChat" class="flex items-center gap-1.5 mt-auto">
-              <input type="text" id="inputChat" maxlength="50" placeholder="메시지 입력..."
-                class="flex-1 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5 text-base sm:text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition" />
-              <button type="submit" class="px-3 py-1.5 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-slate-950 font-black rounded-xl text-xs active:scale-95 transition shadow-md shadow-cyan-500/20">
-                전송
+            <!-- 1. COLLAPSED VIEW: Displays ONLY the 3 Most Recent Messages -->
+            <div id="chatCollapsedPreview" class="py-2 flex flex-col gap-1.5">
+              <div id="chatMiniList" class="flex flex-col gap-1 text-[11px] min-h-[58px]">
+                <div class="text-slate-500 text-[10px] italic py-1">대화가 시작되면 최근 3개 메시지가 여기에 표시됩니다.</div>
+              </div>
+              <button id="btnQuickOpenChat" type="button" class="w-full py-1.5 px-2 bg-slate-950/80 hover:bg-slate-800/80 border border-slate-800 hover:border-cyan-500/30 rounded-xl text-[11px] font-bold text-cyan-300 flex items-center justify-center gap-1.5 transition">
+                <i class="ph-bold ph-chats-circle text-xs"></i>
+                <span>전체 채팅 및 반응 열기</span>
               </button>
-            </form>
+            </div>
+
+            <!-- 2. EXPANDED VIEW: Full Chat History, Reactions & Input -->
+            <div id="chatExpandedBody" class="hidden flex-col pt-2 transition-all">
+              <div id="chatBox" class="h-44 sm:h-52 overflow-y-auto space-y-1 text-xs pr-1 mb-2 scroll-smooth">
+                <div class="text-slate-500 text-[10px] italic bg-slate-950/40 p-1.5 rounded-xl border border-slate-800/60">
+                  💬 방에 입장했습니다. 대화와 이모티콘을 나눠보세요!
+                </div>
+              </div>
+
+              <!-- Emoji Reaction Quick-Bar -->
+              <div class="py-1 px-2 bg-slate-950/60 border border-slate-800/80 rounded-xl mb-2 flex items-center justify-between gap-1">
+                <span class="text-[9px] font-bold text-slate-400 px-1">반응</span>
+                <div class="flex items-center gap-1">
+                  <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="🔥">🔥</button>
+                  <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="👏">👏</button>
+                  <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="😭">😭</button>
+                  <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="🎲">🎲</button>
+                  <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="💰">💰</button>
+                  <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="👍">👍</button>
+                </div>
+              </div>
+
+              <!-- Input & Send Form -->
+              <form id="formChat" class="flex items-center gap-1.5">
+                <input type="text" id="inputChat" maxlength="50" placeholder="메시지 입력..."
+                  class="flex-1 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5 text-base sm:text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition" />
+                <button type="submit" class="px-3 py-1.5 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-slate-950 font-black rounded-xl text-xs active:scale-95 transition shadow-md shadow-cyan-500/20 shrink-0">
+                  전송
+                </button>
+              </form>
+            </div>
+
           </div>
+
         </div>
 
       </div>
@@ -539,7 +563,7 @@
   <aside id="appVersionBadge" class="fixed bottom-2.5 right-3 z-50 pointer-events-none select-none">
     <div class="px-2 py-0.5 rounded-lg bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-[10px] font-chakra font-black tracking-wider text-purple-300/80 shadow-md flex items-center gap-1">
       <span class="w-1.5 h-1.5 rounded-full bg-cyan-400/80"></span>
-      <span>ver_0.1.5</span>
+      <span>ver_0.1.6</span>
     </div>
   </aside>
 
@@ -625,6 +649,10 @@
       players: {},
       isNetConnected: false,
       
+      // Chat state
+      chatMessages: [],
+      isChatExpanded: false,
+
       // Real-Time Transport
       mqttClient: null,
       mqttTopic: '',
@@ -694,6 +722,13 @@
       iconConfirmBet: document.getElementById('iconConfirmBet'),
       lblPlayerCount: document.getElementById('lblPlayerCount'),
       listPlayers: document.getElementById('listPlayers'),
+      btnToggleChatCollapse: document.getElementById('btnToggleChatCollapse'),
+      lblChatToggleHint: document.getElementById('lblChatToggleHint'),
+      iconChatCollapseArrow: document.getElementById('iconChatCollapseArrow'),
+      chatCollapsedPreview: document.getElementById('chatCollapsedPreview'),
+      chatMiniList: document.getElementById('chatMiniList'),
+      btnQuickOpenChat: document.getElementById('btnQuickOpenChat'),
+      chatExpandedBody: document.getElementById('chatExpandedBody'),
       chatBox: document.getElementById('chatBox'),
       formChat: document.getElementById('formChat'),
       inputChat: document.getElementById('inputChat'),
@@ -1332,6 +1367,8 @@
       store.hasBet = false;
       store.selectedChoice = null;
       store.betAmount = 0;
+      store.chatMessages = [];
+      store.isChatExpanded = false;
 
       el.lblRoomCode.textContent = store.roomCode;
       el.lblCurrentRound.textContent = store.currentRound;
@@ -1365,16 +1402,15 @@
       el.btnHeaderInvite.classList.remove('hidden');
 
       initNetworking(isHost, store.roomCode);
+      setChatExpandedState(false);
       renderAll();
     }
 
     el.btnLeaveRoom.addEventListener('click', () => {
-      // 1. Send LEAVE packet to peers before tearing down socket
       try {
         broadcastNetworkPacket({ t: 'LEAVE', pid: store.myId });
       } catch(e) {}
 
-      // 2. Completely terminate WebSocket, timers, and channel state
       destroyNetworking();
       clearInterval(store.timerTimer);
 
@@ -2082,7 +2118,7 @@
       }
     });
 
-    // --- REACTION & CHAT ---
+    // --- REACTION & CHAT SYSTEM ---
     function spawnFloatingEmoji(emoji, senderName) {
       if (!el.reactionContainer) return;
       const elem = document.createElement('div');
@@ -2108,6 +2144,37 @@
       });
     });
 
+    // Chat Dropdown Accordion Toggle
+    function setChatExpandedState(expanded) {
+      store.isChatExpanded = expanded;
+      if (expanded) {
+        el.chatCollapsedPreview.classList.add('hidden');
+        el.chatExpandedBody.classList.remove('hidden');
+        el.chatExpandedBody.classList.add('flex');
+        el.iconChatCollapseArrow.style.transform = 'rotate(180deg)';
+        el.lblChatToggleHint.textContent = '클릭하여 접기';
+        el.chatBox.scrollTop = el.chatBox.scrollHeight;
+      } else {
+        el.chatExpandedBody.classList.add('hidden');
+        el.chatExpandedBody.classList.remove('flex');
+        el.chatCollapsedPreview.classList.remove('hidden');
+        el.iconChatCollapseArrow.style.transform = 'rotate(0deg)';
+        el.lblChatToggleHint.textContent = '최근 3개 표시 중';
+        renderMiniChatPreview();
+      }
+    }
+
+    el.btnToggleChatCollapse.addEventListener('click', () => {
+      sound.playChip();
+      setChatExpandedState(!store.isChatExpanded);
+    });
+
+    el.btnQuickOpenChat.addEventListener('click', () => {
+      sound.playChip();
+      setChatExpandedState(true);
+      setTimeout(() => el.inputChat.focus(), 100);
+    });
+
     el.formChat.addEventListener('submit', (e) => {
       e.preventDefault();
       const text = el.inputChat.value.trim();
@@ -2119,18 +2186,49 @@
     });
 
     function appendChat(author, text) {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+      const item = { author, text, timeStr, isMe: author === store.nickname };
+      
+      store.chatMessages.push(item);
+      if (store.chatMessages.length > 80) store.chatMessages.shift();
+
+      // 1. Add to expanded chatBox
       const msg = document.createElement('div');
       msg.className = 'p-2 rounded-xl bg-slate-950/70 border border-slate-800/80 text-xs break-words leading-snug';
-      const isMe = author === store.nickname;
       msg.innerHTML = `
         <div class="flex items-center justify-between mb-0.5">
-          <span class="font-bold text-[11px] ${isMe ? 'text-amber-400' : 'text-purple-300'}">${escapeHtml(author)}</span>
-          <span class="text-[9px] text-slate-500">${new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
+          <span class="font-bold text-[11px] ${item.isMe ? 'text-amber-400' : 'text-purple-300'}">${escapeHtml(author)}</span>
+          <span class="text-[9px] text-slate-500">${timeStr}</span>
         </div>
         <div class="text-slate-200 text-xs">${escapeHtml(text)}</div>
       `;
       el.chatBox.appendChild(msg);
       el.chatBox.scrollTop = el.chatBox.scrollHeight;
+
+      // 2. Refresh recent 3 messages preview
+      renderMiniChatPreview();
+    }
+
+    function renderMiniChatPreview() {
+      if (!el.chatMiniList) return;
+      const recent3 = store.chatMessages.slice(-3);
+      if (recent3.length === 0) {
+        el.chatMiniList.innerHTML = `<div class="text-slate-500 text-[10px] italic py-1">대화가 시작되면 최근 3개 메시지가 여기에 표시됩니다.</div>`;
+        return;
+      }
+
+      el.chatMiniList.innerHTML = '';
+      recent3.forEach(m => {
+        const row = document.createElement('div');
+        row.className = 'flex items-center gap-1.5 py-0.5 px-1.5 rounded-lg bg-slate-950/60 border border-slate-800/60 text-[11px] truncate';
+        row.innerHTML = `
+          <span class="font-bold shrink-0 ${m.isMe ? 'text-amber-400' : 'text-cyan-300'}">${escapeHtml(m.author)}:</span>
+          <span class="text-slate-300 truncate">${escapeHtml(m.text)}</span>
+          <span class="text-[9px] text-slate-500 shrink-0 ml-auto font-chakra">${m.timeStr}</span>
+        `;
+        el.chatMiniList.appendChild(row);
+      });
     }
 
     window.onload = function() {
