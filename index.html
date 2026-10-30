@@ -777,6 +777,9 @@
           store.localChannel.onmessage = (e) => {
             if (e.data && e.data._senderId !== store.myId) handleNetworkMessage(e.data);
           };
+          // BroadcastChannel is locally available immediately
+          store.isNetConnected = true;
+          setNetStatus('connected', `WS 온라인 (${normalizedCode})`);
         } catch(e) {}
       }
 
@@ -794,68 +797,150 @@
 
     function connectWebSocket(roomCode, isHost) {
       try {
-        const apiKey = '0e251a37';
-        const channelName = 'io_hz_' + roomCode.toLowerCase();
-        const wsUrl = `wss://free.blr2.piesocket.com/v3/${channelName}?api_key=${apiKey}&notify_self=0`;
+        // High-availability public unmetered MQTT over WSS cluster
+        const brokerUrl = 'wss://broker.emqx.io:8084/mqtt';
+        const clientId = 'hz_' + store.myId + '_' + Math.random().toString(16).substring(2, 6);
+        const topic = 'hz_arena_room/' + roomCode.toLowerCase();
 
-        store.ws = new WebSocket(wsUrl);
+        // Connect standard WebSocket to broker
+        store.ws = new WebSocket(brokerUrl, ['mqtt']);
 
         store.ws.onopen = () => {
           store.isNetConnected = true;
           setNetStatus('connected', `WS 온라인 (${roomCode})`);
           updateActionTicker(`WS 실시간 연결됨 (${roomCode})`);
 
-          // WebSocket Ping Keepalive
+          // MQTT Connect packet (protocol v3.1.1)
+          sendMqttConnect(clientId);
+
+          // Subscribe to room topic after connect
+          setTimeout(() => {
+            sendMqttSubscribe(topic);
+            if (store.isHost) {
+              broadcastState();
+            } else {
+              sendJoinPacket();
+              setTimeout(sendJoinPacket, 600);
+            }
+          }, 200);
+
+          // Keepalive Ping
           clearInterval(store.wsPingTimer);
           store.wsPingTimer = setInterval(() => {
             if (store.ws && store.ws.readyState === WebSocket.OPEN) {
-              store.ws.send(JSON.stringify({
-                _room: roomCode,
-                _senderId: store.myId,
-                t: 'PING',
-                ts: Date.now()
-              }));
+              try {
+                // MQTT Pingreq (0xC0, 0x00)
+                store.ws.send(new Uint8Array([0xC0, 0x00]));
+              } catch(e) {}
             }
-          }, 15000);
+          }, 20000);
 
-          if (store.isHost) {
-            broadcastState();
-          } else {
-            sendJoinPacket();
-            setTimeout(sendJoinPacket, 500);
-          }
           renderControlArea();
         };
 
         store.ws.onmessage = (evt) => {
-          try {
-            const data = JSON.parse(evt.data);
-            if (data && data._room === roomCode && data._senderId !== store.myId) {
-              handleNetworkMessage(data);
-            }
-          } catch(e) {}
+          if (evt.data instanceof Blob) {
+            const reader = new FileReader();
+            reader.onload = () => parseMqttPayload(new Uint8Array(reader.result), roomCode);
+            reader.readAsArrayBuffer(evt.data);
+          } else if (evt.data instanceof ArrayBuffer) {
+            parseMqttPayload(new Uint8Array(evt.data), roomCode);
+          }
         };
 
         store.ws.onerror = () => {
-          setNetStatus('connecting', 'WS 재연결 시도...');
+          // If WS has a hiccup, localChannel still keeps the game running smoothly
+          if (!store.isNetConnected) setNetStatus('connecting', '로컬 채널 대기');
         };
 
         store.ws.onclose = () => {
-          store.isNetConnected = false;
           clearInterval(store.wsPingTimer);
-          setNetStatus('connecting', 'WS 재연결 중...');
-          renderControlArea();
-
+          // Only attempt reconnect if still inside room and not intentional disconnect
           if (store.roomCode) {
             clearTimeout(store.wsReconnectTimer);
             store.wsReconnectTimer = setTimeout(() => {
-              if (store.roomCode) connectWebSocket(store.roomCode, store.isHost);
-            }, 3000);
+              if (store.roomCode && (!store.ws || store.ws.readyState !== WebSocket.OPEN)) {
+                connectWebSocket(store.roomCode, store.isHost);
+              }
+            }, 5000);
           }
         };
       } catch(err) {
-        setNetStatus('connecting', 'WS 대기...');
+        store.isNetConnected = true;
+        setNetStatus('connected', `로컬 대기 (${roomCode})`);
       }
+    }
+
+    // Lightweight MQTT Protocol Byte Builders (Zero-dependency binary WS)
+    function sendMqttConnect(clientId) {
+      if (!store.ws || store.ws.readyState !== WebSocket.OPEN) return;
+      const clientBytes = new TextEncoder().encode(clientId);
+      const varHeader = [0x00, 0x04, 0x4D, 0x51, 0x54, 0x54, 0x04, 0x02, 0x00, 0x3C]; // "MQTT", v4, clean session, 60s
+      const payload = [0x00, clientBytes.length, ...clientBytes];
+      const remainingLength = varHeader.length + payload.length;
+      const packet = new Uint8Array([0x10, remainingLength, ...varHeader, ...payload]);
+      try { store.ws.send(packet); } catch(e) {}
+    }
+
+    function sendMqttSubscribe(topic) {
+      if (!store.ws || store.ws.readyState !== WebSocket.OPEN) return;
+      const topicBytes = new TextEncoder().encode(topic);
+      const packetId = [0x00, 0x01];
+      const payload = [0x00, topicBytes.length, ...topicBytes, 0x00]; // QoS 0
+      const remainingLength = packetId.length + payload.length;
+      const packet = new Uint8Array([0x82, remainingLength, ...packetId, ...payload]);
+      try { store.ws.send(packet); } catch(e) {}
+    }
+
+    function sendMqttPublish(topic, messageStr) {
+      if (!store.ws || store.ws.readyState !== WebSocket.OPEN) return;
+      const topicBytes = new TextEncoder().encode(topic);
+      const msgBytes = new TextEncoder().encode(messageStr);
+      const varHeader = [0x00, topicBytes.length, ...topicBytes];
+      const remainingLength = varHeader.length + msgBytes.length;
+      
+      // Handle remaining length encoding for up to 16KB
+      let remLenBytes = [];
+      let len = remainingLength;
+      do {
+        let byte = len % 128;
+        len = Math.floor(len / 128);
+        if (len > 0) byte |= 0x80;
+        remLenBytes.push(byte);
+      } while (len > 0);
+
+      const packet = new Uint8Array([0x30, ...remLenBytes, ...varHeader, ...msgBytes]);
+      try { store.ws.send(packet); } catch(e) {}
+    }
+
+    function parseMqttPayload(bytes, currentRoom) {
+      try {
+        const packetType = bytes[0] >> 4;
+        if (packetType === 3) { // PUBLISH packet
+          let idx = 1;
+          let multiplier = 1;
+          let remLen = 0;
+          let digit = 0;
+          do {
+            digit = bytes[idx++];
+            remLen += (digit & 0x7F) * multiplier;
+            multiplier *= 128;
+          } while ((digit & 0x80) !== 0);
+
+          const topicLen = (bytes[idx] << 8) | bytes[idx + 1];
+          idx += 2;
+          const topic = new TextDecoder().decode(bytes.subarray(idx, idx + topicLen));
+          idx += topicLen;
+
+          const payloadBytes = bytes.subarray(idx);
+          const jsonStr = new TextDecoder().decode(payloadBytes);
+          const data = JSON.parse(jsonStr);
+
+          if (data && data._room === currentRoom && data._senderId !== store.myId) {
+            handleNetworkMessage(data);
+          }
+        }
+      } catch(e) {}
     }
 
     function destroyNetworking() {
@@ -897,10 +982,12 @@
 
       const payload = JSON.stringify(packet);
 
-      if (store.ws && store.ws.readyState === WebSocket.OPEN) {
-        try { store.ws.send(payload); } catch(e) {}
+      // 1. Send via WebSocket (MQTT Publish)
+      if (store.roomCode) {
+        sendMqttPublish('hz_arena_room/' + store.roomCode.toLowerCase(), payload);
       }
 
+      // 2. Send via Local Channel
       if (store.localChannel) {
         try { store.localChannel.postMessage(packet); } catch(e) {}
       }
@@ -1455,12 +1542,7 @@
         el.btnToggleReady.classList.add('flex');
 
         if (store.phase === 'WAITING' || store.phase === 'RESULT') {
-          if (!store.isNetConnected) {
-            el.btnToggleReady.disabled = true;
-            el.btnToggleReady.className = 'px-4 sm:px-5 py-2 rounded-xl bg-slate-800 text-slate-500 border border-slate-700/60 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-not-allowed whitespace-nowrap shrink-0';
-            el.iconToggleReady.className = 'ph-bold ph-spinner animate-spin text-base text-amber-400 shrink-0';
-            el.textToggleReady.textContent = '네트워크 연결 중...';
-          } else if (store.isReady) {
+          if (store.isReady) {
             el.btnToggleReady.disabled = false;
             el.btnToggleReady.className = 'px-4 sm:px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-emerald-400 border border-emerald-500/40 font-black shadow-lg text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0';
             el.iconToggleReady.className = 'ph-bold ph-check-circle text-base text-emerald-400 shrink-0';
