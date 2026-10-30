@@ -156,7 +156,7 @@
     }
   </style>
 </head>
-<body class="flex flex-col min-h-screen text-slate-100 selection:bg-amber-500 selection:text-black">
+<body class="flex flex-col min-h-screen text-slate-100 selection:bg-amber-500 selection:text-black relative">
 
   <!-- TOP HEADER -->
   <header class="border-b border-purple-900/40 bg-slate-950/75 backdrop-blur-md sticky top-0 z-40 px-3 sm:px-4 py-2 sm:py-2.5 shrink-0">
@@ -564,6 +564,14 @@
 
   </main>
 
+  <!-- FIXED BOTTOM-RIGHT VERSION BADGE -->
+  <aside id="appVersionBadge" class="fixed bottom-2.5 right-3 z-50 pointer-events-none select-none">
+    <div class="px-2 py-0.5 rounded-lg bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-[10px] font-chakra font-black tracking-wider text-purple-300/80 shadow-md flex items-center gap-1">
+      <span class="w-1.5 h-1.5 rounded-full bg-cyan-400/80"></span>
+      <span>ver_0.1.0</span>
+    </div>
+  </aside>
+
   <!-- Sound FX Engine -->
   <script>
     class SoundFx {
@@ -815,7 +823,6 @@
 
     function connectUniversalRelay(roomCode, isHost) {
       try {
-        // High-capacity public WebSocket broadcast endpoints
         const pubChannel = `hz_stream_${roomCode.toLowerCase()}`;
         const wsUrl = `wss://ws-ap1.pusher.com/app/eb1d5f283081a78b932c?protocol=7&client=js&version=7.4.0&flash=false`;
 
@@ -825,7 +832,6 @@
           store.isNetConnected = true;
           setNetStatus('connected', `WS 온라인 (${roomCode})`);
 
-          // Subscribe to dedicated room channel
           const subPayload = JSON.stringify({
             event: 'pusher:subscribe',
             data: { channel: pubChannel }
@@ -865,7 +871,6 @@
         };
 
         store.ws.onerror = () => {
-          // Fallback seamlessly using persistent relay bus
           setNetStatus('connected', `WS 온라인 (${roomCode})`);
         };
 
@@ -918,12 +923,10 @@
         store.processedPacketIds.delete(first);
       }
 
-      // 1. Cross-Tab Local High-Speed Delivery
       if (store.localChannel) {
         try { store.localChannel.postMessage(packet); } catch(e) {}
       }
 
-      // 2. Direct Cross-Device WSS Broadcast
       if (store.ws && store.ws.readyState === WebSocket.OPEN) {
         try {
           const pubChannel = `hz_stream_${packet._room.toLowerCase()}`;
@@ -936,7 +939,6 @@
         } catch(e) {}
       }
 
-      // 3. Ultra-Reliable Serverless Cross-Device Relay Fallback (Prevents mobile packet drops)
       try {
         const endpoint = `https://ntfy.sh/hz_io_${packet._room.toLowerCase()}`;
         fetch(endpoint, {
@@ -947,7 +949,6 @@
       } catch(e) {}
     }
 
-    // Start Host Fixed 10Hz Snapshot Engine
     function startHostSnapshotLoop() {
       clearInterval(store.snapshotInterval);
       store.snapshotInterval = setInterval(() => {
@@ -1028,7 +1029,6 @@
             }
 
             if (store.isHost) {
-              // Immediately send state back twice to ensure guest receives full roster
               broadcastState();
               setTimeout(broadcastState, 250);
             }
