@@ -563,7 +563,7 @@
   <aside id="appVersionBadge" class="fixed bottom-2.5 right-3 z-50 pointer-events-none select-none">
     <div class="px-2 py-0.5 rounded-lg bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-[10px] font-chakra font-black tracking-wider text-purple-300/80 shadow-md flex items-center gap-1">
       <span class="w-1.5 h-1.5 rounded-full bg-cyan-400/80"></span>
-      <span>ver_0.1.6</span>
+      <span>ver_0.1.7</span>
     </div>
   </aside>
 
@@ -1020,6 +1020,53 @@
       });
     }
 
+    // --- HOST MIGRATION (방장 넘기기 핵심 로직) ---
+    function checkAndMigrateHost(leavingPlayerId) {
+      const remainingHumanPlayers = Object.values(store.players)
+        .filter(p => !p.isBot && p.id !== leavingPlayerId)
+        .sort((a, b) => (a.joinedAt || 0) - (b.joinedAt || 0));
+
+      if (remainingHumanPlayers.length === 0) return null;
+
+      const nextHost = remainingHumanPlayers[0];
+      return nextHost.id;
+    }
+
+    function applyNewHost(newHostId, broadcasterName = null) {
+      if (!newHostId || !store.players[newHostId]) return;
+
+      Object.values(store.players).forEach(p => {
+        p.isHost = (p.id === newHostId);
+      });
+
+      const newHostName = store.players[newHostId].name;
+
+      if (newHostId === store.myId) {
+        store.isHost = true;
+        store.isReady = true;
+        if (store.players[store.myId]) {
+          store.players[store.myId].isHost = true;
+          store.players[store.myId].isReady = true;
+        }
+        startHostSnapshotLoop();
+        broadcastNetworkPacket({
+          t: 'HOST_MIGRATE',
+          newHostId: newHostId,
+          newHostName: newHostName
+        });
+        broadcastState();
+        showToast(`방장이 퇴장하여 회원님이 새로운 방장이 되었습니다! 👑`);
+        updateActionTicker(`👑 [방장 변경] ${newHostName} 님으로 위임됨`);
+      } else {
+        store.isHost = false;
+        clearInterval(store.snapshotInterval);
+        showToast(`[${newHostName}] 님이 새로운 방장이 되었습니다. 👑`);
+        updateActionTicker(`👑 [방장 변경] ${newHostName} 님`);
+      }
+
+      renderAll();
+    }
+
     function handleNetworkMessage(msg) {
       if (!msg || !msg.t) return;
 
@@ -1066,16 +1113,33 @@
 
         case 'LEAVE':
           if (msg.pid && store.players[msg.pid]) {
-            const leftName = store.players[msg.pid].name;
+            const leftPlayer = store.players[msg.pid];
+            const leftName = leftPlayer.name;
+            const wasHost = leftPlayer.isHost;
+
             delete store.players[msg.pid];
             store.notifiedPlayerJoins.delete(msg.pid);
             showToast(`[${leftName}] 님이 퇴장했습니다.`, false);
             updateActionTicker(`🔴 ${leftName} 님이 퇴장함`);
-            if (store.isHost) {
+
+            // 방장이 나간 경우: 방장 넘기기(Host Migration) 즉시 발동
+            if (wasHost) {
+              const nextHostId = checkAndMigrateHost(msg.pid);
+              if (nextHostId) {
+                applyNewHost(nextHostId, leftName);
+              }
+            } else if (store.isHost) {
               broadcastState();
               checkAllPlayersBetComplete();
             }
+
             renderAll();
+          }
+          break;
+
+        case 'HOST_MIGRATE':
+          if (msg.newHostId) {
+            applyNewHost(msg.newHostId);
           }
           break;
 
@@ -1107,6 +1171,17 @@
               store.chips = store.players[store.myId].chips;
               store.isBankrupt = store.players[store.myId].isBankrupt;
               store.hasBet = store.players[store.myId].hasBet;
+              
+              // 방장 권한이 넘어왔는지 검사
+              if (store.players[store.myId].isHost && !store.isHost) {
+                store.isHost = true;
+                store.isReady = true;
+                startHostSnapshotLoop();
+                showToast('방장 권한을 넘겨받았습니다! 👑');
+              } else if (!store.players[store.myId].isHost && store.isHost) {
+                store.isHost = false;
+                clearInterval(store.snapshotInterval);
+              }
             }
           }
           if (store.phase === 'FINISHED' && !store.isHost) {
@@ -1407,6 +1482,18 @@
     }
 
     el.btnLeaveRoom.addEventListener('click', () => {
+      // 내가 방장이었으면 나가기 전 다음 참가자에게 방장 위임 후 퇴장
+      if (store.isHost) {
+        const nextHostId = checkAndMigrateHost(store.myId);
+        if (nextHostId) {
+          broadcastNetworkPacket({
+            t: 'HOST_MIGRATE',
+            newHostId: nextHostId,
+            newHostName: store.players[nextHostId]?.name || ''
+          });
+        }
+      }
+
       try {
         broadcastNetworkPacket({ t: 'LEAVE', pid: store.myId });
       } catch(e) {}
@@ -1432,6 +1519,16 @@
     });
 
     window.addEventListener('beforeunload', () => {
+      if (store.isHost) {
+        const nextHostId = checkAndMigrateHost(store.myId);
+        if (nextHostId) {
+          broadcastNetworkPacket({
+            t: 'HOST_MIGRATE',
+            newHostId: nextHostId,
+            newHostName: store.players[nextHostId]?.name || ''
+          });
+        }
+      }
       broadcastNetworkPacket({ t: 'LEAVE', pid: store.myId });
     });
 
