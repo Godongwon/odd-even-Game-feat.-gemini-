@@ -631,7 +631,8 @@
       players: {}, // id -> { id, name, chips, choice, betAmount, hasBet, isHost, isBot, isBankrupt, isReady, wins }
       dice1: 1,
       dice2: 1,
-      // Zero-security-risk networking channel (BroadcastChannel + LocalStorage event bridge)
+      // Hybrid Cross-Network Real-time Engine (SSE HTTPS Stream + Local BroadcastChannel)
+      sseEventSource: null,
       localChannel: null,
       storageListener: null,
       heartbeatTimer: null
@@ -784,29 +785,60 @@
       textNetStatus.textContent = text;
     }
 
-    // --- ZERO-ERROR SECURE IN-BROWSER NETWORKING (BroadcastChannel + Storage Event Bridge) ---
-    // Does not make any external WebSocket calls, preventing Canvas SecurityError
+    // --- GLOBAL CROSS-NETWORK ENGINE (HTTPS SSE + Local BroadcastChannel) ---
+    // Works across different networks (LTE/5G, different Wi-Fis, different PCs/phones)
+    // Passes through standard HTTPS (Port 443), completely bypassing WebSocket blocks & firewall restrictions.
     function initNetworking(isHost, roomCode) {
       destroyNetworking();
 
-      const channelName = 'hz_arena_' + roomCode.toUpperCase();
-      setNetStatus('connected', isHost ? `방 생성됨 (${roomCode})` : `방 참여됨 (${roomCode})`);
+      const channelTopic = 'hz_arena_' + roomCode.toUpperCase();
+      setNetStatus('connecting', '글로벌 네트워크 연결 중...');
 
-      // 1. BroadcastChannel
+      // 1. Cross-Network HTTPS Server-Sent Events (SSE) Stream
+      try {
+        const streamUrl = `https://ntfy.sh/${channelTopic}/sse`;
+        store.sseEventSource = new EventSource(streamUrl);
+
+        store.sseEventSource.onopen = () => {
+          setNetStatus('connected', isHost ? `방 생성됨 (${roomCode})` : `방 참여됨 (${roomCode})`);
+        };
+
+        store.sseEventSource.onmessage = (event) => {
+          try {
+            const raw = JSON.parse(event.data);
+            // ntfy.sh delivers payload inside message field
+            if (raw && raw.message) {
+              const packet = JSON.parse(raw.message);
+              if (packet && packet._senderId !== store.myId) {
+                handleNetworkMessage(packet);
+              }
+            }
+          } catch (e) {
+            // Not a JSON packet, ignore
+          }
+        };
+
+        store.sseEventSource.onerror = () => {
+          // Fallback status indicator
+          setNetStatus('connecting', '재연결 시도 중...');
+        };
+      } catch (err) {
+        console.warn('SSE stream error, relying on local bridge:', err);
+      }
+
+      // 2. Local Multi-Tab Channel (Instant 0ms latency for same-device tabs)
       if ('BroadcastChannel' in window) {
         try {
-          store.localChannel = new BroadcastChannel(channelName);
+          store.localChannel = new BroadcastChannel(channelTopic);
           store.localChannel.onmessage = (e) => {
             if (e.data && e.data._senderId !== store.myId) {
               handleNetworkMessage(e.data);
             }
           };
-        } catch (e) {
-          console.warn('BroadcastChannel not permitted, falling back to storage bridge:', e);
-        }
+        } catch (e) {}
       }
 
-      // 2. LocalStorage Event Bridge (Secondary cross-window synchronization)
+      // 3. LocalStorage Event Bridge
       store.storageListener = (e) => {
         if (e.key === 'hz_pkt_' + roomCode.toUpperCase() && e.newValue) {
           try {
@@ -824,7 +856,7 @@
         startHostHeartbeat();
       } else {
         showToast(`방 [${store.roomCode}]에 입장했습니다!`);
-        // Announce join to host
+        // Announce join across global network
         broadcastNetworkPacket({
           type: 'PLAYER_JOIN',
           player: {
@@ -858,7 +890,7 @@
         for (let pid in store.players) {
           const p = store.players[pid];
           if (p.id !== store.myId && !p.isBot) {
-            if (p.lastSeen && now - p.lastSeen > 8000) {
+            if (p.lastSeen && now - p.lastSeen > 12000) {
               const leavingName = p.name;
               delete store.players[pid];
               showToast(`[${leavingName}] 님의 접속이 끊어져 퇴장 처리되었습니다.`, false);
@@ -875,7 +907,7 @@
         }
 
         broadcastNetworkPacket({ type: 'HOST_PING', time: now });
-      }, 2500);
+      }, 3000);
     }
 
     function startGuestHeartbeat() {
@@ -883,7 +915,7 @@
       store.heartbeatTimer = setInterval(() => {
         if (store.isHost) return;
         broadcastNetworkPacket({ type: 'HEARTBEAT_PING', playerId: store.myId });
-      }, 2500);
+      }, 3000);
     }
 
     function handleHostDisconnected() {
@@ -916,6 +948,10 @@
 
     function destroyNetworking() {
       clearInterval(store.heartbeatTimer);
+      if (store.sseEventSource) {
+        try { store.sseEventSource.close(); } catch(e) {}
+        store.sseEventSource = null;
+      }
       if (store.localChannel) {
         try { store.localChannel.close(); } catch(e) {}
         store.localChannel = null;
@@ -926,19 +962,35 @@
       }
     }
 
+    // Broadcast across both Global HTTPS Serverless Bus & Local channels
     function broadcastNetworkPacket(packet) {
       packet._senderId = store.myId;
       packet._t = Date.now();
+      const jsonStr = JSON.stringify(packet);
 
-      // 1. BroadcastChannel
+      // 1. Global HTTPS Stream POST (Reaches other phones, LTE, external networks)
+      if (store.roomCode) {
+        const topic = 'hz_arena_' + store.roomCode.toUpperCase();
+        try {
+          fetch(`https://ntfy.sh/${topic}`, {
+            method: 'POST',
+            body: jsonStr,
+            headers: { 'Content-Type': 'text/plain' },
+            mode: 'cors',
+            cache: 'no-cache'
+          }).catch(() => {});
+        } catch (e) {}
+      }
+
+      // 2. BroadcastChannel (Same-device tabs)
       if (store.localChannel) {
         try { store.localChannel.postMessage(packet); } catch(e) {}
       }
 
-      // 2. Storage event
+      // 3. Storage Event Bridge
       if (store.roomCode) {
         try {
-          localStorage.setItem('hz_pkt_' + store.roomCode.toUpperCase(), JSON.stringify(packet));
+          localStorage.setItem('hz_pkt_' + store.roomCode.toUpperCase(), jsonStr);
         } catch(e) {}
       }
     }
@@ -1216,6 +1268,13 @@
         pendingInviteRoom = roomParam.trim().toUpperCase();
         lblInviteRoomCode.textContent = pendingInviteRoom;
         inputRoomCode.value = pendingInviteRoom;
+
+        // Generate a new random guest nickname so invited players don't inherit the inviter's name
+        const randomGuestNick = '플레이어_' + Math.floor(100 + Math.random() * 900);
+        store.nickname = randomGuestNick;
+        inputNickname.value = randomGuestNick;
+        localStorage.setItem('holzzak_user_nick', randomGuestNick);
+
         inviteNoticeBox.classList.remove('hidden');
         defaultLobbyButtons.classList.add('hidden');
         btnDirectInviteJoin.classList.remove('hidden');
