@@ -750,7 +750,7 @@
   <aside id="appVersionBadge" class="fixed bottom-2.5 right-3 z-50 pointer-events-none select-none">
     <div class="px-2 py-0.5 rounded-lg bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-[10px] font-chakra font-black tracking-wider text-purple-300/80 shadow-md flex items-center gap-1">
       <span class="w-1.5 h-1.5 rounded-full bg-cyan-400/80"></span>
-      <span>ver_0.3.7</span>
+      <span>ver_0.3.9</span>
     </div>
   </aside>
 
@@ -1004,18 +1004,33 @@
     }
 
     // --- NETWORKING ---
+    function handleVisibilitySync() {
+      if (document.visibilityState === 'visible' && store.roomCode) {
+        if (store.isHost) {
+          broadcastState();
+        } else {
+          sendJoinPacket();
+        }
+      }
+    }
+
     function initNetworking(isHost, roomCode, isGuestJoin = false) {
       destroyNetworking();
       const normalizedCode = roomCode.toUpperCase().trim();
       store.notifiedPlayerJoins.clear();
       setNetStatus('connecting', `WS 연결 중...`);
 
+      // 브라우저 탭 간 통신 (BroadcastChannel) 즉시 개설
       if ('BroadcastChannel' in window) {
         try {
           store.localChannel = new BroadcastChannel('hz_room_' + normalizedCode);
           store.localChannel.onmessage = (e) => {
             if (e.data && e.data._senderId !== store.myId) handleNetworkMessage(e.data);
           };
+          // 로컬 채널이 정상 열리면 기본 통신망 확보로 인정
+          store.isNetConnected = true;
+          setNetStatus('connected', `WS 온라인 (${normalizedCode})`);
+          triggerReadyButtonDelay();
         } catch(e) {}
       }
 
@@ -1046,7 +1061,7 @@
           if (!hasHost) {
             handleClosedRoom(normalizedCode);
           }
-        }, 3000);
+        }, 3500);
       }
     }
 
@@ -1101,14 +1116,17 @@
         store.mqttClient = new Paho.MQTT.Client(brokerHost, brokerPort, '/mqtt', clientId);
 
         store.mqttClient.onConnectionLost = (responseObject) => {
-          store.isNetConnected = false;
-          store.isReadyDelayUnlocked = false;
-          if (store.readyDelayTimer) clearTimeout(store.readyDelayTimer);
-          renderControlArea();
+          // 로컬 채널이 있으면 연결 상태 유지, 아니면 재연결
+          if (!store.localChannel) {
+            store.isNetConnected = false;
+            store.isReadyDelayUnlocked = false;
+            if (store.readyDelayTimer) clearTimeout(store.readyDelayTimer);
+            renderControlArea();
+          }
           if (store.roomCode) {
             setNetStatus('connecting', `WS 재연결 중...`);
             setTimeout(() => {
-              if (store.roomCode) connectMqttClient(store.isHost, store.roomCode, isGuestJoin);
+              if (store.roomCode) fallbackAlternateBroker(normalizedCode, isGuestJoin);
             }, 1200);
           }
         };
@@ -1124,7 +1142,7 @@
 
         store.mqttClient.connect({
           useSSL: true,
-          timeout: 4,
+          timeout: 3,
           keepAliveInterval: 20,
           cleanSession: true,
           onSuccess: () => {
@@ -1155,10 +1173,12 @@
         const clientId = 'hz_fb_' + store.myId + '_' + Math.random().toString(36).substring(2, 6);
         store.mqttClient = new Paho.MQTT.Client('broker.hivemq.com', 8884, '/mqtt', clientId);
         store.mqttClient.onConnectionLost = () => {
-          store.isNetConnected = false;
-          store.isReadyDelayUnlocked = false;
-          if (store.readyDelayTimer) clearTimeout(store.readyDelayTimer);
-          renderControlArea();
+          if (!store.localChannel) {
+            store.isNetConnected = false;
+            store.isReadyDelayUnlocked = false;
+            if (store.readyDelayTimer) clearTimeout(store.readyDelayTimer);
+            renderControlArea();
+          }
         };
         store.mqttClient.onMessageArrived = (message) => {
           try {
@@ -1168,7 +1188,7 @@
         };
         store.mqttClient.connect({
           useSSL: true,
-          timeout: 4,
+          timeout: 3,
           keepAliveInterval: 20,
           cleanSession: true,
           onSuccess: () => {
@@ -1180,6 +1200,7 @@
             triggerReadyButtonDelay();
           },
           onFailure: () => {
+            // 외부 공용 서버가 막힌 환경에서도 로컬 통신 보장
             store.isNetConnected = true;
             setNetStatus('connected', `WS 로컬온라인`);
             triggerReadyButtonDelay();
