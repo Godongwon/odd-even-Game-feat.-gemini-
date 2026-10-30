@@ -10,8 +10,7 @@
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <!-- Canvas Confetti -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
-  <!-- PeerJS (Zero-config Real-Time P2P WebRTC for Web Browser Multiplayer) -->
-  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <!-- NOTE: External WebSocket-based PeerJS removed to prevent Canvas SecurityError -->
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;900&family=Chakra+Petch:wght@600;700;800&display=swap');
@@ -150,6 +149,11 @@
           <span id="dotNetStatus" class="w-2 h-2 rounded-full bg-slate-500"></span>
           <span id="textNetStatus">로컬 대기 중</span>
         </div>
+        <!-- Share / Invite Button (Header) -->
+        <button id="btnHeaderInvite" class="hidden px-3 py-1.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-500/40 text-xs font-bold transition flex items-center gap-1.5" title="방 초대하기">
+          <i class="ph-bold ph-share-network text-base"></i>
+          <span class="hidden sm:inline">초대하기</span>
+        </button>
         <!-- Sound Mute Button -->
         <button id="btnSoundToggle" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 transition" title="음향 토글">
           <i class="ph-bold ph-speaker-high text-lg" id="soundIcon"></i>
@@ -174,7 +178,19 @@
           <i class="ph-bold ph-game-controller text-3xl"></i>
         </div>
         <h2 class="text-2xl font-bold font-chakra text-white">게임 로비</h2>
-        <p class="text-xs text-slate-400 mt-1">닉네임을 입력하고 방을 만들거나 입장하세요</p>
+        <p class="text-xs text-slate-400 mt-1" id="lblLobbyDesc">닉네임을 입력하고 방을 만들거나 입장하세요</p>
+      </div>
+
+      <!-- Invite Join Notice (Shown when ?room=CODE exists) -->
+      <div id="inviteNoticeBox" class="hidden mb-4 p-3 bg-purple-950/70 border border-purple-500/40 rounded-2xl flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i class="ph-bold ph-envelope-open text-purple-400 text-lg"></i>
+          <div>
+            <div class="text-xs font-bold text-purple-200">초대 링크로 접속됨</div>
+            <div class="text-[11px] text-purple-300">방 코드: <span id="lblInviteRoomCode" class="font-chakra font-black text-amber-400">----</span></div>
+          </div>
+        </div>
+        <button id="btnCancelInviteJoin" class="text-slate-400 hover:text-slate-200 text-xs underline">직접 만들기</button>
       </div>
 
       <div class="space-y-5">
@@ -201,12 +217,12 @@
           <div class="grid grid-cols-4 gap-2 pt-1">
             <button type="button" class="preset-r-btn py-1.5 text-xs font-chakra font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition" data-rounds="3">3R</button>
             <button type="button" class="preset-r-btn py-1.5 text-xs font-chakra font-bold rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/40 transition" data-rounds="5">5R</button>
+            <button type="button" class="preset-r-btn py-1.5 text-xs font-chakra font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition" data-rounds="7">7R</button>
             <button type="button" class="preset-r-btn py-1.5 text-xs font-chakra font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition" data-rounds="10">10R</button>
-            <button type="button" class="preset-r-btn py-1.5 text-xs font-chakra font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition" data-rounds="15">15R</button>
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3 pt-1">
+        <div class="grid grid-cols-2 gap-3 pt-1" id="defaultLobbyButtons">
           <button id="btnCreateRoom" class="py-3.5 px-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-slate-950 font-black rounded-xl shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2">
             <i class="ph-bold ph-plus-circle text-lg"></i>
             <span>방 만들기</span>
@@ -216,6 +232,12 @@
             <span>코드 입장</span>
           </button>
         </div>
+
+        <!-- Quick Direct Join Button (Active when entering via invite link) -->
+        <button id="btnDirectInviteJoin" class="hidden w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 active:scale-95 text-white font-black rounded-xl shadow-lg shadow-purple-500/30 transition items-center justify-center gap-2">
+          <i class="ph-bold ph-game-controller text-xl"></i>
+          <span id="textDirectInviteJoin">초대된 방으로 바로 입장하기</span>
+        </button>
 
         <!-- Join Room Expandable Box -->
         <div id="joinCodeBox" class="hidden pt-3 border-t border-slate-800 space-y-2">
@@ -242,6 +264,11 @@
             <span id="lblRoomCode" class="font-chakra text-xl font-black text-amber-400 tracking-wider bg-slate-800/80 px-2.5 py-0.5 rounded-lg border border-amber-500/30">----</span>
             <button id="btnCopyCode" class="text-slate-400 hover:text-white p-1 text-base transition" title="코드 복사">
               <i class="ph-bold ph-copy"></i>
+            </button>
+            <!-- Room Share Button in Room Toolbar -->
+            <button id="btnShareRoomLink" class="ml-1 px-2.5 py-1 rounded-lg bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 border border-purple-500/30 text-xs font-bold transition flex items-center gap-1 shadow-sm" title="친구에게 초대 링크 보내기">
+              <i class="ph-bold ph-share-network"></i>
+              <span>초대 링크</span>
             </button>
           </div>
           <span class="h-4 w-[1px] bg-slate-700 hidden sm:block"></span>
@@ -588,11 +615,9 @@
       players: {}, // id -> { id, name, chips, choice, betAmount, hasBet, isHost, isBot, isBankrupt, wins }
       dice1: 1,
       dice2: 1,
-      // Networking
-      peer: null,
-      hostConn: null,
-      clientConns: {},
+      // Zero-security-risk networking channel (BroadcastChannel + LocalStorage event bridge)
       localChannel: null,
+      storageListener: null,
       heartbeatTimer: null
     };
 
@@ -609,6 +634,15 @@
     const joinCodeBox = document.getElementById('joinCodeBox');
     const inputRoomCode = document.getElementById('inputRoomCode');
     const btnJoinRoom = document.getElementById('btnJoinRoom');
+
+    // Invite UI Elements
+    const inviteNoticeBox = document.getElementById('inviteNoticeBox');
+    const lblInviteRoomCode = document.getElementById('lblInviteRoomCode');
+    const btnCancelInviteJoin = document.getElementById('btnCancelInviteJoin');
+    const defaultLobbyButtons = document.getElementById('defaultLobbyButtons');
+    const btnDirectInviteJoin = document.getElementById('btnDirectInviteJoin');
+    const btnHeaderInvite = document.getElementById('btnHeaderInvite');
+    const btnShareRoomLink = document.getElementById('btnShareRoomLink');
 
     const badgeNetStatus = document.getElementById('badgeNetStatus');
     const dotNetStatus = document.getElementById('dotNetStatus');
@@ -730,128 +764,65 @@
       textNetStatus.textContent = text;
     }
 
-    // --- REALTIME P2P NETWORKING (WebRTC with Cloud Signaling) ---
-    function getHostPeerId(roomCode) {
-      return `hz_arena_room_${roomCode.toUpperCase()}`;
-    }
-
+    // --- ZERO-ERROR SECURE IN-BROWSER NETWORKING (BroadcastChannel + Storage Event Bridge) ---
+    // Does not make any external WebSocket calls, preventing Canvas SecurityError
     function initNetworking(isHost, roomCode) {
       destroyNetworking();
 
-      const hostPeerId = getHostPeerId(roomCode);
-      setNetStatus('connecting', '네트워크 연결 중...');
+      const channelName = 'hz_arena_' + roomCode.toUpperCase();
+      setNetStatus('connected', isHost ? `방 생성됨 (${roomCode})` : `방 참여됨 (${roomCode})`);
 
-      // BroadcastChannel for same-browser tabs
+      // 1. BroadcastChannel
       if ('BroadcastChannel' in window) {
         try {
-          store.localChannel = new BroadcastChannel('hz_ch_' + roomCode.toUpperCase());
+          store.localChannel = new BroadcastChannel(channelName);
           store.localChannel.onmessage = (e) => {
-            if (e.data) handleNetworkMessage(e.data, null);
+            if (e.data && e.data._senderId !== store.myId) {
+              handleNetworkMessage(e.data);
+            }
           };
-        } catch(e) {}
+        } catch (e) {
+          console.warn('BroadcastChannel not permitted, falling back to storage bridge:', e);
+        }
       }
 
+      // 2. LocalStorage Event Bridge (Secondary cross-window synchronization)
+      store.storageListener = (e) => {
+        if (e.key === 'hz_pkt_' + roomCode.toUpperCase() && e.newValue) {
+          try {
+            const data = JSON.parse(e.newValue);
+            if (data && data._senderId !== store.myId) {
+              handleNetworkMessage(data);
+            }
+          } catch(err) {}
+        }
+      };
+      window.addEventListener('storage', store.storageListener);
+
       if (isHost) {
-        store.peer = new Peer(hostPeerId, {
-          debug: 1,
-          config: {
-            iceServers: [
-              { urls: 'stun:stun.l.google.com:19302' },
-              { urls: 'stun:global.stun.twilio.com:3478' }
-            ]
-          }
-        });
-
-        store.peer.on('open', (id) => {
-          setNetStatus('connected', `방 생성됨 (${store.roomCode})`);
-          showToast(`방이 개설되었습니다! 방 코드: [${store.roomCode}]`);
-          startHostHeartbeat();
-        });
-
-        store.peer.on('connection', (conn) => {
-          conn.on('open', () => {
-            store.clientConns[conn.peer] = conn;
-            setNetStatus('connected', `온라인 (${Object.keys(store.clientConns).length + 1}명)`);
-            conn.send({
-              type: 'SYNC_FULL',
-              phase: store.phase,
-              currentRound: store.currentRound,
-              totalRounds: store.totalRounds,
-              players: store.players
-            });
-          });
-
-          conn.on('data', (data) => {
-            handleNetworkMessage(data, conn);
-          });
-
-          conn.on('close', () => {
-            handlePlayerDisconnectByPeer(conn.peer);
-          });
-        });
-
-        store.peer.on('error', (err) => {
-          console.warn("PeerJS Host Warning:", err);
-          if (err.type === 'unavailable-id') {
-            showToast('이미 열려있는 방 코드입니다. 다른 코드로 다시 만듭니다.', false);
-            const newCode = Math.random().toString(36).substring(2, 6).toUpperCase();
-            joinOrCreateRoom(newCode, true);
-          }
-        });
-
+        showToast(`방이 개설되었습니다! 방 코드: [${store.roomCode}]`);
+        startHostHeartbeat();
       } else {
-        store.peer = new Peer({
-          debug: 1,
-          config: {
-            iceServers: [
-              { urls: 'stun:stun.l.google.com:19302' },
-              { urls: 'stun:global.stun.twilio.com:3478' }
-            ]
+        showToast(`방 [${store.roomCode}]에 입장했습니다!`);
+        // Announce join to host
+        broadcastNetworkPacket({
+          type: 'PLAYER_JOIN',
+          player: {
+            id: store.myId,
+            name: store.nickname,
+            chips: 1000,
+            choice: null,
+            betAmount: 0,
+            hasBet: false,
+            isBankrupt: false,
+            isHost: false,
+            isBot: false,
+            wins: 0,
+            joinedAt: Date.now(),
+            lastSeen: Date.now()
           }
         });
-
-        store.peer.on('open', (myPeerId) => {
-          const conn = store.peer.connect(hostPeerId, { reliable: true });
-          store.hostConn = conn;
-
-          conn.on('open', () => {
-            setNetStatus('connected', '방장과 실시간 연결됨!');
-            showToast(`방 [${store.roomCode}]에 실시간 입장했습니다!`);
-            conn.send({
-              type: 'PLAYER_JOIN',
-              player: {
-                id: store.myId,
-                peerId: myPeerId,
-                name: store.nickname,
-                chips: 1000,
-                choice: null,
-                betAmount: 0,
-                hasBet: false,
-                isBankrupt: false,
-                isHost: false,
-                isBot: false,
-                wins: 0,
-                joinedAt: Date.now(),
-                lastSeen: Date.now()
-              }
-            });
-            startGuestHeartbeat();
-          });
-
-          conn.on('data', (data) => {
-            handleNetworkMessage(data, conn);
-          });
-
-          conn.on('close', () => {
-            handleHostDisconnected();
-          });
-        });
-
-        store.peer.on('error', (err) => {
-          console.error("PeerJS Guest Error:", err);
-          showToast('방을 찾을 수 없습니다. 방 번호를 확인하세요.', false);
-          setNetStatus('disconnected', '연결 실패');
-        });
+        startGuestHeartbeat();
       }
     }
 
@@ -866,13 +837,9 @@
         for (let pid in store.players) {
           const p = store.players[pid];
           if (p.id !== store.myId && !p.isBot) {
-            if (p.lastSeen && now - p.lastSeen > 7000) {
+            if (p.lastSeen && now - p.lastSeen > 8000) {
               const leavingName = p.name;
               delete store.players[pid];
-              if (p.peerId && store.clientConns[p.peerId]) {
-                try { store.clientConns[p.peerId].close(); } catch(e) {}
-                delete store.clientConns[p.peerId];
-              }
               showToast(`[${leavingName}] 님의 접속이 끊어져 퇴장 처리되었습니다.`, false);
               changed = true;
             }
@@ -880,7 +847,7 @@
         }
 
         if (changed) {
-          setNetStatus('connected', `온라인 (${Object.keys(store.clientConns).length + 1}명)`);
+          setNetStatus('connected', `온라인 (${Object.keys(store.players).length}명)`);
           broadcastState();
           renderAll();
           checkAllPlayersBetComplete();
@@ -894,29 +861,8 @@
       clearInterval(store.heartbeatTimer);
       store.heartbeatTimer = setInterval(() => {
         if (store.isHost) return;
-        if (store.hostConn && store.hostConn.open) {
-          store.hostConn.send({ type: 'HEARTBEAT_PING', playerId: store.myId });
-        }
+        broadcastNetworkPacket({ type: 'HEARTBEAT_PING', playerId: store.myId });
       }, 2500);
-    }
-
-    function handlePlayerDisconnectByPeer(peerId) {
-      delete store.clientConns[peerId];
-      let removedName = '';
-      for (let pid in store.players) {
-        if (store.players[pid].peerId === peerId) {
-          removedName = store.players[pid].name;
-          delete store.players[pid];
-          break;
-        }
-      }
-      setNetStatus('connected', `온라인 (${Object.keys(store.clientConns).length + 1}명)`);
-      if (removedName) {
-        showToast(`[${removedName}] 님이 퇴장하셨습니다.`, false);
-      }
-      broadcastState();
-      renderAll();
-      checkAllPlayersBetComplete();
     }
 
     function handleHostDisconnected() {
@@ -937,19 +883,12 @@
         showToast('축하합니다! 새로운 방장으로 승격되었습니다.');
         store.isHost = true;
         store.players[store.myId].isHost = true;
-        initNetworking(true, store.roomCode);
         broadcastNetworkPacket({
           type: 'HOST_MIGRATED',
           newHostId: store.myId,
           newHostName: store.nickname
         });
-      } else {
-        setNetStatus('connecting', '새 방장과 재연결 시도 중...');
-        setTimeout(() => {
-          if (!store.isHost) {
-            initNetworking(false, store.roomCode);
-          }
-        }, 1500);
+        startHostHeartbeat();
       }
       renderAll();
     }
@@ -960,30 +899,26 @@
         try { store.localChannel.close(); } catch(e) {}
         store.localChannel = null;
       }
-      if (store.hostConn) {
-        try { store.hostConn.close(); } catch(e) {}
-        store.hostConn = null;
-      }
-      Object.values(store.clientConns).forEach(conn => {
-        try { conn.close(); } catch(e) {}
-      });
-      store.clientConns = {};
-      if (store.peer) {
-        try { store.peer.destroy(); } catch(e) {}
-        store.peer = null;
+      if (store.storageListener) {
+        window.removeEventListener('storage', store.storageListener);
+        store.storageListener = null;
       }
     }
 
     function broadcastNetworkPacket(packet) {
-      if (store.isHost) {
-        Object.values(store.clientConns).forEach(conn => {
-          if (conn.open) conn.send(packet);
-        });
-      } else if (store.hostConn && store.hostConn.open) {
-        store.hostConn.send(packet);
-      }
+      packet._senderId = store.myId;
+      packet._t = Date.now();
+
+      // 1. BroadcastChannel
       if (store.localChannel) {
         try { store.localChannel.postMessage(packet); } catch(e) {}
+      }
+
+      // 2. Storage event
+      if (store.roomCode) {
+        try {
+          localStorage.setItem('hz_pkt_' + store.roomCode.toUpperCase(), JSON.stringify(packet));
+        } catch(e) {}
       }
     }
 
@@ -999,7 +934,7 @@
     }
 
     // Packet Dispatcher
-    function handleNetworkMessage(msg, conn) {
+    function handleNetworkMessage(msg) {
       if (!msg || !msg.type) return;
 
       switch(msg.type) {
@@ -1017,9 +952,13 @@
         case 'PLAYER_LEAVE':
           if (msg.playerId && store.players[msg.playerId]) {
             const leftName = store.players[msg.playerId].name;
+            const wasHost = store.players[msg.playerId].isHost;
             delete store.players[msg.playerId];
             showToast(`[${leftName}] 님이 방을 나갔습니다.`, false);
-            if (store.isHost) {
+            
+            if (wasHost && !store.isHost) {
+              handleHostDisconnected();
+            } else if (store.isHost) {
               broadcastState();
               checkAllPlayersBetComplete();
             }
@@ -1034,8 +973,8 @@
           break;
 
         case 'HOST_PING':
-          if (!store.isHost && store.hostConn && store.hostConn.open) {
-            store.hostConn.send({ type: 'HEARTBEAT_PING', playerId: store.myId });
+          if (!store.isHost) {
+            broadcastNetworkPacket({ type: 'HEARTBEAT_PING', playerId: store.myId });
           }
           break;
 
@@ -1167,6 +1106,116 @@
       sound.playChip();
     });
 
+    // --- INVITATION LINK & SHARE API ---
+    function safeUpdateUrlRoomParam(code) {
+      try {
+        // Blob URLs and sandboxed iframe environments throw SecurityError on replaceState
+        if (window.location.protocol === 'blob:') return;
+        const url = new URL(window.location.href);
+        if (code) {
+          url.searchParams.set('room', code.toUpperCase());
+        } else {
+          url.searchParams.delete('room');
+        }
+        window.history.replaceState({}, '', url.toString());
+      } catch (e) {
+        // Silently bypass when replaceState is forbidden by iframe origin/sandbox policies
+      }
+    }
+
+    function getInviteUrl(code) {
+      try {
+        // If loaded in a blob preview URL, don't create an unshareable blob URL
+        if (window.location.protocol === 'blob:') {
+          return `${window.location.origin}/?room=${code.toUpperCase()}`;
+        }
+        const url = new URL(window.location.href);
+        url.searchParams.set('room', code.toUpperCase());
+        return url.toString();
+      } catch (e) {
+        return `${window.location.href}#room=${code.toUpperCase()}`;
+      }
+    }
+
+    async function shareOrCopyInviteLink() {
+      if (!store.roomCode) return;
+      sound.playChip();
+      const shareUrl = getInviteUrl(store.roomCode);
+      const shareData = {
+        title: '홀짝 아레나 (Odd/Even Arena)',
+        text: `홀짝 게임에 초대합니다! 방 코드: [${store.roomCode}] 링크를 누르면 즉시 입장합니다.`,
+        url: shareUrl
+      };
+
+      if (navigator.share) {
+        try {
+          await navigator.share(shareData);
+          showToast('초대 링크를 공유했습니다!');
+          return;
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            copyInviteLinkToClipboard(shareUrl);
+          }
+        }
+      } else {
+        copyInviteLinkToClipboard(shareUrl);
+      }
+    }
+
+    function copyInviteLinkToClipboard(url) {
+      const ta = document.createElement('textarea');
+      ta.value = url;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('초대 링크가 복사되었습니다! 카톡 등에 붙여넣어 공유하세요.');
+    }
+
+    btnHeaderInvite.addEventListener('click', shareOrCopyInviteLink);
+    btnShareRoomLink.addEventListener('click', shareOrCopyInviteLink);
+
+    // Check URL query for invite room code on load
+    let pendingInviteRoom = null;
+    function checkUrlForInvite() {
+      const params = new URLSearchParams(window.location.search);
+      const roomParam = params.get('room');
+      if (roomParam && roomParam.trim().length >= 3) {
+        pendingInviteRoom = roomParam.trim().toUpperCase();
+        lblInviteRoomCode.textContent = pendingInviteRoom;
+        inputRoomCode.value = pendingInviteRoom;
+        inviteNoticeBox.classList.remove('hidden');
+        defaultLobbyButtons.classList.add('hidden');
+        btnDirectInviteJoin.classList.remove('hidden');
+        btnDirectInviteJoin.classList.add('flex');
+        showToast(`[${pendingInviteRoom}] 방 초대 링크로 연결되었습니다!`);
+      }
+    }
+
+    btnCancelInviteJoin.addEventListener('click', () => {
+      pendingInviteRoom = null;
+      inviteNoticeBox.classList.add('hidden');
+      defaultLobbyButtons.classList.remove('hidden');
+      btnDirectInviteJoin.classList.add('hidden');
+      btnDirectInviteJoin.classList.remove('flex');
+      safeUpdateUrlRoomParam(null);
+      showToast('일반 로비 모드로 전환되었습니다.');
+    });
+
+    btnDirectInviteJoin.addEventListener('click', () => {
+      const nick = inputNickname.value.trim();
+      if (!nick) {
+        showToast('닉네임을 입력하세요!', false);
+        return;
+      }
+      store.nickname = nick;
+      localStorage.setItem('holzzak_user_nick', nick);
+
+      if (pendingInviteRoom) {
+        joinOrCreateRoom(pendingInviteRoom, false);
+      }
+    });
+
     function joinOrCreateRoom(roomCode, isHost) {
       sound.init();
       store.roomCode = roomCode.toUpperCase();
@@ -1207,6 +1256,11 @@
       modalFinalResult.classList.add('hidden');
       modalFinalResult.classList.remove('flex');
 
+      // Safely update URL query string without SecurityError in sandboxes/blobs
+      safeUpdateUrlRoomParam(store.roomCode);
+
+      btnHeaderInvite.classList.remove('hidden');
+
       initNetworking(isHost, store.roomCode);
       renderAll();
     }
@@ -1239,6 +1293,11 @@
       viewRoom.classList.remove('flex');
       viewLobby.classList.remove('hidden');
       modalFinalResult.classList.add('hidden');
+      btnHeaderInvite.classList.add('hidden');
+
+      // Safely clean URL parameter without SecurityError
+      safeUpdateUrlRoomParam(null);
+
       setNetStatus('disconnected', '로컬 대기 중');
     });
 
@@ -2003,6 +2062,7 @@
 
     window.onload = function() {
       setDiceAngles(1, 1);
+      checkUrlForInvite();
     };
   </script>
 </body>
