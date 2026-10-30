@@ -10,7 +10,8 @@
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <!-- Canvas Confetti -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
-  <!-- NOTE: External WebSocket-based PeerJS removed to prevent Canvas SecurityError -->
+  <!-- Global PeerJS WebRTC P2P (No Rate Limit, Direct Device-to-Device Mesh) -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;900&family=Chakra+Petch:wght@600;700;800&display=swap');
@@ -241,11 +242,17 @@
           </button>
         </div>
 
-        <!-- Quick Direct Join Button (Active when entering via invite link) -->
-        <button id="btnDirectInviteJoin" class="hidden w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 active:scale-95 text-white font-black rounded-xl shadow-lg shadow-purple-500/30 transition items-center justify-center gap-2">
-          <i class="ph-bold ph-game-controller text-xl"></i>
-          <span id="textDirectInviteJoin">초대된 방으로 바로 입장하기</span>
-        </button>
+        <!-- Quick Direct Join Button + Cancel Group (Active when entering via invite link) -->
+        <div id="inviteButtonGroup" class="hidden grid grid-cols-3 gap-2 w-full pt-1">
+          <button id="btnDirectInviteJoin" class="col-span-2 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 active:scale-95 text-white font-black rounded-xl shadow-lg shadow-purple-500/30 transition flex items-center justify-center gap-2 text-sm sm:text-base">
+            <i class="ph-bold ph-game-controller text-xl"></i>
+            <span id="textDirectInviteJoin">초대된 방으로 바로 입장하기</span>
+          </button>
+          <button id="btnCancelInviteBtn" type="button" class="col-span-1 py-4 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 hover:text-white font-bold rounded-xl border border-slate-700 transition flex items-center justify-center gap-1.5 text-sm">
+            <i class="ph-bold ph-x text-lg"></i>
+            <span>취소</span>
+          </button>
+        </div>
 
         <!-- Join Room Expandable Box -->
         <div id="joinCodeBox" class="hidden pt-3 border-t border-slate-800 space-y-2">
@@ -631,14 +638,13 @@
       players: {}, // id -> { id, name, chips, choice, betAmount, hasBet, isHost, isBot, isBankrupt, isReady, wins }
       dice1: 1,
       dice2: 1,
-      // Hybrid Cross-Network Real-time Engine (SSE HTTPS Stream + Local BroadcastChannel)
-      sseEventSource: null,
+      // High-Performance WebRTC P2P + BroadcastChannel Fallback
+      peer: null,
+      connections: {}, // connId/peerId -> DataConnection
+      hostConn: null, // guest's direct connection to host
       localChannel: null,
       storageListener: null,
-      heartbeatTimer: null,
-      pollTimer: null,
-      lastMsgTimestamp: 0,
-      processedMsgIds: new Set()
+      heartbeatTimer: null
     };
 
     // DOM Elements
@@ -660,7 +666,9 @@
     const lblInviteRoomCode = document.getElementById('lblInviteRoomCode');
     const btnCancelInviteJoin = document.getElementById('btnCancelInviteJoin');
     const defaultLobbyButtons = document.getElementById('defaultLobbyButtons');
+    const inviteButtonGroup = document.getElementById('inviteButtonGroup');
     const btnDirectInviteJoin = document.getElementById('btnDirectInviteJoin');
+    const btnCancelInviteBtn = document.getElementById('btnCancelInviteBtn');
     const btnHeaderInvite = document.getElementById('btnHeaderInvite');
     const btnShareRoomLink = document.getElementById('btnShareRoomLink');
 
@@ -788,66 +796,20 @@
       textNetStatus.textContent = text;
     }
 
-    // --- GLOBAL CROSS-NETWORK ENGINE (HTTPS SSE + Local BroadcastChannel) ---
-    // Works across different networks (LTE/5G, different Wi-Fis, different PCs/phones)
-    // Passes through standard HTTPS (Port 443), completely bypassing WebSocket blocks & firewall restrictions.
+    // --- BULLETPROOF WebRTC P2P NETWORKING (Zero Rate-Limit, Cross-Network Direct Tunnel) ---
     function initNetworking(isHost, roomCode) {
       destroyNetworking();
 
-      const channelTopic = 'hz_arena_' + roomCode.toUpperCase();
-      setNetStatus('connecting', '네트워크 연결 중...');
-      store.lastMsgTimestamp = Math.floor(Date.now() / 1000) - 1; // start fetching slightly before now
+      const normalizedCode = roomCode.toUpperCase().trim();
+      const hostPeerId = 'hz_arena_' + normalizedCode + '_host';
+      const myPeerId = isHost ? hostPeerId : 'hz_arena_' + normalizedCode + '_guest_' + store.myId;
 
-      // 1. High-Reliability Mobile & Desktop Polling Pipeline
-      // Works 100% on mobile LTE/5G where long-lived SSE connections are suspended by mobile OS
-      startPollingPipeline(channelTopic);
+      setNetStatus('connecting', 'P2P 연결 수립 중...');
 
-      // 2. Cross-Network HTTPS Server-Sent Events (SSE) as fast-path if supported
-      try {
-        const streamUrl = `https://ntfy.sh/${channelTopic}/sse`;
-        store.sseEventSource = new EventSource(streamUrl);
-
-        store.sseEventSource.onopen = () => {
-          setNetStatus('connected', isHost ? `방 생성됨 (${roomCode})` : `방 참여됨 (${roomCode})`);
-          if (!isHost) {
-            sendJoinPacket();
-          }
-        };
-
-        store.sseEventSource.onmessage = (event) => {
-          try {
-            const raw = JSON.parse(event.data);
-            if (raw && raw.message) {
-              const msgId = raw.id || (raw.time + '_' + raw.message.length);
-              if (store.processedMsgIds.has(msgId)) return;
-              store.processedMsgIds.add(msgId);
-              if (store.processedMsgIds.size > 200) {
-                const arr = Array.from(store.processedMsgIds);
-                store.processedMsgIds = new Set(arr.slice(-100));
-              }
-
-              const packet = JSON.parse(raw.message);
-              if (packet && packet._senderId !== store.myId) {
-                handleNetworkMessage(packet);
-              }
-            }
-          } catch (e) {}
-        };
-
-        store.sseEventSource.onerror = () => {
-          // Do not lock UI in reconnecting loop on mobile; the polling pipeline will seamlessly handle messages!
-          if (store.roomCode) {
-            setNetStatus('connected', isHost ? `온라인 (${roomCode})` : `참여 중 (${roomCode})`);
-          }
-        };
-      } catch (err) {
-        console.warn('SSE stream error, using polling fallback:', err);
-      }
-
-      // 3. Local Multi-Tab Channel
+      // 1. Local Same-Device Cross-Tab Channel
       if ('BroadcastChannel' in window) {
         try {
-          store.localChannel = new BroadcastChannel(channelTopic);
+          store.localChannel = new BroadcastChannel('hz_arena_' + normalizedCode);
           store.localChannel.onmessage = (e) => {
             if (e.data && e.data._senderId !== store.myId) {
               handleNetworkMessage(e.data);
@@ -856,9 +818,9 @@
         } catch (e) {}
       }
 
-      // 4. LocalStorage Event Bridge
+      // 2. Storage event fallback for same-origin tabs
       store.storageListener = (e) => {
-        if (e.key === 'hz_pkt_' + roomCode.toUpperCase() && e.newValue) {
+        if (e.key === 'hz_pkt_' + normalizedCode && e.newValue) {
           try {
             const data = JSON.parse(e.newValue);
             if (data && data._senderId !== store.myId) {
@@ -869,55 +831,111 @@
       };
       window.addEventListener('storage', store.storageListener);
 
-      if (isHost) {
-        showToast(`방이 개설되었습니다! 방 코드: [${store.roomCode}]`);
-        startHostHeartbeat();
-      } else {
-        showToast(`방 [${store.roomCode}]에 입장했습니다!`);
-        sendJoinPacket();
-        startGuestHeartbeat();
+      // 3. WebRTC P2P Mesh with Google STUN Servers (traverses LTE/NAT/Firewalls effortlessly)
+      try {
+        store.peer = new Peer(myPeerId, {
+          config: {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:stun1.l.google.com:19302' },
+              { urls: 'stun:stun2.l.google.com:19302' }
+            ]
+          },
+          debug: 0
+        });
+
+        store.peer.on('open', (id) => {
+          if (isHost) {
+            setNetStatus('connected', `방 생성됨 (${roomCode})`);
+            showToast(`방이 개설되었습니다! 방 코드: [${store.roomCode}]`);
+            startHostHeartbeat();
+          } else {
+            setNetStatus('connecting', '방장과 터널 연결 중...');
+            connectToHost(hostPeerId);
+          }
+        });
+
+        // Host receives incoming connections from guests
+        store.peer.on('connection', (conn) => {
+          setupConnectionEvents(conn);
+        });
+
+        store.peer.on('error', (err) => {
+          console.warn('P2P Status/Warning:', err.type);
+          if (err.type === 'unavailable-id' && isHost) {
+            showToast('이미 존재하는 방 코드입니다. 다른 코드로 방을 만드세요.', false);
+          }
+        });
+
+      } catch (err) {
+        console.warn('PeerJS init failed, falling back to local channel:', err);
       }
     }
 
-    // Mobile-friendly JSON polling fallback (executes every 1.5s to ensure mobile receives state even if SSE is suspended)
-    function startPollingPipeline(channelTopic) {
-      clearInterval(store.pollTimer);
-      store.pollTimer = setInterval(async () => {
-        if (!store.roomCode) return;
-        try {
-          const res = await fetch(`https://ntfy.sh/${channelTopic}/json?since=${store.lastMsgTimestamp}`, {
-            cache: 'no-store'
-          });
-          if (!res.ok) return;
-          const text = await res.text();
-          if (!text) return;
+    // Guest establishes direct P2P connection to Host
+    function connectToHost(hostPeerId) {
+      if (!store.peer) return;
 
-          // ntfy /json returns newline-delimited JSON
-          const lines = text.trim().split('\n');
-          for (const line of lines) {
-            if (!line) continue;
-            try {
-              const item = JSON.parse(line);
-              if (item.time) {
-                store.lastMsgTimestamp = Math.max(store.lastMsgTimestamp, item.time);
-              }
-              if (item.event === 'message' && item.message) {
-                const msgId = item.id || (item.time + '_' + item.message.length);
-                if (store.processedMsgIds.has(msgId)) continue;
-                store.processedMsgIds.add(msgId);
+      const conn = store.peer.connect(hostPeerId, { reliable: true });
+      store.hostConn = conn;
 
-                const packet = JSON.parse(item.message);
-                if (packet && packet._senderId !== store.myId) {
-                  handleNetworkMessage(packet);
-                }
-              }
-            } catch (err) {}
-          }
-          setNetStatus('connected', store.isHost ? `온라인 (${store.roomCode})` : `참여 중 (${store.roomCode})`);
-        } catch (e) {
-          // Silently pass transient network hiccups on mobile LTE
+      conn.on('open', () => {
+        setNetStatus('connected', `온라인 (${store.roomCode})`);
+        showToast(`방장과 실시간 연결되었습니다!`);
+        store.connections[hostPeerId] = conn;
+
+        // Immediately send join packet upon direct socket open
+        sendJoinPacket();
+        startGuestHeartbeat();
+      });
+
+      conn.on('data', (data) => {
+        if (data && data._senderId !== store.myId) {
+          handleNetworkMessage(data);
         }
-      }, 1500);
+      });
+
+      conn.on('close', () => {
+        setNetStatus('disconnected', '방장 연결 끊김');
+        handleHostDisconnected();
+      });
+
+      conn.on('error', () => {
+        // Fallback retry after 1.5s if host was still initializing
+        setTimeout(() => {
+          if (!store.isHost && store.roomCode && (!store.hostConn || !store.hostConn.open)) {
+            connectToHost(hostPeerId);
+          }
+        }, 1500);
+      });
+    }
+
+    function setupConnectionEvents(conn) {
+      conn.on('open', () => {
+        store.connections[conn.peer] = conn;
+        if (store.isHost) {
+          // Immediately send full room state to the newly joined peer
+          broadcastState();
+        }
+      });
+
+      conn.on('data', (data) => {
+        if (data && data._senderId !== store.myId) {
+          handleNetworkMessage(data);
+          // If host receives packet, forward to other guests to ensure mesh sync
+          if (store.isHost) {
+            for (let pid in store.connections) {
+              if (pid !== conn.peer && store.connections[pid].open) {
+                try { store.connections[pid].send(data); } catch(e) {}
+              }
+            }
+          }
+        }
+      });
+
+      conn.on('close', () => {
+        delete store.connections[conn.peer];
+      });
     }
 
     function sendJoinPacket() {
@@ -968,10 +986,10 @@
           checkAllPlayersBetComplete();
         }
 
-        // Host sends periodic sync of entire room so all clients maintain exact player list
+        // Host periodic sync of room state
         broadcastState();
         broadcastNetworkPacket({ type: 'HOST_PING', time: now });
-      }, 2500);
+      }, 3000);
     }
 
     function startGuestHeartbeat() {
@@ -990,7 +1008,7 @@
             isHost: false
           }
         });
-      }, 2500);
+      }, 3000);
     }
 
     function handleHostDisconnected() {
@@ -1023,10 +1041,17 @@
 
     function destroyNetworking() {
       clearInterval(store.heartbeatTimer);
-      clearInterval(store.pollTimer);
-      if (store.sseEventSource) {
-        try { store.sseEventSource.close(); } catch(e) {}
-        store.sseEventSource = null;
+      for (let p in store.connections) {
+        try { store.connections[p].close(); } catch(e) {}
+      }
+      store.connections = {};
+      if (store.hostConn) {
+        try { store.hostConn.close(); } catch(e) {}
+        store.hostConn = null;
+      }
+      if (store.peer) {
+        try { store.peer.destroy(); } catch(e) {}
+        store.peer = null;
       }
       if (store.localChannel) {
         try { store.localChannel.close(); } catch(e) {}
@@ -1038,36 +1063,32 @@
       }
     }
 
-    // Broadcast across both Global HTTPS Serverless Bus & Local channels
+    // Direct WebRTC P2P Packet Broadcast (Zero Server Rate-Limit)
     function broadcastNetworkPacket(packet) {
       packet._senderId = store.myId;
       packet._t = Date.now();
-      const jsonStr = JSON.stringify(packet);
 
-      // 1. Global HTTPS Stream POST (Reaches other phones, LTE, external networks)
-      if (store.roomCode) {
-        const topic = 'hz_arena_' + store.roomCode.toUpperCase();
-        try {
-          fetch(`https://ntfy.sh/${topic}`, {
-            method: 'POST',
-            body: jsonStr,
-            headers: { 'Content-Type': 'text/plain' },
-            mode: 'cors',
-            cache: 'no-cache',
-            keepalive: true
-          }).catch(() => {});
-        } catch (e) {}
+      // 1. Direct WebRTC P2P DataChannels
+      if (store.isHost) {
+        for (let pid in store.connections) {
+          const conn = store.connections[pid];
+          if (conn && conn.open) {
+            try { conn.send(packet); } catch(e) {}
+          }
+        }
+      } else if (store.hostConn && store.hostConn.open) {
+        try { store.hostConn.send(packet); } catch(e) {}
       }
 
-      // 2. BroadcastChannel (Same-device tabs)
+      // 2. Same-Device BroadcastChannel
       if (store.localChannel) {
         try { store.localChannel.postMessage(packet); } catch(e) {}
       }
 
-      // 3. Storage Event Bridge
+      // 3. LocalStorage Event Bridge
       if (store.roomCode) {
         try {
-          localStorage.setItem('hz_pkt_' + store.roomCode.toUpperCase(), jsonStr);
+          localStorage.setItem('hz_pkt_' + store.roomCode.toUpperCase(), JSON.stringify(packet));
         } catch(e) {}
       }
     }
@@ -1373,21 +1394,24 @@
 
         inviteNoticeBox.classList.remove('hidden');
         defaultLobbyButtons.classList.add('hidden');
-        btnDirectInviteJoin.classList.remove('hidden');
-        btnDirectInviteJoin.classList.add('flex');
+        inviteButtonGroup.classList.remove('hidden');
+        inviteButtonGroup.classList.add('grid');
         showToast(`[${pendingInviteRoom}] 방 초대 링크로 연결되었습니다!`);
       }
     }
 
-    btnCancelInviteJoin.addEventListener('click', () => {
+    function cancelInviteMode() {
       pendingInviteRoom = null;
       inviteNoticeBox.classList.add('hidden');
+      inviteButtonGroup.classList.add('hidden');
+      inviteButtonGroup.classList.remove('grid');
       defaultLobbyButtons.classList.remove('hidden');
-      btnDirectInviteJoin.classList.add('hidden');
-      btnDirectInviteJoin.classList.remove('flex');
       safeUpdateUrlRoomParam(null);
-      showToast('일반 로비 모드로 전환되었습니다.');
-    });
+      showToast('초대를 취소하고 일반 로비 모드로 전환되었습니다.');
+    }
+
+    btnCancelInviteJoin.addEventListener('click', cancelInviteMode);
+    btnCancelInviteBtn.addEventListener('click', cancelInviteMode);
 
     btnDirectInviteJoin.addEventListener('click', () => {
       const nick = inputNickname.value.trim();
@@ -1484,8 +1508,7 @@
       modalFinalResult.classList.add('hidden');
       btnHeaderInvite.classList.add('hidden');
 
-      // Safely clean URL parameter without SecurityError
-      safeUpdateUrlRoomParam(null);
+      cancelInviteMode();
 
       setNetStatus('disconnected', '로컬 대기 중');
     });
