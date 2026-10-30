@@ -166,17 +166,14 @@
       </div>
 
       <div class="flex items-center gap-2 sm:gap-3">
-        <!-- Live Connection Status Badge -->
         <div id="badgeNetStatus" class="px-2.5 py-1 rounded-xl bg-slate-800/80 border border-slate-700 text-[11px] font-bold text-slate-400 flex items-center gap-1.5">
           <span id="dotNetStatus" class="w-2 h-2 rounded-full bg-slate-500"></span>
           <span id="textNetStatus">로컬 대기 중</span>
         </div>
-        <!-- Share / Invite Button (Header) -->
         <button id="btnHeaderInvite" class="hidden px-3 py-1.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-500/40 text-xs font-bold transition flex items-center gap-1.5" title="방 초대하기">
           <i class="ph-bold ph-share-network text-base"></i>
           <span class="hidden sm:inline">초대하기</span>
         </button>
-        <!-- Sound Mute Button -->
         <button id="btnSoundToggle" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 transition" title="음향 토글">
           <i class="ph-bold ph-speaker-high text-lg" id="soundIcon"></i>
         </button>
@@ -200,10 +197,10 @@
           <i class="ph-bold ph-game-controller text-3xl"></i>
         </div>
         <h2 class="text-2xl font-bold font-chakra text-white">게임 로비</h2>
-        <p class="text-xs text-slate-400 mt-1" id="lblLobbyDesc">닉네임을 입력하고 방을 만들거나 입장하세요</p>
+        <p class="text-xs text-slate-400 mt-1">닉네임을 입력하고 방을 만들거나 입장하세요</p>
       </div>
 
-      <!-- Invite Join Notice (Shown when ?room=CODE exists) -->
+      <!-- Invite Join Notice -->
       <div id="inviteNoticeBox" class="hidden mb-4 p-3 bg-purple-950/70 border border-purple-500/40 rounded-2xl flex items-center justify-between">
         <div class="flex items-center gap-2">
           <i class="ph-bold ph-envelope-open text-purple-400 text-lg"></i>
@@ -255,11 +252,11 @@
           </button>
         </div>
 
-        <!-- Quick Direct Join Button + Cancel Group (Active when entering via invite link) -->
+        <!-- Quick Direct Join Button + Cancel Group -->
         <div id="inviteButtonGroup" class="hidden grid grid-cols-3 gap-2 w-full pt-1">
           <button id="btnDirectInviteJoin" class="col-span-2 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 active:scale-95 text-white font-black rounded-xl shadow-lg shadow-purple-500/30 transition flex items-center justify-center gap-2 text-sm sm:text-base">
             <i class="ph-bold ph-game-controller text-xl"></i>
-            <span id="textDirectInviteJoin">초대된 방으로 바로 입장하기</span>
+            <span>초대된 방으로 바로 입장하기</span>
           </button>
           <button id="btnCancelInviteBtn" type="button" class="col-span-1 py-4 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 hover:text-white font-bold rounded-xl border border-slate-700 transition flex items-center justify-center gap-1.5 text-sm">
             <i class="ph-bold ph-x text-lg"></i>
@@ -274,7 +271,7 @@
             <input type="text" id="inputRoomCode" maxlength="4" placeholder="예: 7B2X"
               class="uppercase text-center font-chakra font-bold tracking-widest text-lg flex-1 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-amber-400 focus:outline-none focus:border-amber-400" />
             <button id="btnJoinRoom" class="px-5 bg-purple-600 hover:bg-purple-500 active:scale-95 text-white font-bold rounded-xl transition flex items-center justify-center gap-1">
-              <span id="textBtnJoin">입장</span>
+              <span>입장</span>
             </button>
           </div>
         </div>
@@ -309,7 +306,6 @@
         </div>
 
         <div class="flex items-center gap-2 shrink-0">
-          <!-- Phase Status Badge -->
           <div id="badgePhase" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1.5 shrink-0 whitespace-nowrap">
             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0"></span>
             <span id="lblPhaseText" class="whitespace-nowrap">대기 중</span>
@@ -320,13 +316,13 @@
         </div>
       </div>
 
-      <!-- Main Responsive Grid: Dice & Betting (Left 7-8 cols) | Participants & Chat (Right 4-5 cols) -->
+      <!-- Main Grid -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-3.5 flex-1 min-h-0">
 
         <!-- Left Column (Dice & Bet Panel) -->
-        <div class="order-1 lg:order-1 lg:col-span-7 xl:col-span-8 flex flex-col gap-2.5 sm:gap-3 min-h-0 justify-between">
+        <div class="order-1 lg:col-span-7 xl:col-span-8 flex flex-col gap-2.5 sm:gap-3 min-h-0 justify-between">
           
-          <!-- 3D Dice Stage (Fluid Scaled) -->
+          <!-- 3D Dice Stage -->
           <div class="relative bg-gradient-to-b from-slate-900/90 to-purple-950/40 border border-purple-500/30 rounded-3xl p-3 sm:p-4 flex flex-col items-center justify-center flex-1 min-h-[170px] lg:min-h-0 overflow-hidden shadow-xl">
             <div class="absolute -top-24 w-80 h-80 bg-purple-600/15 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -365,10 +361,9 @@
               </div>
             </div>
 
-            <!-- Host Action / Guest Ready Bar & Betting Progress Area -->
+            <!-- Controls & Progress Bar Area -->
             <div class="mt-2.5 flex flex-col items-center justify-center gap-1.5 z-10 w-full max-w-lg">
               
-              <!-- Betting Progress Bar (Replaces all result buttons during BETTING phase) -->
               <div id="bettingProgressWrap" class="w-full hidden flex-col gap-1 bg-slate-950/70 p-2 sm:p-2.5 rounded-2xl border border-amber-500/30 shadow-inner">
                 <div class="flex items-center justify-between text-xs px-1 font-bold whitespace-nowrap">
                   <span class="text-amber-400 flex items-center gap-1.5 font-chakra tracking-wide text-[11px] whitespace-nowrap">
@@ -381,21 +376,17 @@
                     <span id="lblProgressDoneCount" class="text-emerald-400 text-xs">0/0 완료</span>
                   </div>
                 </div>
-                <!-- Track & Bar -->
                 <div class="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800 p-0.5">
                   <div id="bettingProgressBar" class="h-full bg-gradient-to-r from-amber-500 via-rose-500 to-amber-400 rounded-full transition-all duration-100 shadow-md shadow-amber-500/40" style="width: 100%;"></div>
                 </div>
               </div>
 
-              <!-- Host / Bot / Guest Control Bar -->
               <div id="hostControlWrap" class="flex items-center justify-center gap-2 w-full flex-nowrap">
-                <!-- Host Start Round Button -->
                 <button id="btnStartRound" class="px-4 sm:px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-slate-950 font-black shadow-lg shadow-amber-500/25 text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0">
                   <i class="ph-bold ph-play text-sm shrink-0" id="iconStartRound"></i>
                   <span id="textStartRound" class="whitespace-nowrap">라운드 시작하기</span>
                 </button>
 
-                <!-- Non-Host Guest Ready Button -->
                 <button id="btnToggleReady" class="hidden px-4 sm:px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black shadow-lg shadow-emerald-500/25 text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0">
                   <i class="ph-bold ph-check text-sm shrink-0" id="iconToggleReady"></i>
                   <span id="textToggleReady" class="whitespace-nowrap">준비 완료 (READY)</span>
@@ -415,7 +406,7 @@
             </div>
           </div>
 
-          <!-- Betting Controls Section (Balanced Height) -->
+          <!-- Betting Controls Section -->
           <div class="bg-slate-900/90 border border-purple-500/20 rounded-3xl p-3 sm:p-4 space-y-2.5 sm:space-y-3 shadow-xl shrink-0">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-1.5">
@@ -429,7 +420,6 @@
 
             <!-- Odd vs Even Select Cards -->
             <div class="grid grid-cols-2 gap-2.5">
-              <!-- Odd (홀) -->
               <button id="cardOdd" class="py-2.5 px-2 rounded-2xl bg-slate-950/70 border-2 border-slate-700 hover:border-cyan-500 transition-all flex flex-col items-center justify-center gap-0.5 group relative cursor-pointer">
                 <span class="text-xl sm:text-2xl font-black font-chakra text-cyan-400 group-hover:scale-105 transition-transform">홀 (ODD)</span>
                 <span class="text-[10px] text-slate-400">합 1, 3, 5, 7, 9, 11</span>
@@ -438,7 +428,6 @@
                 </div>
               </button>
 
-              <!-- Even (짝) -->
               <button id="cardEven" class="py-2.5 px-2 rounded-2xl bg-slate-950/70 border-2 border-slate-700 hover:border-rose-500 transition-all flex flex-col items-center justify-center gap-0.5 group relative cursor-pointer">
                 <span class="text-xl sm:text-2xl font-black font-chakra text-rose-400 group-hover:scale-105 transition-transform">짝 (EVEN)</span>
                 <span class="text-[10px] text-slate-400">합 2, 4, 6, 8, 10, 12</span>
@@ -473,10 +462,10 @@
           </div>
         </div>
 
-        <!-- Right Column: Participants & Real-time Chat Sidebar (Single Unique Container) -->
-        <div class="order-2 lg:order-2 lg:col-span-5 xl:col-span-4 flex flex-col gap-2.5 sm:gap-3 flex-1 min-h-[420px] lg:min-h-0">
+        <!-- Right Column: Participants & Real-time Chat Sidebar -->
+        <div class="order-2 lg:col-span-5 xl:col-span-4 flex flex-col gap-2.5 sm:gap-3 flex-1 min-h-[420px] lg:min-h-0">
           
-          <!-- Participants List (Proportional Height) -->
+          <!-- Participants List -->
           <div class="bg-slate-900/90 border border-purple-500/30 rounded-3xl p-3 sm:p-3.5 shadow-xl flex flex-col min-h-[200px] lg:h-[45%] shrink-0">
             <div class="flex items-center justify-between mb-2 border-b border-slate-800 pb-1.5 whitespace-nowrap">
               <h3 class="text-xs sm:text-sm font-bold text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
@@ -490,9 +479,8 @@
             </div>
           </div>
 
-          <!-- Real-time Chat & Reactions Box (Fills Remaining Space) -->
+          <!-- Real-time Chat & Reactions Box -->
           <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-3 shadow-xl flex flex-col flex-1 min-h-[200px] lg:min-h-0">
-            <!-- Chat Header -->
             <div class="flex items-center justify-between pb-1 border-b border-slate-800 mb-1 whitespace-nowrap">
               <h3 class="text-xs font-bold text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
                 <i class="ph-bold ph-chat-centered-text text-cyan-400 shrink-0"></i>
@@ -503,7 +491,6 @@
               </span>
             </div>
 
-            <!-- Message Area -->
             <div id="chatBox" class="flex-1 overflow-y-auto space-y-1 text-xs pr-1 mb-1.5 scroll-smooth">
               <div class="text-slate-500 text-[10px] italic bg-slate-950/40 p-1.5 rounded-xl border border-slate-800/60">
                 💬 방에 입장했습니다. 대화와 이모티콘을 나눠보세요!
@@ -523,7 +510,7 @@
               </div>
             </div>
 
-            <!-- Input & Send (Fixed to Bottom) -->
+            <!-- Input & Send -->
             <form id="formChat" class="flex items-center gap-1.5 mt-auto">
               <input type="text" id="inputChat" maxlength="50" placeholder="메시지 입력..."
                 class="flex-1 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5 text-base sm:text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition" />
@@ -548,13 +535,8 @@
         </h2>
         <p id="lblFinalResultDesc" class="text-xs text-slate-400 mt-1 mb-6">모든 라운드가 종료되었습니다! 최종 순위입니다.</p>
 
-        <div id="finalPodium" class="w-full flex items-end justify-center gap-2 mb-6 min-h-[150px]">
-          <!-- Top 3 podium items -->
-        </div>
-
-        <div id="finalPlayerList" class="w-full bg-slate-950/70 border border-slate-800 rounded-2xl p-3 mb-6 max-h-44 overflow-y-auto space-y-1.5">
-          <!-- All players final chips -->
-        </div>
+        <div id="finalPodium" class="w-full flex items-end justify-center gap-2 mb-6 min-h-[150px]"></div>
+        <div id="finalPlayerList" class="w-full bg-slate-950/70 border border-slate-800 rounded-2xl p-3 mb-6 max-h-44 overflow-y-auto space-y-1.5"></div>
 
         <button id="btnRestartGame" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-sm transition shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2">
           <i class="ph-bold ph-arrow-counter-clockwise text-lg"></i>
@@ -622,7 +604,7 @@
     });
   </script>
 
-  <!-- Complete Robust Real-time Multi-Device Engine (Eliminating Reconnect Loops & Failures) -->
+  <!-- Clean, Optimized Application Logic -->
   <script>
     // State Store
     const store = {
@@ -644,9 +626,6 @@
       hasBet: false,
       forcedRig: null,
       players: {},
-      dice1: 1,
-      dice2: 1,
-      // Zero-loop robust networking layer
       isNetConnected: false,
       localChannel: null,
       storageListener: null,
@@ -655,131 +634,84 @@
       sessionStartTime: Date.now(),
       lastEventTimestamp: Math.floor(Date.now() / 1000),
       processedPacketIds: new Set(),
-      notifiedPlayerJoins: new Set() // Strict lock: notify join only ONCE per player per session
+      notifiedPlayerJoins: new Set()
     };
 
-    // DOM Elements
-    const viewLobby = document.getElementById('viewLobby');
-    const viewRoom = document.getElementById('viewRoom');
-    const modalFinalResult = document.getElementById('modalFinalResult');
-    const inputNickname = document.getElementById('inputNickname');
-    const sliderRounds = document.getElementById('sliderRounds');
-    const lblSelectedRounds = document.getElementById('lblSelectedRounds');
-    const presetRBtns = document.querySelectorAll('.preset-r-btn');
-    const btnCreateRoom = document.getElementById('btnCreateRoom');
-    const btnToggleJoinBox = document.getElementById('btnToggleJoinBox');
-    const joinCodeBox = document.getElementById('joinCodeBox');
-    const inputRoomCode = document.getElementById('inputRoomCode');
-    const btnJoinRoom = document.getElementById('btnJoinRoom');
+    // DOM Elements Cache
+    const el = {
+      viewLobby: document.getElementById('viewLobby'),
+      viewRoom: document.getElementById('viewRoom'),
+      modalFinalResult: document.getElementById('modalFinalResult'),
+      inputNickname: document.getElementById('inputNickname'),
+      sliderRounds: document.getElementById('sliderRounds'),
+      lblSelectedRounds: document.getElementById('lblSelectedRounds'),
+      presetRBtns: document.querySelectorAll('.preset-r-btn'),
+      btnCreateRoom: document.getElementById('btnCreateRoom'),
+      btnToggleJoinBox: document.getElementById('btnToggleJoinBox'),
+      joinCodeBox: document.getElementById('joinCodeBox'),
+      inputRoomCode: document.getElementById('inputRoomCode'),
+      btnJoinRoom: document.getElementById('btnJoinRoom'),
+      inviteNoticeBox: document.getElementById('inviteNoticeBox'),
+      lblInviteRoomCode: document.getElementById('lblInviteRoomCode'),
+      btnCancelInviteJoin: document.getElementById('btnCancelInviteJoin'),
+      defaultLobbyButtons: document.getElementById('defaultLobbyButtons'),
+      inviteButtonGroup: document.getElementById('inviteButtonGroup'),
+      btnDirectInviteJoin: document.getElementById('btnDirectInviteJoin'),
+      btnCancelInviteBtn: document.getElementById('btnCancelInviteBtn'),
+      btnHeaderInvite: document.getElementById('btnHeaderInvite'),
+      btnShareRoomLink: document.getElementById('btnShareRoomLink'),
+      dotNetStatus: document.getElementById('dotNetStatus'),
+      textNetStatus: document.getElementById('textNetStatus'),
+      lblRoomCode: document.getElementById('lblRoomCode'),
+      btnCopyCode: document.getElementById('btnCopyCode'),
+      lblCurrentRound: document.getElementById('lblCurrentRound'),
+      lblTotalRounds: document.getElementById('lblTotalRounds'),
+      badgePhase: document.getElementById('badgePhase'),
+      lblPhaseText: document.getElementById('lblPhaseText'),
+      btnLeaveRoom: document.getElementById('btnLeaveRoom'),
+      diceCube1: document.getElementById('diceCube1'),
+      diceCube2: document.getElementById('diceCube2'),
+      lblResultSub: document.getElementById('lblResultSub'),
+      lblResultMain: document.getElementById('lblResultMain'),
+      bettingProgressWrap: document.getElementById('bettingProgressWrap'),
+      bettingProgressBar: document.getElementById('bettingProgressBar'),
+      lblProgressSeconds: document.getElementById('lblProgressSeconds'),
+      lblProgressDoneCount: document.getElementById('lblProgressDoneCount'),
+      hostControlWrap: document.getElementById('hostControlWrap'),
+      btnStartRound: document.getElementById('btnStartRound'),
+      textStartRound: document.getElementById('textStartRound'),
+      iconStartRound: document.getElementById('iconStartRound'),
+      btnToggleReady: document.getElementById('btnToggleReady'),
+      textToggleReady: document.getElementById('textToggleReady'),
+      iconToggleReady: document.getElementById('iconToggleReady'),
+      boxBotControls: document.getElementById('boxBotControls'),
+      btnAddBot: document.getElementById('btnAddBot'),
+      btnRemoveBot: document.getElementById('btnRemoveBot'),
+      lblUserChips: document.getElementById('lblUserChips'),
+      cardOdd: document.getElementById('cardOdd'),
+      cardEven: document.getElementById('cardEven'),
+      checkOdd: document.getElementById('checkOdd'),
+      checkEven: document.getElementById('checkEven'),
+      lblBetAmount: document.getElementById('lblBetAmount'),
+      btnConfirmBet: document.getElementById('btnConfirmBet'),
+      textConfirmBet: document.getElementById('textConfirmBet'),
+      iconConfirmBet: document.getElementById('iconConfirmBet'),
+      lblPlayerCount: document.getElementById('lblPlayerCount'),
+      listPlayers: document.getElementById('listPlayers'),
+      chatBox: document.getElementById('chatBox'),
+      formChat: document.getElementById('formChat'),
+      inputChat: document.getElementById('inputChat'),
+      reactionContainer: document.getElementById('reactionContainer'),
+      finalPodium: document.getElementById('finalPodium'),
+      finalPlayerList: document.getElementById('finalPlayerList'),
+      lblFinalResultDesc: document.getElementById('lblFinalResultDesc'),
+      btnRestartGame: document.getElementById('btnRestartGame')
+    };
 
-    const inviteNoticeBox = document.getElementById('inviteNoticeBox');
-    const lblInviteRoomCode = document.getElementById('lblInviteRoomCode');
-    const btnCancelInviteJoin = document.getElementById('btnCancelInviteJoin');
-    const defaultLobbyButtons = document.getElementById('defaultLobbyButtons');
-    const inviteButtonGroup = document.getElementById('inviteButtonGroup');
-    const btnDirectInviteJoin = document.getElementById('btnDirectInviteJoin');
-    const btnCancelInviteBtn = document.getElementById('btnCancelInviteBtn');
-    const btnHeaderInvite = document.getElementById('btnHeaderInvite');
-    const btnShareRoomLink = document.getElementById('btnShareRoomLink');
+    // Helper: Escape HTML
+    const escapeHtml = (t) => (t || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 
-    const badgeNetStatus = document.getElementById('badgeNetStatus');
-    const dotNetStatus = document.getElementById('dotNetStatus');
-    const textNetStatus = document.getElementById('textNetStatus');
-
-    const lblRoomCode = document.getElementById('lblRoomCode');
-    const btnCopyCode = document.getElementById('btnCopyCode');
-    const lblCurrentRound = document.getElementById('lblCurrentRound');
-    const lblTotalRounds = document.getElementById('lblTotalRounds');
-    const badgePhase = document.getElementById('badgePhase');
-    const lblPhaseText = document.getElementById('lblPhaseText');
-    const btnLeaveRoom = document.getElementById('btnLeaveRoom');
-
-    const diceCube1 = document.getElementById('diceCube1');
-    const diceCube2 = document.getElementById('diceCube2');
-    const lblResultSub = document.getElementById('lblResultSub');
-    const lblResultMain = document.getElementById('lblResultMain');
-
-    const bettingProgressWrap = document.getElementById('bettingProgressWrap');
-    const bettingProgressBar = document.getElementById('bettingProgressBar');
-    const lblProgressSeconds = document.getElementById('lblProgressSeconds');
-    const lblProgressDoneCount = document.getElementById('lblProgressDoneCount');
-    const hostControlWrap = document.getElementById('hostControlWrap');
-
-    const btnStartRound = document.getElementById('btnStartRound');
-    const textStartRound = document.getElementById('textStartRound');
-    const iconStartRound = document.getElementById('iconStartRound');
-    const btnToggleReady = document.getElementById('btnToggleReady');
-    const textToggleReady = document.getElementById('textToggleReady');
-    const iconToggleReady = document.getElementById('iconToggleReady');
-    const boxBotControls = document.getElementById('boxBotControls');
-    const btnAddBot = document.getElementById('btnAddBot');
-    const btnRemoveBot = document.getElementById('btnRemoveBot');
-
-    const lblUserChips = document.getElementById('lblUserChips');
-    const cardOdd = document.getElementById('cardOdd');
-    const cardEven = document.getElementById('cardEven');
-    const checkOdd = document.getElementById('checkOdd');
-    const checkEven = document.getElementById('checkEven');
-    const lblBetAmount = document.getElementById('lblBetAmount');
-    const btnConfirmBet = document.getElementById('btnConfirmBet');
-    const textConfirmBet = document.getElementById('textConfirmBet');
-    const iconConfirmBet = document.getElementById('iconConfirmBet');
-
-    const lblPlayerCount = document.getElementById('lblPlayerCount');
-    const listPlayers = document.getElementById('listPlayers');
-    const chatBox = document.getElementById('chatBox');
-    const formChat = document.getElementById('formChat');
-    const inputChat = document.getElementById('inputChat');
-    const reactionContainer = document.getElementById('reactionContainer');
-    const reactionButtons = document.querySelectorAll('.btn-reaction');
-
-    const finalPodium = document.getElementById('finalPodium');
-    const finalPlayerList = document.getElementById('finalPlayerList');
-    const btnRestartGame = document.getElementById('btnRestartGame');
-
-    // Init Nickname
-    inputNickname.value = store.nickname;
-    inputNickname.addEventListener('input', (e) => {
-      const val = e.target.value.trim();
-      if (val) {
-        store.nickname = val;
-        localStorage.setItem('holzzak_user_nick', val);
-      }
-    });
-
-    sliderRounds.addEventListener('input', (e) => {
-      const val = parseInt(e.target.value, 10);
-      lblSelectedRounds.textContent = val;
-      store.totalRounds = val;
-      updatePresetRoundsUI(val);
-    });
-
-    presetRBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const val = parseInt(btn.getAttribute('data-rounds'), 10);
-        sliderRounds.value = val;
-        lblSelectedRounds.textContent = val;
-        store.totalRounds = val;
-        updatePresetRoundsUI(val);
-      });
-    });
-
-    function updatePresetRoundsUI(val) {
-      presetRBtns.forEach(b => {
-        const r = parseInt(b.getAttribute('data-rounds'), 10);
-        if (r === val) {
-          b.className = 'preset-r-btn py-1.5 text-xs font-chakra font-bold rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/40 transition';
-        } else {
-          b.className = 'preset-r-btn py-1.5 text-xs font-chakra font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition';
-        }
-      });
-    }
-
-    btnToggleJoinBox.addEventListener('click', () => {
-      joinCodeBox.classList.toggle('hidden');
-      if (!joinCodeBox.classList.contains('hidden')) inputRoomCode.focus();
-    });
-
+    // Toast Notification
     function showToast(msg, isSuccess = true) {
       const t = document.createElement('div');
       t.className = `px-3.5 py-2 rounded-xl border text-xs font-semibold shadow-lg backdrop-blur-md flex items-center gap-2 pointer-events-auto transition-all ${
@@ -792,19 +724,19 @@
 
     function setNetStatus(status, text) {
       if (status === 'connected') {
-        dotNetStatus.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
-        textNetStatus.className = 'text-emerald-300 font-bold';
+        el.dotNetStatus.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+        el.textNetStatus.className = 'text-emerald-300 font-bold';
       } else if (status === 'connecting') {
-        dotNetStatus.className = 'w-2 h-2 rounded-full bg-amber-400 animate-ping';
-        textNetStatus.className = 'text-amber-300 font-bold';
+        el.dotNetStatus.className = 'w-2 h-2 rounded-full bg-amber-400 animate-ping';
+        el.textNetStatus.className = 'text-amber-300 font-bold';
       } else {
-        dotNetStatus.className = 'w-2 h-2 rounded-full bg-slate-500';
-        textNetStatus.className = 'text-slate-400';
+        el.dotNetStatus.className = 'w-2 h-2 rounded-full bg-slate-500';
+        el.textNetStatus.className = 'text-slate-400';
       }
-      textNetStatus.textContent = text;
+      el.textNetStatus.textContent = text;
     }
 
-    // --- ZERO-LOOP UNIVERSAL SYNC PIPELINE (Safe on all networks & devices) ---
+    // --- NETWORKING ENGINE ---
     function initNetworking(isHost, roomCode) {
       destroyNetworking();
 
@@ -814,32 +746,28 @@
       store.lastEventTimestamp = Math.floor(Date.now() / 1000);
       store.notifiedPlayerJoins.clear();
 
-      // 1. Same-Device BroadcastChannel
+      // 1. BroadcastChannel (Same-Device)
       if ('BroadcastChannel' in window) {
         try {
           store.localChannel = new BroadcastChannel('hz_arena_' + normalizedCode);
           store.localChannel.onmessage = (e) => {
-            if (e.data && e.data._senderId !== store.myId) {
-              handleNetworkMessage(e.data);
-            }
+            if (e.data && e.data._senderId !== store.myId) handleNetworkMessage(e.data);
           };
         } catch (e) {}
       }
 
-      // 2. Storage Event Listener for multi-window sync
+      // 2. Storage Event (Cross-Tab fallback)
       store.storageListener = (e) => {
         if (e.key === 'hz_pkt_' + normalizedCode && e.newValue) {
           try {
             const data = JSON.parse(e.newValue);
-            if (data && data._senderId !== store.myId) {
-              handleNetworkMessage(data);
-            }
+            if (data && data._senderId !== store.myId) handleNetworkMessage(data);
           } catch(err) {}
         }
       };
       window.addEventListener('storage', store.storageListener);
 
-      // 3. Mark connection ready immediately (no blocking reconnect loops)
+      // Connected
       store.isNetConnected = true;
       setNetStatus('connected', `온라인 (${roomCode})`);
 
@@ -849,31 +777,24 @@
         broadcastState();
       } else {
         showToast(`방에 입장했습니다!`);
-        // Send join and request immediate full sync
         sendJoinPacket();
         setTimeout(sendJoinPacket, 800);
         startGuestHeartbeat();
       }
-      renderControlArea();
 
-      // Multi-device Cloud Sync Polling (Silent, rate-limit protected)
-      startCloudSync(normalizedCode, isHost);
+      renderControlArea();
+      startCloudSync(normalizedCode);
     }
 
-    // Global Cloud Bus without loop-crashing websockets
-    function startCloudSync(roomCode, isHost) {
+    function startCloudSync(roomCode) {
       clearInterval(store.syncTimer);
       const endpoint = `https://ntfy.sh/hz_live_${roomCode}`;
 
-      // Polling once every 2 seconds without infinite reconnect loops
       store.syncTimer = setInterval(async () => {
         if (!store.roomCode) return;
         try {
-          // Fetch only new messages since last observed timestamp
           const sinceParam = store.lastEventTimestamp || Math.floor((Date.now() - 3000) / 1000);
-          const resp = await fetch(`${endpoint}/json?since=${sinceParam}&poll=1`, {
-            cache: 'no-store'
-          });
+          const resp = await fetch(`${endpoint}/json?since=${sinceParam}&poll=1`, { cache: 'no-store' });
           if (!resp.ok) return;
 
           const text = await resp.text();
@@ -883,24 +804,15 @@
           for (let line of lines) {
             try {
               const entry = JSON.parse(line);
-              if (entry.time) {
-                store.lastEventTimestamp = Math.max(store.lastEventTimestamp, entry.time);
-              }
+              if (entry.time) store.lastEventTimestamp = Math.max(store.lastEventTimestamp, entry.time);
               if (entry.event === 'message' && entry.message) {
                 const pkt = JSON.parse(entry.message);
-                // Discard messages sent before this user joined the room
-                if (pkt._t && pkt._t < store.sessionStartTime - 2000) {
-                  continue;
-                }
-                if (pkt && pkt._senderId !== store.myId) {
-                  handleNetworkMessage(pkt);
-                }
+                if (pkt._t && pkt._t < store.sessionStartTime - 2000) continue;
+                if (pkt && pkt._senderId !== store.myId) handleNetworkMessage(pkt);
               }
             } catch(e) {}
           }
-        } catch (e) {
-          // Soft ignore network hiccups without infinite reconnect triggers
-        }
+        } catch (e) {}
       }, 2000);
     }
 
@@ -934,13 +846,10 @@
 
         for (let pid in store.players) {
           const p = store.players[pid];
-          if (p.id !== store.myId && !p.isBot) {
-            if (p.lastSeen && now - p.lastSeen > 20000) {
-              const leavingName = p.name;
-              delete store.players[pid];
-              showToast(`[${leavingName}] 님이 퇴장 처리되었습니다.`, false);
-              changed = true;
-            }
+          if (p.id !== store.myId && !p.isBot && p.lastSeen && now - p.lastSeen > 20000) {
+            delete store.players[pid];
+            showToast(`[${p.name}] 님이 퇴장 처리되었습니다.`, false);
+            changed = true;
           }
         }
 
@@ -976,7 +885,6 @@
 
     function handleHostDisconnected() {
       showToast('방장 연결이 종료되었습니다. 다음 플레이어가 방장으로 지정됩니다.', false);
-
       for (let pid in store.players) {
         if (store.players[pid].isHost) {
           delete store.players[pid];
@@ -992,11 +900,7 @@
         showToast('축하합니다! 새로운 방장으로 승격되었습니다.');
         store.isHost = true;
         store.players[store.myId].isHost = true;
-        broadcastNetworkPacket({
-          type: 'HOST_MIGRATED',
-          newHostId: store.myId,
-          newHostName: store.nickname
-        });
+        broadcastNetworkPacket({ type: 'HOST_MIGRATED', newHostId: store.myId, newHostName: store.nickname });
         startHostHeartbeat();
       }
       renderAll();
@@ -1021,28 +925,20 @@
       packet._senderId = store.myId;
       packet._pktId = store.myId + '_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
       packet._t = Date.now();
-      
-      // Memorize self packet id
+
       store.processedPacketIds.add(packet._pktId);
-      if (store.processedPacketIds.size > 500) {
+      if (store.processedPacketIds.size > 400) {
         const first = store.processedPacketIds.values().next().value;
         store.processedPacketIds.delete(first);
       }
 
       const payload = JSON.stringify(packet);
-
-      // Local Channel
       if (store.localChannel) {
         try { store.localChannel.postMessage(packet); } catch(e) {}
       }
 
-      // Storage event
       if (store.roomCode) {
-        try {
-          localStorage.setItem('hz_pkt_' + store.roomCode.toUpperCase(), payload);
-        } catch(e) {}
-
-        // Global HTTPS Cloud Dispatch (fire-and-forget, non-blocking)
+        try { localStorage.setItem('hz_pkt_' + store.roomCode.toUpperCase(), payload); } catch(e) {}
         try {
           fetch(`https://ntfy.sh/hz_live_${store.roomCode.toUpperCase()}`, {
             method: 'POST',
@@ -1064,15 +960,13 @@
       });
     }
 
-    // Packet Dispatcher
     function handleNetworkMessage(msg) {
       if (!msg || !msg.type) return;
 
-      // Duplicate Packet Guard: drop identical packets received via multiple channels or poll replay
       if (msg._pktId) {
         if (store.processedPacketIds.has(msg._pktId)) return;
         store.processedPacketIds.add(msg._pktId);
-        if (store.processedPacketIds.size > 500) {
+        if (store.processedPacketIds.size > 400) {
           const first = store.processedPacketIds.values().next().value;
           store.processedPacketIds.delete(first);
         }
@@ -1086,16 +980,13 @@
             msg.player.lastSeen = Date.now();
             store.players[pid] = Object.assign(store.players[pid] || {}, msg.player);
 
-            // Notify ONCE per player per entire session (avoids infinite toast loops completely)
             if (!isAlreadyKnown && !store.notifiedPlayerJoins.has(pid) && pid !== store.myId) {
               store.notifiedPlayerJoins.add(pid);
               sound.playChip();
               showToast(`[${msg.player.name}] 님이 입장했습니다!`);
             }
 
-            if (store.isHost) {
-              broadcastState();
-            }
+            if (store.isHost) broadcastState();
             renderAll();
           }
           break;
@@ -1103,9 +994,7 @@
         case 'PLAYER_READY':
           if (msg.playerId && store.players[msg.playerId]) {
             store.players[msg.playerId].isReady = msg.isReady;
-            if (store.isHost) {
-              broadcastState();
-            }
+            if (store.isHost) broadcastState();
             renderAll();
           }
           break;
@@ -1174,11 +1063,9 @@
               isHost: store.isHost
             };
             store.players = Object.assign({}, msg.players);
-            // Always guarantee self player object remains firmly registered in the players store
             store.players[store.myId] = Object.assign({}, msg.players[store.myId] || {}, myCurrent);
-
-            // Register known players into notified set so they won't trigger join toasts
             Object.keys(store.players).forEach(id => store.notifiedPlayerJoins.add(id));
+            
             if (store.players[store.myId]) {
               store.chips = store.players[store.myId].chips;
               store.isBankrupt = store.players[store.myId].isBankrupt;
@@ -1211,9 +1098,8 @@
             store.players[msg.playerId].chips = msg.remainingChips;
             store.players[msg.playerId].hasBet = true;
             store.players[msg.playerId].lastSeen = Date.now();
-            if (msg.secretRig) {
-              store.forcedRig = msg.secretRig;
-            }
+            if (msg.secretRig) store.forcedRig = msg.secretRig;
+
             broadcastState();
             renderAll();
             checkAllPlayersBetComplete();
@@ -1251,38 +1137,67 @@
       }
     }
 
-    // --- LOBBY ACTIONS ---
-    btnCreateRoom.addEventListener('click', () => {
-      const nick = inputNickname.value.trim();
-      if (!nick) {
-        showToast('닉네임을 입력하세요!', false);
-        return;
+    // --- LOBBY INTERACTIONS ---
+    el.inputNickname.value = store.nickname;
+    el.inputNickname.addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      if (val) {
+        store.nickname = val;
+        localStorage.setItem('holzzak_user_nick', val);
       }
-      store.nickname = nick;
-      localStorage.setItem('holzzak_user_nick', nick);
-
-      const code = Math.random().toString(36).substring(2, 6).toUpperCase();
-      joinOrCreateRoom(code, true);
     });
 
-    btnJoinRoom.addEventListener('click', () => {
-      const nick = inputNickname.value.trim();
-      if (!nick) {
-        showToast('닉네임을 입력하세요!', false);
-        return;
-      }
+    el.sliderRounds.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      el.lblSelectedRounds.textContent = val;
+      store.totalRounds = val;
+      updatePresetRoundsUI(val);
+    });
+
+    el.presetRBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const val = parseInt(btn.getAttribute('data-rounds'), 10);
+        el.sliderRounds.value = val;
+        el.lblSelectedRounds.textContent = val;
+        store.totalRounds = val;
+        updatePresetRoundsUI(val);
+      });
+    });
+
+    function updatePresetRoundsUI(val) {
+      el.presetRBtns.forEach(b => {
+        const r = parseInt(b.getAttribute('data-rounds'), 10);
+        b.className = r === val
+          ? 'preset-r-btn py-1.5 text-xs font-chakra font-bold rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/40 transition'
+          : 'preset-r-btn py-1.5 text-xs font-chakra font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition';
+      });
+    }
+
+    el.btnToggleJoinBox.addEventListener('click', () => {
+      el.joinCodeBox.classList.toggle('hidden');
+      if (!el.joinCodeBox.classList.contains('hidden')) el.inputRoomCode.focus();
+    });
+
+    el.btnCreateRoom.addEventListener('click', () => {
+      const nick = el.inputNickname.value.trim();
+      if (!nick) return showToast('닉네임을 입력하세요!', false);
+      store.nickname = nick;
+      localStorage.setItem('holzzak_user_nick', nick);
+      joinOrCreateRoom(Math.random().toString(36).substring(2, 6).toUpperCase(), true);
+    });
+
+    el.btnJoinRoom.addEventListener('click', () => {
+      const nick = el.inputNickname.value.trim();
+      if (!nick) return showToast('닉네임을 입력하세요!', false);
       store.nickname = nick;
       localStorage.setItem('holzzak_user_nick', nick);
 
-      const code = inputRoomCode.value.trim().toUpperCase();
-      if (!code || code.length < 3) {
-        showToast('방 코드를 올바르게 입력하세요.', false);
-        return;
-      }
+      const code = el.inputRoomCode.value.trim().toUpperCase();
+      if (!code || code.length < 3) return showToast('방 코드를 올바르게 입력하세요.', false);
       joinOrCreateRoom(code, false);
     });
 
-    btnCopyCode.addEventListener('click', () => {
+    el.btnCopyCode.addEventListener('click', () => {
       const ta = document.createElement('textarea');
       ta.value = store.roomCode;
       document.body.appendChild(ta);
@@ -1293,29 +1208,20 @@
       sound.playChip();
     });
 
-    // --- INVITATION LINK & SHARE API ---
+    // --- INVITE / URL MANAGEMENT ---
     function safeUpdateUrlRoomParam(code) {
       try {
-        // Blob URLs and sandboxed iframe environments throw SecurityError on replaceState
         if (window.location.protocol === 'blob:') return;
         const url = new URL(window.location.href);
-        if (code) {
-          url.searchParams.set('room', code.toUpperCase());
-        } else {
-          url.searchParams.delete('room');
-        }
+        if (code) url.searchParams.set('room', code.toUpperCase());
+        else url.searchParams.delete('room');
         window.history.replaceState({}, '', url.toString());
-      } catch (e) {
-        // Silently bypass when replaceState is forbidden by iframe origin/sandbox policies
-      }
+      } catch (e) {}
     }
 
     function getInviteUrl(code) {
       try {
-        // If loaded in a blob preview URL, don't create an unshareable blob URL
-        if (window.location.protocol === 'blob:') {
-          return `${window.location.origin}/?room=${code.toUpperCase()}`;
-        }
+        if (window.location.protocol === 'blob:') return `${window.location.origin}/?room=${code.toUpperCase()}`;
         const url = new URL(window.location.href);
         url.searchParams.set('room', code.toUpperCase());
         return url.toString();
@@ -1330,7 +1236,7 @@
       const shareUrl = getInviteUrl(store.roomCode);
       const shareData = {
         title: '홀짝 아레나 (Odd/Even Arena)',
-        text: `홀짝 게임에 초대합니다! 방 코드: [${store.roomCode}] 링크를 누르면 즉시 입장합니다.`,
+        text: `홀짝 게임에 초대합니다! 방 코드: [${store.roomCode}]`,
         url: shareUrl
       };
 
@@ -1340,9 +1246,7 @@
           showToast('초대 링크를 공유했습니다!');
           return;
         } catch (err) {
-          if (err.name !== 'AbortError') {
-            copyInviteLinkToClipboard(shareUrl);
-          }
+          if (err.name !== 'AbortError') copyInviteLinkToClipboard(shareUrl);
         }
       } else {
         copyInviteLinkToClipboard(shareUrl);
@@ -1359,65 +1263,57 @@
       showToast('초대 링크가 복사되었습니다! 카톡 등에 붙여넣어 공유하세요.');
     }
 
-    btnHeaderInvite.addEventListener('click', shareOrCopyInviteLink);
-    btnShareRoomLink.addEventListener('click', shareOrCopyInviteLink);
+    el.btnHeaderInvite.addEventListener('click', shareOrCopyInviteLink);
+    el.btnShareRoomLink.addEventListener('click', shareOrCopyInviteLink);
 
-    // Check URL query for invite room code on load
     let pendingInviteRoom = null;
     function checkUrlForInvite() {
       const params = new URLSearchParams(window.location.search);
       const roomParam = params.get('room');
       if (roomParam && roomParam.trim().length >= 3) {
         pendingInviteRoom = roomParam.trim().toUpperCase();
-        lblInviteRoomCode.textContent = pendingInviteRoom;
-        inputRoomCode.value = pendingInviteRoom;
+        el.lblInviteRoomCode.textContent = pendingInviteRoom;
+        el.inputRoomCode.value = pendingInviteRoom;
 
-        // Generate a new random guest nickname so invited players don't inherit the inviter's name
         const randomGuestNick = '플레이어_' + Math.floor(100 + Math.random() * 900);
         store.nickname = randomGuestNick;
-        inputNickname.value = randomGuestNick;
+        el.inputNickname.value = randomGuestNick;
         localStorage.setItem('holzzak_user_nick', randomGuestNick);
 
-        inviteNoticeBox.classList.remove('hidden');
-        defaultLobbyButtons.classList.add('hidden');
-        inviteButtonGroup.classList.remove('hidden');
-        inviteButtonGroup.classList.add('grid');
+        el.inviteNoticeBox.classList.remove('hidden');
+        el.defaultLobbyButtons.classList.add('hidden');
+        el.inviteButtonGroup.classList.remove('hidden');
+        el.inviteButtonGroup.classList.add('grid');
         showToast(`[${pendingInviteRoom}] 방 초대 링크로 연결되었습니다!`);
       }
     }
 
     function cancelInviteMode() {
       pendingInviteRoom = null;
-      inviteNoticeBox.classList.add('hidden');
-      inviteButtonGroup.classList.add('hidden');
-      inviteButtonGroup.classList.remove('grid');
-      defaultLobbyButtons.classList.remove('hidden');
+      el.inviteNoticeBox.classList.add('hidden');
+      el.inviteButtonGroup.classList.add('hidden');
+      el.inviteButtonGroup.classList.remove('grid');
+      el.defaultLobbyButtons.classList.remove('hidden');
       safeUpdateUrlRoomParam(null);
       showToast('초대를 취소하고 일반 로비 모드로 전환되었습니다.');
     }
 
-    btnCancelInviteJoin.addEventListener('click', cancelInviteMode);
-    btnCancelInviteBtn.addEventListener('click', cancelInviteMode);
+    el.btnCancelInviteJoin.addEventListener('click', cancelInviteMode);
+    el.btnCancelInviteBtn.addEventListener('click', cancelInviteMode);
 
-    btnDirectInviteJoin.addEventListener('click', () => {
-      const nick = inputNickname.value.trim();
-      if (!nick) {
-        showToast('닉네임을 입력하세요!', false);
-        return;
-      }
+    el.btnDirectInviteJoin.addEventListener('click', () => {
+      const nick = el.inputNickname.value.trim();
+      if (!nick) return showToast('닉네임을 입력하세요!', false);
       store.nickname = nick;
       localStorage.setItem('holzzak_user_nick', nick);
-
-      if (pendingInviteRoom) {
-        joinOrCreateRoom(pendingInviteRoom, false);
-      }
+      if (pendingInviteRoom) joinOrCreateRoom(pendingInviteRoom, false);
     });
 
     function joinOrCreateRoom(roomCode, isHost) {
       sound.init();
       store.roomCode = roomCode.toUpperCase();
       store.isHost = isHost;
-      store.isReady = isHost; // Host is always ready
+      store.isReady = isHost;
       store.currentRound = 1;
       store.phase = 'WAITING';
       store.forcedRig = null;
@@ -1427,9 +1323,9 @@
       store.selectedChoice = null;
       store.betAmount = 0;
 
-      lblRoomCode.textContent = store.roomCode;
-      lblCurrentRound.textContent = store.currentRound;
-      lblTotalRounds.textContent = store.totalRounds;
+      el.lblRoomCode.textContent = store.roomCode;
+      el.lblCurrentRound.textContent = store.currentRound;
+      el.lblTotalRounds.textContent = store.totalRounds;
 
       store.players = {
         [store.myId]: {
@@ -1449,27 +1345,21 @@
         }
       };
 
-      viewLobby.classList.add('hidden');
-      viewRoom.classList.remove('hidden');
-      viewRoom.classList.add('flex');
-      modalFinalResult.classList.add('hidden');
-      modalFinalResult.classList.remove('flex');
+      el.viewLobby.classList.add('hidden');
+      el.viewRoom.classList.remove('hidden');
+      el.viewRoom.classList.add('flex');
+      el.modalFinalResult.classList.add('hidden');
+      el.modalFinalResult.classList.remove('flex');
 
-      // Safely update URL query string without SecurityError in sandboxes/blobs
       safeUpdateUrlRoomParam(store.roomCode);
-
-      btnHeaderInvite.classList.remove('hidden');
+      el.btnHeaderInvite.classList.remove('hidden');
 
       initNetworking(isHost, store.roomCode);
       renderAll();
     }
 
-    // --- LEAVE ROOM ---
-    btnLeaveRoom.addEventListener('click', () => {
-      broadcastNetworkPacket({
-        type: 'PLAYER_LEAVE',
-        playerId: store.myId
-      });
+    el.btnLeaveRoom.addEventListener('click', () => {
+      broadcastNetworkPacket({ type: 'PLAYER_LEAVE', playerId: store.myId });
 
       if (store.isHost) {
         const nextHost = Object.values(store.players)
@@ -1488,44 +1378,36 @@
       destroyNetworking();
       clearInterval(store.timerTimer);
 
-      viewRoom.classList.add('hidden');
-      viewRoom.classList.remove('flex');
-      viewLobby.classList.remove('hidden');
-      modalFinalResult.classList.add('hidden');
-      btnHeaderInvite.classList.add('hidden');
+      el.viewRoom.classList.add('hidden');
+      el.viewRoom.classList.remove('flex');
+      el.viewLobby.classList.remove('hidden');
+      el.modalFinalResult.classList.add('hidden');
+      el.btnHeaderInvite.classList.add('hidden');
 
       cancelInviteMode();
-
       setNetStatus('disconnected', '로컬 대기 중');
     });
 
     window.addEventListener('beforeunload', () => {
-      broadcastNetworkPacket({
-        type: 'PLAYER_LEAVE',
-        playerId: store.myId
-      });
+      broadcastNetworkPacket({ type: 'PLAYER_LEAVE', playerId: store.myId });
     });
 
-    // --- TIMER & PROGRESS BAR HELPER ---
+    // --- BETTING TIMER & PROGRESS ---
     function startBettingTimer(seconds = 20) {
       store.timerTotalSeconds = seconds;
       store.timerRemainingMs = seconds * 1000;
       updateProgressBarDisplay();
 
       clearInterval(store.timerTimer);
-      const startTime = Date.now();
-      const endTime = startTime + (seconds * 1000);
+      const endTime = Date.now() + (seconds * 1000);
 
       store.timerTimer = setInterval(() => {
-        const now = Date.now();
-        store.timerRemainingMs = Math.max(0, endTime - now);
+        store.timerRemainingMs = Math.max(0, endTime - Date.now());
         updateProgressBarDisplay();
 
         if (store.timerRemainingMs <= 0) {
           clearInterval(store.timerTimer);
-          if (store.isHost && store.phase === 'BETTING') {
-            rollTheDice();
-          }
+          if (store.isHost && store.phase === 'BETTING') rollTheDice();
         }
       }, 100);
     }
@@ -1534,32 +1416,27 @@
       const remainingSec = (store.timerRemainingMs / 1000).toFixed(1);
       const percent = Math.max(0, Math.min(100, (store.timerRemainingMs / (store.timerTotalSeconds * 1000)) * 100));
 
-      if (lblTimerCount) lblTimerCount.textContent = Math.ceil(store.timerRemainingMs / 1000);
-      if (lblProgressSeconds) lblProgressSeconds.textContent = `${remainingSec}s`;
-      if (bettingProgressBar) {
-        bettingProgressBar.style.width = `${percent}%`;
-        if (percent < 25) {
-          bettingProgressBar.className = 'h-full bg-rose-500 rounded-full transition-all duration-100 shadow-lg shadow-rose-500/60 animate-pulse';
-        } else if (percent < 55) {
-          bettingProgressBar.className = 'h-full bg-gradient-to-r from-amber-500 to-rose-400 rounded-full transition-all duration-100 shadow-md shadow-amber-500/40';
-        } else {
-          bettingProgressBar.className = 'h-full bg-gradient-to-r from-emerald-500 to-amber-400 rounded-full transition-all duration-100 shadow-md shadow-emerald-500/40';
-        }
+      el.lblProgressSeconds.textContent = `${remainingSec}s`;
+      el.bettingProgressBar.style.width = `${percent}%`;
+
+      if (percent < 25) {
+        el.bettingProgressBar.className = 'h-full bg-rose-500 rounded-full transition-all duration-100 shadow-lg shadow-rose-500/60 animate-pulse';
+      } else if (percent < 55) {
+        el.bettingProgressBar.className = 'h-full bg-gradient-to-r from-amber-500 to-rose-400 rounded-full transition-all duration-100 shadow-md shadow-amber-500/40';
+      } else {
+        el.bettingProgressBar.className = 'h-full bg-gradient-to-r from-emerald-500 to-amber-400 rounded-full transition-all duration-100 shadow-md shadow-emerald-500/40';
       }
 
-      // Update done count (e.g., 2/3 완료)
       const activePlayers = Object.values(store.players).filter(p => !p.isBankrupt && p.chips > 0);
       const donePlayers = activePlayers.filter(p => p.hasBet);
-      if (lblProgressDoneCount) {
-        lblProgressDoneCount.textContent = `${donePlayers.length}/${activePlayers.length} 완료`;
-      }
+      el.lblProgressDoneCount.textContent = `${donePlayers.length}/${activePlayers.length} 완료`;
     }
 
-    // --- RENDER FUNCTIONS ---
+    // --- UI RENDERING ---
     function renderAll() {
-      lblUserChips.textContent = store.chips.toLocaleString();
-      lblCurrentRound.textContent = store.currentRound;
-      lblTotalRounds.textContent = store.totalRounds;
+      el.lblUserChips.textContent = store.chips.toLocaleString();
+      el.lblCurrentRound.textContent = store.currentRound;
+      el.lblTotalRounds.textContent = store.totalRounds;
 
       renderPhaseBanner();
       renderControlArea();
@@ -1569,86 +1446,79 @@
 
     function renderPhaseBanner() {
       if (store.phase === 'WAITING') {
-        badgePhase.className = 'px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-2';
-        lblPhaseText.textContent = '라운드 시작 대기 중';
-        lblResultSub.textContent = `ROUND ${store.currentRound} 대기`;
-        lblResultMain.textContent = store.isHost ? '[라운드 시작하기]를 누르면 배팅이 시작됩니다' : '방장의 라운드 시작을 기다리고 있습니다';
-        lblResultMain.className = 'text-2xl sm:text-3xl font-black font-chakra text-white mt-0.5';
+        el.badgePhase.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1.5 shrink-0 whitespace-nowrap';
+        el.lblPhaseText.textContent = '라운드 시작 대기 중';
+        el.lblResultSub.textContent = `ROUND ${store.currentRound} 대기`;
+        el.lblResultMain.textContent = store.isHost ? '[라운드 시작하기]를 누르면 배팅이 시작됩니다' : '방장의 라운드 시작을 기다리고 있습니다';
+        el.lblResultMain.className = 'text-base sm:text-xl font-black font-chakra text-white mt-0.5 text-center leading-snug';
       } else if (store.phase === 'BETTING') {
-        badgePhase.className = 'px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-2';
-        lblPhaseText.textContent = '배팅 진행 중';
-        lblResultSub.textContent = `ROUND ${store.currentRound} / ${store.totalRounds}`;
-        lblResultMain.textContent = '홀 또는 짝과 배팅액을 선택 후 [배팅완료]를 누르세요';
-        lblResultMain.className = 'text-xl sm:text-2xl font-black font-chakra text-amber-400 mt-0.5 animate-pulse';
+        el.badgePhase.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1.5 shrink-0 whitespace-nowrap';
+        el.lblPhaseText.textContent = '배팅 진행 중';
+        el.lblResultSub.textContent = `ROUND ${store.currentRound} / ${store.totalRounds}`;
+        el.lblResultMain.textContent = '홀 또는 짝과 배팅액을 선택 후 [배팅완료]를 누르세요';
+        el.lblResultMain.className = 'text-base sm:text-xl font-black font-chakra text-amber-400 mt-0.5 animate-pulse text-center leading-snug';
       } else if (store.phase === 'ROLLING') {
-        badgePhase.className = 'px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/40 flex items-center gap-2';
-        lblPhaseText.textContent = '주사위 굴리는 중...';
-        lblResultSub.textContent = `ROUND ${store.currentRound} 판정 중`;
-        lblResultMain.textContent = '주사위가 굴러가고 있습니다!';
-        lblResultMain.className = 'text-2xl sm:text-3xl font-black font-chakra text-purple-300 mt-0.5';
+        el.badgePhase.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/40 flex items-center gap-1.5 shrink-0 whitespace-nowrap';
+        el.lblPhaseText.textContent = '주사위 굴리는 중...';
+        el.lblResultSub.textContent = `ROUND ${store.currentRound} 판정 중`;
+        el.lblResultMain.textContent = '주사위가 굴러가고 있습니다!';
+        el.lblResultMain.className = 'text-lg sm:text-2xl font-black font-chakra text-purple-300 mt-0.5 text-center leading-snug';
       } else if (store.phase === 'RESULT') {
-        badgePhase.className = 'px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-2';
-        lblPhaseText.textContent = '결과 정산 완료';
+        el.badgePhase.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5 shrink-0 whitespace-nowrap';
+        el.lblPhaseText.textContent = '결과 정산 완료';
       }
     }
 
     function renderControlArea() {
-      // During BETTING phase, hide all manual buttons and show the Betting Progress Bar!
       if (store.phase === 'BETTING') {
-        bettingProgressWrap.classList.remove('hidden');
-        bettingProgressWrap.classList.add('flex');
-        hostControlWrap.classList.add('hidden');
+        el.bettingProgressWrap.classList.remove('hidden');
+        el.bettingProgressWrap.classList.add('flex');
+        el.hostControlWrap.classList.add('hidden');
         updateProgressBarDisplay();
         return;
       }
 
-      // In other phases, hide the progress bar and show regular controls
-      bettingProgressWrap.classList.add('hidden');
-      bettingProgressWrap.classList.remove('flex');
-      hostControlWrap.classList.remove('hidden');
+      el.bettingProgressWrap.classList.add('hidden');
+      el.bettingProgressWrap.classList.remove('flex');
+      el.hostControlWrap.classList.remove('hidden');
 
-      // Non-host player controls (READY button toggle)
       if (!store.isHost) {
-        btnStartRound.classList.add('hidden');
-        boxBotControls.classList.add('hidden');
-        btnToggleReady.classList.remove('hidden');
-        btnToggleReady.classList.add('flex');
-
-        // Check if network socket connection is established
-        const isNetConnected = store.isNetConnected;
+        el.btnStartRound.classList.add('hidden');
+        el.boxBotControls.classList.add('hidden');
+        el.btnToggleReady.classList.remove('hidden');
+        el.btnToggleReady.classList.add('flex');
 
         if (store.phase === 'WAITING' || store.phase === 'RESULT') {
-          if (!isNetConnected) {
-            // Connected to room but socket not yet ready -> Disabled
-            btnToggleReady.disabled = true;
-            btnToggleReady.className = 'px-5 sm:px-6 py-2.5 rounded-xl bg-slate-800 text-slate-500 border border-slate-700/60 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-not-allowed whitespace-nowrap shrink-0';
-            iconToggleReady.className = 'ph-bold ph-spinner animate-spin text-base text-amber-400 shrink-0';
-            textToggleReady.textContent = '네트워크 연결 중...';
+          if (!store.isNetConnected) {
+            el.btnToggleReady.disabled = true;
+            el.btnToggleReady.className = 'px-4 sm:px-5 py-2 rounded-xl bg-slate-800 text-slate-500 border border-slate-700/60 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-not-allowed whitespace-nowrap shrink-0';
+            el.iconToggleReady.className = 'ph-bold ph-spinner animate-spin text-base text-amber-400 shrink-0';
+            el.textToggleReady.textContent = '네트워크 연결 중...';
           } else if (store.isReady) {
-            btnToggleReady.disabled = false;
-            btnToggleReady.className = 'px-5 sm:px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-emerald-400 border border-emerald-500/40 font-black shadow-lg text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0';
-            iconToggleReady.className = 'ph-bold ph-check-circle text-base text-emerald-400 shrink-0';
-            textToggleReady.textContent = '준비 완료됨 (클릭 시 취소)';
+            el.btnToggleReady.disabled = false;
+            el.btnToggleReady.className = 'px-4 sm:px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-emerald-400 border border-emerald-500/40 font-black shadow-lg text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0';
+            el.iconToggleReady.className = 'ph-bold ph-check-circle text-base text-emerald-400 shrink-0';
+            el.textToggleReady.textContent = '준비 완료됨 (취소)';
           } else {
-            btnToggleReady.disabled = false;
-            btnToggleReady.className = 'px-5 sm:px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black shadow-lg shadow-emerald-500/25 text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0';
-            iconToggleReady.className = 'ph-bold ph-check text-base shrink-0';
-            textToggleReady.textContent = '준비 완료 (READY)';
+            el.btnToggleReady.disabled = false;
+            el.btnToggleReady.className = 'px-4 sm:px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black shadow-lg shadow-emerald-500/25 text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0';
+            el.iconToggleReady.className = 'ph-bold ph-check text-base shrink-0';
+            el.textToggleReady.textContent = '준비 완료 (READY)';
           }
         } else {
-          btnToggleReady.disabled = true;
-          btnToggleReady.className = 'px-5 sm:px-6 py-2.5 rounded-xl bg-slate-800 text-slate-500 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-not-allowed whitespace-nowrap shrink-0';
-          iconToggleReady.className = 'ph-bold ph-hourglass text-base shrink-0';
-          textToggleReady.textContent = '게임 진행 중';
+          el.btnToggleReady.disabled = true;
+          el.btnToggleReady.className = 'px-4 sm:px-5 py-2 rounded-xl bg-slate-800 text-slate-500 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-not-allowed whitespace-nowrap shrink-0';
+          el.iconToggleReady.className = 'ph-bold ph-hourglass text-base shrink-0';
+          el.textToggleReady.textContent = '게임 진행 중';
         }
         return;
       }
 
       // Host controls
-      btnToggleReady.classList.add('hidden');
-      btnToggleReady.classList.remove('flex');
-      btnStartRound.classList.remove('hidden');
-      boxBotControls.classList.remove('hidden');
+      el.btnToggleReady.classList.add('hidden');
+      el.btnToggleReady.classList.remove('flex');
+      el.btnStartRound.classList.remove('hidden');
+      el.boxBotControls.classList.remove('hidden');
 
       if (store.phase === 'WAITING' || store.phase === 'RESULT') {
         const activeSurviving = Object.values(store.players).filter(p => !p.isBankrupt && p.chips > 0);
@@ -1657,51 +1527,44 @@
         const canStart = activeSurviving.length >= 2 && allGuestsReady;
 
         if (canStart) {
-          btnStartRound.disabled = false;
-          btnStartRound.className = 'px-5 sm:px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-slate-950 font-black shadow-lg shadow-amber-500/25 text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0';
-          iconStartRound.className = 'ph-bold ph-play text-base shrink-0';
-          textStartRound.textContent = store.currentRound > 1 ? `다음 라운드 시작 (${store.currentRound}/${store.totalRounds})` : '라운드 시작하기';
+          el.btnStartRound.disabled = false;
+          el.btnStartRound.className = 'px-4 sm:px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-slate-950 font-black shadow-lg shadow-amber-500/25 text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0';
+          el.iconStartRound.className = 'ph-bold ph-play text-sm shrink-0';
+          el.textStartRound.textContent = store.currentRound > 1 ? `다음 라운드 시작 (${store.currentRound}/${store.totalRounds})` : '라운드 시작하기';
         } else {
-          btnStartRound.disabled = true;
-          btnStartRound.className = 'px-5 sm:px-6 py-2.5 rounded-xl bg-slate-800 text-slate-500 border border-slate-700/60 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-not-allowed whitespace-nowrap shrink-0';
-          iconStartRound.className = 'ph-bold ph-hourglass text-base shrink-0';
+          el.btnStartRound.disabled = true;
+          el.btnStartRound.className = 'px-4 sm:px-5 py-2 rounded-xl bg-slate-800 text-slate-500 border border-slate-700/60 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-not-allowed whitespace-nowrap shrink-0';
+          el.iconStartRound.className = 'ph-bold ph-hourglass text-sm shrink-0';
           if (activeSurviving.length < 2) {
-            textStartRound.textContent = '최소 2인 필요 (+봇 추가)';
+            el.textStartRound.textContent = '최소 2인 필요 (+봇 추가)';
           } else {
             const notReadyCount = guestPlayers.filter(p => !p.isReady).length;
-            textStartRound.textContent = `참가자 준비 대기 중 (${notReadyCount}명 남음)`;
+            el.textStartRound.textContent = `준비 대기 중 (${notReadyCount}명 남음)`;
           }
         }
       } else {
-        btnStartRound.disabled = true;
-        btnStartRound.className = 'px-5 sm:px-6 py-2.5 rounded-xl bg-slate-800 text-slate-500 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-not-allowed whitespace-nowrap shrink-0';
-        iconStartRound.className = 'ph-bold ph-hourglass text-base shrink-0';
-        textStartRound.textContent = '주사위 진행 중...';
+        el.btnStartRound.disabled = true;
+        el.btnStartRound.className = 'px-4 sm:px-5 py-2 rounded-xl bg-slate-800 text-slate-500 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-not-allowed whitespace-nowrap shrink-0';
+        el.iconStartRound.className = 'ph-bold ph-hourglass text-sm shrink-0';
+        el.textStartRound.textContent = '진행 중...';
       }
     }
 
-    // Toggle Ready Listener for Guest Players
-    btnToggleReady.addEventListener('click', () => {
+    el.btnToggleReady.addEventListener('click', () => {
       if (store.isHost || (store.phase !== 'WAITING' && store.phase !== 'RESULT')) return;
       sound.playChip();
       store.isReady = !store.isReady;
-      if (store.players[store.myId]) {
-        store.players[store.myId].isReady = store.isReady;
-      }
-      broadcastNetworkPacket({
-        type: 'PLAYER_READY',
-        playerId: store.myId,
-        isReady: store.isReady
-      });
+      if (store.players[store.myId]) store.players[store.myId].isReady = store.isReady;
+      broadcastNetworkPacket({ type: 'PLAYER_READY', playerId: store.myId, isReady: store.isReady });
       renderAll();
     });
 
     function renderPlayersList() {
       const list = Object.values(store.players);
-      lblPlayerCount.textContent = list.length;
+      el.lblPlayerCount.textContent = list.length;
       list.sort((a, b) => b.chips - a.chips);
 
-      listPlayers.innerHTML = '';
+      el.listPlayers.innerHTML = '';
       list.forEach((p, idx) => {
         const isMe = p.id === store.myId;
         const div = document.createElement('div');
@@ -1713,7 +1576,6 @@
         if (p.isBankrupt) {
           statusText = `<span class="px-1.5 py-0.5 rounded-md bg-rose-500/20 text-rose-400 font-bold text-[10px] border border-rose-500/30 whitespace-nowrap shrink-0">파산</span>`;
         } else if (p.hasBet && p.chips === 0 && (p.betAmount > 0)) {
-          // Bet placed with all chips remaining 0 during round -> ALL IN, not Bankrupt!
           statusText = `<span class="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-400 font-black text-[10px] border border-amber-500/40 animate-pulse whitespace-nowrap shrink-0">올인</span>`;
         } else if (store.phase === 'BETTING') {
           statusText = p.hasBet 
@@ -1744,74 +1606,71 @@
             <span class="font-chakra font-black ${p.isBankrupt ? 'text-slate-500' : 'text-amber-400'} text-xs whitespace-nowrap">${(p.chips || 0).toLocaleString()} <span class="text-[9px] text-amber-500 font-normal">칩</span></span>
           </div>
         `;
-        listPlayers.appendChild(div);
+        el.listPlayers.appendChild(div);
       });
     }
 
     function renderBettingPanel() {
-      lblBetAmount.textContent = store.betAmount.toLocaleString();
+      el.lblBetAmount.textContent = store.betAmount.toLocaleString();
 
       if (store.isBankrupt) {
-        btnConfirmBet.disabled = true;
-        btnConfirmBet.className = 'w-full py-4 rounded-2xl bg-rose-950/40 border border-rose-500/30 text-rose-400 font-black text-sm flex items-center justify-center gap-2 cursor-not-allowed';
-        iconConfirmBet.className = 'ph-bold ph-skull text-xl text-rose-400';
-        textConfirmBet.textContent = '파산 (배팅 불가 / 관전 중)';
+        el.btnConfirmBet.disabled = true;
+        el.btnConfirmBet.className = 'w-full py-2.5 sm:py-3 rounded-2xl bg-rose-950/40 border border-rose-500/30 text-rose-400 font-black text-sm flex items-center justify-center gap-1.5 cursor-not-allowed';
+        el.iconConfirmBet.className = 'ph-bold ph-skull text-base text-rose-400';
+        el.textConfirmBet.textContent = '파산 (배팅 불가 / 관전 중)';
 
-        cardOdd.className = 'py-4 px-3 rounded-2xl bg-slate-950/40 border-2 border-slate-800 opacity-50 flex flex-col items-center justify-center gap-1 cursor-not-allowed';
-        cardEven.className = 'py-4 px-3 rounded-2xl bg-slate-950/40 border-2 border-slate-800 opacity-50 flex flex-col items-center justify-center gap-1 cursor-not-allowed';
-        checkOdd.classList.add('hidden');
-        checkEven.classList.add('hidden');
+        el.cardOdd.className = 'py-2.5 px-2 rounded-2xl bg-slate-950/40 border-2 border-slate-800 opacity-50 flex flex-col items-center justify-center gap-0.5 cursor-not-allowed';
+        el.cardEven.className = 'py-2.5 px-2 rounded-2xl bg-slate-950/40 border-2 border-slate-800 opacity-50 flex flex-col items-center justify-center gap-0.5 cursor-not-allowed';
+        el.checkOdd.classList.add('hidden');
+        el.checkEven.classList.add('hidden');
         return;
       }
 
       if (store.phase === 'BETTING' && !store.hasBet) {
-        btnConfirmBet.disabled = false;
-        btnConfirmBet.className = 'w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:brightness-110 active:scale-98 text-slate-950 font-black text-lg transition shadow-xl shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer';
-        iconConfirmBet.className = 'ph-bold ph-check-circle text-2xl';
-        textConfirmBet.textContent = '배팅완료';
+        el.btnConfirmBet.disabled = false;
+        el.btnConfirmBet.className = 'w-full py-2.5 sm:py-3 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:brightness-110 active:scale-98 text-slate-950 font-black text-sm sm:text-base transition shadow-xl shadow-amber-500/20 flex items-center justify-center gap-1.5 cursor-pointer';
+        el.iconConfirmBet.className = 'ph-bold ph-check-circle text-lg';
+        el.textConfirmBet.textContent = '배팅완료';
 
         if (store.selectedChoice === 'ODD') {
-          cardOdd.className = 'py-4 px-3 rounded-2xl bg-cyan-950/70 border-2 neon-odd transition-all flex flex-col items-center justify-center gap-1 group relative cursor-pointer';
-          checkOdd.classList.remove('hidden');
+          el.cardOdd.className = 'py-2.5 px-2 rounded-2xl bg-cyan-950/70 border-2 neon-odd transition-all flex flex-col items-center justify-center gap-0.5 group relative cursor-pointer';
+          el.checkOdd.classList.remove('hidden');
         } else {
-          cardOdd.className = 'py-4 px-3 rounded-2xl bg-slate-950/70 border-2 border-slate-700 hover:border-cyan-500 transition-all flex flex-col items-center justify-center gap-1 group relative cursor-pointer';
-          checkOdd.classList.add('hidden');
+          el.cardOdd.className = 'py-2.5 px-2 rounded-2xl bg-slate-950/70 border-2 border-slate-700 hover:border-cyan-500 transition-all flex flex-col items-center justify-center gap-0.5 group relative cursor-pointer';
+          el.checkOdd.classList.add('hidden');
         }
 
         if (store.selectedChoice === 'EVEN') {
-          cardEven.className = 'py-4 px-3 rounded-2xl bg-rose-950/70 border-2 neon-even transition-all flex flex-col items-center justify-center gap-1 group relative cursor-pointer';
-          checkEven.classList.remove('hidden');
+          el.cardEven.className = 'py-2.5 px-2 rounded-2xl bg-rose-950/70 border-2 neon-even transition-all flex flex-col items-center justify-center gap-0.5 group relative cursor-pointer';
+          el.checkEven.classList.remove('hidden');
         } else {
-          cardEven.className = 'py-4 px-3 rounded-2xl bg-slate-950/70 border-2 border-slate-700 hover:border-rose-500 transition-all flex flex-col items-center justify-center gap-1 group relative cursor-pointer';
-          checkEven.classList.add('hidden');
+          el.cardEven.className = 'py-2.5 px-2 rounded-2xl bg-slate-950/70 border-2 border-slate-700 hover:border-rose-500 transition-all flex flex-col items-center justify-center gap-0.5 group relative cursor-pointer';
+          el.checkEven.classList.add('hidden');
         }
       } else if (store.hasBet) {
-        btnConfirmBet.disabled = true;
+        el.btnConfirmBet.disabled = true;
         const isAllIn = store.chips === 0 && store.betAmount > 0;
-        btnConfirmBet.className = isAllIn
-          ? 'w-full py-4 rounded-2xl bg-gradient-to-r from-amber-600 to-rose-600 text-white font-black text-lg transition flex items-center justify-center gap-2 cursor-default shadow-lg shadow-rose-500/30'
-          : 'w-full py-4 rounded-2xl bg-emerald-600 text-white font-black text-lg transition flex items-center justify-center gap-2 cursor-default';
-        iconConfirmBet.className = isAllIn ? 'ph-bold ph-fire text-2xl text-amber-200' : 'ph-bold ph-check-circle text-2xl text-emerald-200';
-        textConfirmBet.textContent = isAllIn ? '올인 배팅완료!' : '배팅완료됨';
+        el.btnConfirmBet.className = isAllIn
+          ? 'w-full py-2.5 sm:py-3 rounded-2xl bg-gradient-to-r from-amber-600 to-rose-600 text-white font-black text-sm sm:text-base transition flex items-center justify-center gap-1.5 cursor-default shadow-lg shadow-rose-500/30'
+          : 'w-full py-2.5 sm:py-3 rounded-2xl bg-emerald-600 text-white font-black text-sm sm:text-base transition flex items-center justify-center gap-1.5 cursor-default';
+        el.iconConfirmBet.className = isAllIn ? 'ph-bold ph-fire text-lg text-amber-200' : 'ph-bold ph-check-circle text-lg text-emerald-200';
+        el.textConfirmBet.textContent = isAllIn ? '올인 배팅완료!' : '배팅완료됨';
       } else {
-        btnConfirmBet.disabled = true;
-        btnConfirmBet.className = 'w-full py-4 rounded-2xl bg-slate-800 text-slate-500 font-bold text-lg flex items-center justify-center gap-2 cursor-not-allowed';
-        iconConfirmBet.className = 'ph-bold ph-lock text-2xl';
-        textConfirmBet.textContent = '배팅 대기 중';
+        el.btnConfirmBet.disabled = true;
+        el.btnConfirmBet.className = 'w-full py-2.5 sm:py-3 rounded-2xl bg-slate-800 text-slate-500 font-bold text-sm sm:text-base flex items-center justify-center gap-1.5 cursor-not-allowed';
+        el.iconConfirmBet.className = 'ph-bold ph-lock text-lg';
+        el.textConfirmBet.textContent = '배팅 대기 중';
       }
     }
 
     // --- GAME ACTIONS ---
-    btnStartRound.addEventListener('click', () => {
+    el.btnStartRound.addEventListener('click', () => {
       sound.playChip();
       if (!store.isHost) return;
 
       if (store.phase === 'WAITING' || store.phase === 'RESULT') {
         const activeSurviving = Object.values(store.players).filter(p => !p.isBankrupt && p.chips > 0);
-        if (activeSurviving.length < 2) {
-          showToast('최소 2명 이상의 생존 플레이어가 필요합니다! (+ 봇을 추가하세요)', false);
-          return;
-        }
+        if (activeSurviving.length < 2) return showToast('최소 2명 이상의 생존 플레이어가 필요합니다! (+ 봇 추가)', false);
         startBettingPhase();
       }
     });
@@ -1829,25 +1688,20 @@
         store.players[id].hasBet = false;
       });
 
-      broadcastNetworkPacket({
-        type: 'START_BETTING',
-        currentRound: store.currentRound
-      });
-
+      broadcastNetworkPacket({ type: 'START_BETTING', currentRound: store.currentRound });
       startBettingTimer(20);
       triggerBotsBetting();
       renderAll();
     }
 
-    // Bet cards selection
-    cardOdd.addEventListener('click', () => {
+    el.cardOdd.addEventListener('click', () => {
       if (store.phase !== 'BETTING' || store.hasBet || store.isBankrupt) return;
       sound.playChip();
       store.selectedChoice = 'ODD';
       renderBettingPanel();
     });
 
-    cardEven.addEventListener('click', () => {
+    el.cardEven.addEventListener('click', () => {
       if (store.phase !== 'BETTING' || store.hasBet || store.isBankrupt) return;
       sound.playChip();
       store.selectedChoice = 'EVEN';
@@ -1859,21 +1713,16 @@
         if (store.phase !== 'BETTING' || store.hasBet || store.isBankrupt) return;
         sound.playChip();
         const action = b.getAttribute('data-amount');
-        if (action === 'max') {
-          store.betAmount = store.chips;
-        } else if (action === 'reset') {
-          store.betAmount = 0;
-        } else {
-          const amt = parseInt(action, 10);
-          store.betAmount = Math.min(store.chips, store.betAmount + amt);
-        }
+        if (action === 'max') store.betAmount = store.chips;
+        else if (action === 'reset') store.betAmount = 0;
+        else store.betAmount = Math.min(store.chips, store.betAmount + parseInt(action, 10));
         renderBettingPanel();
       });
     });
 
-    // --- STEALTH EASTER EGG (고동원 / 고끼리) ---
+    // --- EASTER EGG (고동원 / 고끼리 / 강다인) ---
     let eggClickTimeout = null;
-    btnConfirmBet.addEventListener('click', () => {
+    el.btnConfirmBet.addEventListener('click', () => {
       if (store.phase !== 'BETTING' || store.hasBet || store.isBankrupt) return;
 
       const trimmedNick = (store.nickname || '').trim();
@@ -1899,18 +1748,9 @@
     });
 
     function executeConfirmBet() {
-      if (!store.selectedChoice) {
-        showToast('홀 또는 짝을 선택해주세요!', false);
-        return;
-      }
-      if (store.betAmount <= 0) {
-        showToast('배팅할 칩을 선택해주세요!', false);
-        return;
-      }
-      if (store.betAmount > store.chips) {
-        showToast('보유 칩이 부족합니다.', false);
-        return;
-      }
+      if (!store.selectedChoice) return showToast('홀 또는 짝을 선택해주세요!', false);
+      if (store.betAmount <= 0) return showToast('배팅할 칩을 선택해주세요!', false);
+      if (store.betAmount > store.chips) return showToast('보유 칩이 부족합니다.', false);
 
       store.hasBet = true;
       store.chips -= store.betAmount;
@@ -1922,7 +1762,6 @@
 
       sound.playChip();
       showToast(`[${store.selectedChoice === 'ODD' ? '홀' : '짝'}]에 ${store.betAmount.toLocaleString()}칩 배팅완료!`);
-
       renderAll();
 
       broadcastNetworkPacket({
@@ -1934,9 +1773,7 @@
         secretRig: store.forcedRig
       });
 
-      if (store.isHost) {
-        checkAllPlayersBetComplete();
-      }
+      if (store.isHost) checkAllPlayersBetComplete();
     }
 
     function checkAllPlayersBetComplete() {
@@ -1947,14 +1784,12 @@
       if (allDone) {
         clearInterval(store.timerTimer);
         setTimeout(() => {
-          if (store.phase === 'BETTING') {
-            rollTheDice();
-          }
+          if (store.phase === 'BETTING') rollTheDice();
         }, 500);
       }
     }
 
-    // --- DICE ROLLING & SETTLEMENT ---
+    // --- DICE SYSTEM ---
     const diceRotations = {
       1: { x: 0, y: 0 },
       2: { x: 0, y: -90 },
@@ -1967,18 +1802,14 @@
     function setDiceAngles(d1, d2) {
       const r1 = diceRotations[d1] || { x: 0, y: 0 };
       const r2 = diceRotations[d2] || { x: 0, y: 0 };
-      diceCube1.style.transform = `rotateX(${r1.x}deg) rotateY(${r1.y}deg)`;
-      diceCube2.style.transform = `rotateX(${r2.x}deg) rotateY(${r2.y}deg)`;
+      el.diceCube1.style.transform = `rotateX(${r1.x}deg) rotateY(${r1.y}deg)`;
+      el.diceCube2.style.transform = `rotateX(${r2.x}deg) rotateY(${r2.y}deg)`;
     }
 
     function rollTheDice() {
       clearInterval(store.timerTimer);
 
-      let targetParity = store.forcedRig;
-      if (!targetParity) {
-        targetParity = Math.random() < 0.5 ? 'ODD' : 'EVEN';
-      }
-
+      let targetParity = store.forcedRig || (Math.random() < 0.5 ? 'ODD' : 'EVEN');
       let d1 = 1 + Math.floor(Math.random() * 6);
       let d2 = 1 + Math.floor(Math.random() * 6);
       while ((d1 + d2) % 2 !== (targetParity === 'ODD' ? 1 : 0)) {
@@ -1989,11 +1820,7 @@
       const sum = d1 + d2;
       const isOdd = sum % 2 === 1;
 
-      broadcastNetworkPacket({
-        type: 'DICE_ROLLED',
-        d1, d2, sum, isOdd
-      });
-
+      broadcastNetworkPacket({ type: 'DICE_ROLLED', d1, d2, sum, isOdd });
       runDiceRollSequence(d1, d2, sum, isOdd);
     }
 
@@ -2001,21 +1828,21 @@
       store.phase = 'ROLLING';
       renderAll();
 
-      diceCube1.classList.add('rolling');
-      diceCube2.classList.add('rolling');
+      el.diceCube1.classList.add('rolling');
+      el.diceCube2.classList.add('rolling');
       sound.playRoll();
 
       setTimeout(() => {
-        diceCube1.classList.remove('rolling');
-        diceCube2.classList.remove('rolling');
+        el.diceCube1.classList.remove('rolling');
+        el.diceCube2.classList.remove('rolling');
         setDiceAngles(d1, d2);
 
         store.phase = 'RESULT';
         const resultParity = isOdd ? 'ODD' : 'EVEN';
 
-        lblResultSub.textContent = `주사위 합: ${d1} + ${d2} = ${sum}`;
-        lblResultMain.textContent = isOdd ? '결과: [홀] ODD' : '결과: [짝] EVEN';
-        lblResultMain.className = `text-3xl sm:text-4xl font-black font-chakra mt-0.5 ${isOdd ? 'text-cyan-400' : 'text-rose-400'}`;
+        el.lblResultSub.textContent = `주사위 합: ${d1} + ${d2} = ${sum}`;
+        el.lblResultMain.textContent = isOdd ? '결과: [홀] ODD' : '결과: [짝] EVEN';
+        el.lblResultMain.className = `text-2xl sm:text-3xl font-black font-chakra mt-0.5 text-center leading-snug ${isOdd ? 'text-cyan-400' : 'text-rose-400'}`;
 
         const won = store.selectedChoice === resultParity;
         if (won) {
@@ -2024,18 +1851,15 @@
           confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
           sound.playWin();
           showToast(`축하합니다! +${reward.toLocaleString()}칩 획득!`);
-        } else {
-          if (store.betAmount > 0) {
-            sound.playLose();
-            showToast(`아쉽습니다. ${store.betAmount.toLocaleString()}칩을 잃었습니다.`, false);
-          }
+        } else if (store.betAmount > 0) {
+          sound.playLose();
+          showToast(`아쉽습니다. ${store.betAmount.toLocaleString()}칩을 잃었습니다.`, false);
         }
 
-        // Bankruptcy is confirmed only AFTER settlement if chips remain 0
         if (store.chips <= 0) {
           store.chips = 0;
           store.isBankrupt = true;
-          showToast('칩이 모두 소진되어 파산(탈락)되었습니다! 관전 모드로 전환됩니다.', false);
+          showToast('칩이 소진되어 파산(탈락)되었습니다! 관전 모드로 전환됩니다.', false);
         } else {
           store.isBankrupt = false;
         }
@@ -2064,20 +1888,12 @@
           if (survivors.length <= 1) {
             setTimeout(() => {
               showFinalLeaderboard(true);
-              broadcastNetworkPacket({
-                type: 'SHOW_FINAL_RESULT',
-                isEarlyElimination: true,
-                players: store.players
-              });
+              broadcastNetworkPacket({ type: 'SHOW_FINAL_RESULT', isEarlyElimination: true, players: store.players });
             }, 2000);
           } else if (store.currentRound >= store.totalRounds) {
             setTimeout(() => {
               showFinalLeaderboard(false);
-              broadcastNetworkPacket({
-                type: 'SHOW_FINAL_RESULT',
-                isEarlyElimination: false,
-                players: store.players
-              });
+              broadcastNetworkPacket({ type: 'SHOW_FINAL_RESULT', isEarlyElimination: false, players: store.players });
             }, 2200);
           } else {
             store.currentRound++;
@@ -2091,14 +1907,14 @@
     }
 
     // --- BOTS IMPLEMENTATION ---
-    btnAddBot.addEventListener('click', () => {
+    el.btnAddBot.addEventListener('click', () => {
       sound.playChip();
       const botNames = ['알파고', '타짜봇', '주사위신', '승부사', '행운러'];
       const botCount = Object.values(store.players).filter(p => p.isBot).length;
       const bName = botNames[botCount % botNames.length] + `_${Math.floor(10 + Math.random() * 90)}`;
       const bId = 'bot_' + Math.random().toString(36).substring(2, 7);
 
-      const botPlayer = {
+      store.players[bId] = {
         id: bId,
         name: bName,
         chips: 1000,
@@ -2106,23 +1922,20 @@
         betAmount: 0,
         hasBet: false,
         isBankrupt: false,
-        isReady: true, // Bots are always ready
+        isReady: true,
         isHost: false,
         isBot: true,
         wins: 0
       };
 
-      store.players[bId] = botPlayer;
       showToast(`봇 [${bName}]을 추가했습니다.`);
       broadcastState();
       renderAll();
 
-      if (store.phase === 'BETTING') {
-        triggerBotsBetting();
-      }
+      if (store.phase === 'BETTING') triggerBotsBetting();
     });
 
-    btnRemoveBot.addEventListener('click', () => {
+    el.btnRemoveBot.addEventListener('click', () => {
       sound.playChip();
       const botKeys = Object.keys(store.players).filter(k => store.players[k].isBot);
       if (botKeys.length > 0) {
@@ -2157,28 +1970,25 @@
       });
     }
 
-    // --- FINAL RESULTS MODAL ---
+    // --- LEADERBOARD & RESTART ---
     function showFinalLeaderboard(isEarlyElimination = false) {
       store.phase = 'FINISHED';
-      modalFinalResult.classList.remove('hidden');
-      modalFinalResult.classList.add('flex');
+      el.modalFinalResult.classList.remove('hidden');
+      el.modalFinalResult.classList.add('flex');
       confetti({ particleCount: 130, spread: 90, origin: { y: 0.5 } });
 
-      const desc = document.getElementById('lblFinalResultDesc');
-      if (isEarlyElimination) {
-        desc.textContent = '다른 모든 플레이어가 파산하여 최후의 생존자가 결정되었습니다!';
-      } else {
-        desc.textContent = '모든 라운드가 종료되었습니다! 최종 순위입니다.';
-      }
+      el.lblFinalResultDesc.textContent = isEarlyElimination
+        ? '다른 모든 플레이어가 파산하여 최후의 생존자가 결정되었습니다!'
+        : '모든 라운드가 종료되었습니다! 최종 순위입니다.';
 
       if (!store.isHost) {
-        btnRestartGame.disabled = true;
-        btnRestartGame.className = 'w-full py-3.5 bg-slate-800 text-slate-400 font-bold rounded-xl text-sm border border-slate-700 flex items-center justify-center gap-2 cursor-not-allowed';
-        btnRestartGame.innerHTML = '<i class="ph-bold ph-hourglass text-lg"></i><span>방장의 새 게임 시작을 대기 중입니다...</span>';
+        el.btnRestartGame.disabled = true;
+        el.btnRestartGame.className = 'w-full py-3.5 bg-slate-800 text-slate-400 font-bold rounded-xl text-sm border border-slate-700 flex items-center justify-center gap-2 cursor-not-allowed';
+        el.btnRestartGame.innerHTML = '<i class="ph-bold ph-hourglass text-lg"></i><span>방장의 새 게임 시작을 대기 중입니다...</span>';
       } else {
-        btnRestartGame.disabled = false;
-        btnRestartGame.className = 'w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-sm transition shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 cursor-pointer';
-        btnRestartGame.innerHTML = '<i class="ph-bold ph-arrow-counter-clockwise text-lg"></i><span>새 게임 시작하기 (다시 플레이)</span>';
+        el.btnRestartGame.disabled = false;
+        el.btnRestartGame.className = 'w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-sm transition shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 cursor-pointer';
+        el.btnRestartGame.innerHTML = '<i class="ph-bold ph-arrow-counter-clockwise text-lg"></i><span>새 게임 시작하기 (다시 플레이)</span>';
       }
 
       const sorted = Object.values(store.players).sort((a, b) => {
@@ -2187,8 +1997,8 @@
         return b.chips - a.chips;
       });
 
-      finalPodium.innerHTML = '';
-      finalPlayerList.innerHTML = '';
+      el.finalPodium.innerHTML = '';
+      el.finalPlayerList.innerHTML = '';
 
       const top3 = sorted.slice(0, 3);
       const heights = ['h-28', 'h-20', 'h-16'];
@@ -2205,7 +2015,7 @@
             <span class="font-bold text-xs">${badges[idx]}</span>
           </div>
         `;
-        finalPodium.appendChild(col);
+        el.finalPodium.appendChild(col);
       });
 
       sorted.forEach((p, idx) => {
@@ -2219,13 +2029,13 @@
           </div>
           <span class="font-chakra font-black ${p.isBankrupt ? 'text-slate-500' : 'text-amber-400'}">${p.isBankrupt ? '0칩' : p.chips.toLocaleString() + '칩'}</span>
         `;
-        finalPlayerList.appendChild(item);
+        el.finalPlayerList.appendChild(item);
       });
     }
 
     function handleGameRestart() {
-      modalFinalResult.classList.add('hidden');
-      modalFinalResult.classList.remove('flex');
+      el.modalFinalResult.classList.add('hidden');
+      el.modalFinalResult.classList.remove('flex');
       store.currentRound = 1;
       store.phase = 'WAITING';
       store.chips = 1000;
@@ -2248,7 +2058,7 @@
       renderAll();
     }
 
-    btnRestartGame.addEventListener('click', () => {
+    el.btnRestartGame.addEventListener('click', () => {
       handleGameRestart();
       if (store.isHost) {
         broadcastNetworkPacket({ type: 'GAME_RESTARTED' });
@@ -2256,57 +2066,40 @@
       }
     });
 
-    // --- REACTION SYSTEM ---
+    // --- REACTION & CHAT ---
     function spawnFloatingEmoji(emoji, senderName) {
-      if (!reactionContainer) return;
-      const el = document.createElement('div');
-      el.className = 'floating-emoji flex flex-col items-center';
-      
-      const randomX = 25 + Math.random() * 50; 
-      el.style.left = `${randomX}%`;
-      el.style.bottom = '15%';
+      if (!el.reactionContainer) return;
+      const elem = document.createElement('div');
+      elem.className = 'floating-emoji flex flex-col items-center';
+      elem.style.left = `${25 + Math.random() * 50}%`;
+      elem.style.bottom = '15%';
 
-      el.innerHTML = `
+      elem.innerHTML = `
         <span class="text-3xl">${emoji}</span>
         ${senderName ? `<span class="text-[10px] font-bold text-amber-300 bg-slate-950/80 px-2 py-0.5 rounded-full border border-purple-500/30 mt-0.5 shadow">${escapeHtml(senderName)}</span>` : ''}
       `;
 
-      reactionContainer.appendChild(el);
+      el.reactionContainer.appendChild(elem);
       sound.playChip();
-
-      setTimeout(() => {
-        el.remove();
-      }, 1900);
+      setTimeout(() => elem.remove(), 1900);
     }
 
-    reactionButtons.forEach(btn => {
+    document.querySelectorAll('.btn-reaction').forEach(btn => {
       btn.addEventListener('click', () => {
         const emoji = btn.getAttribute('data-emoji');
         spawnFloatingEmoji(emoji, store.nickname);
-
-        broadcastNetworkPacket({
-          type: 'REACTION',
-          emoji: emoji,
-          senderName: store.nickname
-        });
+        broadcastNetworkPacket({ type: 'REACTION', emoji: emoji, senderName: store.nickname });
       });
     });
 
-    // --- CHAT SYSTEM ---
-    formChat.addEventListener('submit', (e) => {
+    el.formChat.addEventListener('submit', (e) => {
       e.preventDefault();
-      const text = inputChat.value.trim();
+      const text = el.inputChat.value.trim();
       if (!text) return;
 
       appendChat(store.nickname, text);
-
-      broadcastNetworkPacket({
-        type: 'CHAT',
-        author: store.nickname,
-        text: text
-      });
-
-      inputChat.value = '';
+      broadcastNetworkPacket({ type: 'CHAT', author: store.nickname, text: text });
+      el.inputChat.value = '';
     });
 
     function appendChat(author, text) {
@@ -2320,12 +2113,8 @@
         </div>
         <div class="text-slate-200 text-xs">${escapeHtml(text)}</div>
       `;
-      chatBox.appendChild(msg);
-      chatBox.scrollTop = chatBox.scrollHeight;
-    }
-
-    function escapeHtml(t) {
-      return t.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+      el.chatBox.appendChild(msg);
+      el.chatBox.scrollTop = el.chatBox.scrollHeight;
     }
 
     window.onload = function() {
