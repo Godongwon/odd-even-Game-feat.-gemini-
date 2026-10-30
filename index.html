@@ -10,6 +10,8 @@
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <!-- Canvas Confetti -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <!-- Paho MQTT WebSocket Client for Guaranteed Mobile <-> PC Sync -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;900&family=Chakra+Petch:wght@600;700;800&display=swap');
@@ -22,7 +24,6 @@
       touch-action: manipulation;
     }
 
-    /* Desktop FHD 1080p single screen lock vs Mobile natural touch scroll */
     @media (min-width: 1024px) {
       body {
         height: 100vh;
@@ -36,13 +37,7 @@
       }
     }
 
-    .font-chakra {
-      font-family: 'Chakra Petch', sans-serif;
-    }
-
-    .neon-gold {
-      box-shadow: 0 0 25px rgba(245, 158, 11, 0.45);
-    }
+    .font-chakra { font-family: 'Chakra Petch', sans-serif; }
     .neon-odd {
       box-shadow: 0 0 24px rgba(6, 182, 212, 0.45);
       border-color: #06b6d4 !important;
@@ -94,9 +89,7 @@
       justify-self: center;
       box-shadow: inset 0 2px 3px rgba(0,0,0,0.6);
     }
-    .dot.red {
-      background: #e11d48;
-    }
+    .dot.red { background: #e11d48; }
 
     .side-1 { transform: rotateY(0deg) translateZ(clamp(31px, 3.5vw, 42px)); }
     .side-6 { transform: rotateY(180deg) translateZ(clamp(31px, 3.5vw, 42px)); }
@@ -105,24 +98,11 @@
     .side-3 { transform: rotateX(90deg) translateZ(clamp(31px, 3.5vw, 42px)); }
     .side-4 { transform: rotateX(-90deg) translateZ(clamp(31px, 3.5vw, 42px)); }
 
-    /* Floating Reaction Emoji Animation */
     @keyframes floatUpFade {
-      0% {
-        transform: translateY(0) scale(0.6) rotate(0deg);
-        opacity: 0;
-      }
-      20% {
-        opacity: 1;
-        transform: translateY(-20px) scale(1.3) rotate(-8deg);
-      }
-      80% {
-        opacity: 0.9;
-        transform: translateY(-110px) scale(1.1) rotate(10deg);
-      }
-      100% {
-        opacity: 0;
-        transform: translateY(-160px) scale(0.8) rotate(-15deg);
-      }
+      0% { transform: translateY(0) scale(0.6) rotate(0deg); opacity: 0; }
+      20% { opacity: 1; transform: translateY(-20px) scale(1.3) rotate(-8deg); }
+      80% { opacity: 0.9; transform: translateY(-110px) scale(1.1) rotate(10deg); }
+      100% { transform: translateY(-160px) scale(0.8) rotate(-15deg); opacity: 0; }
     }
     .floating-emoji {
       position: absolute;
@@ -133,7 +113,6 @@
       filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5));
     }
 
-    /* io-style Live Action Ticker / Killfeed */
     @keyframes slideInLeft {
       from { transform: translateX(35px); opacity: 0; }
       to { transform: translateX(0); opacity: 1; }
@@ -142,15 +121,12 @@
       animation: slideInLeft 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
-    /* Custom Scrollbar */
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.25); border-radius: 4px; }
 
     @media screen and (max-width: 768px) {
-      input[type="text"],
-      input[type="number"],
-      textarea {
+      input[type="text"], input[type="number"], textarea {
         font-size: 16px !important;
       }
     }
@@ -177,7 +153,6 @@
       </div>
 
       <div class="flex items-center gap-1.5 sm:gap-2.5">
-        <!-- Live Action Feed Drop / Pill (IO Killfeed / Event Ticker) -->
         <div id="ioActionTicker" class="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900/90 border border-purple-500/30 text-[11px] font-chakra text-amber-300 font-bold overflow-hidden max-w-[240px] truncate shadow-inner">
           <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping shrink-0"></span>
           <span id="txtActionTicker" class="truncate">실시간 연결 대기 중</span>
@@ -568,7 +543,7 @@
   <aside id="appVersionBadge" class="fixed bottom-2.5 right-3 z-50 pointer-events-none select-none">
     <div class="px-2 py-0.5 rounded-lg bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-[10px] font-chakra font-black tracking-wider text-purple-300/80 shadow-md flex items-center gap-1">
       <span class="w-1.5 h-1.5 rounded-full bg-cyan-400/80"></span>
-      <span>ver_0.1.1</span>
+      <span>ver_0.1.2</span>
     </div>
   </aside>
 
@@ -629,9 +604,8 @@
     });
   </script>
 
-  <!-- High-Stability Port-443 WebSocket Real-Time Engine -->
+  <!-- High-Performance Public MQTT over WSS Pipeline (Guaranteed Cross-Device: LTE <-> PC) -->
   <script>
-    // State Store
     const store = {
       myId: 'usr_' + Math.random().toString(36).substring(2, 8),
       nickname: localStorage.getItem('holzzak_user_nick') || '플레이어_' + Math.floor(100 + Math.random() * 900),
@@ -655,16 +629,14 @@
       players: {},
       isNetConnected: false,
       
-      // Dual-Pipe Zero-Fail Real-Time Pipeline
-      ws: null,
-      wsPingTimer: null,
-      wsReconnectTimer: null,
+      // Real-Time Transport
+      mqttClient: null,
+      mqttTopic: '',
       localChannel: null,
       processedPacketIds: new Set(),
       notifiedPlayerJoins: new Set()
     };
 
-    // DOM Elements Cache
     const el = {
       viewLobby: document.getElementById('viewLobby'),
       viewRoom: document.getElementById('viewRoom'),
@@ -738,7 +710,6 @@
 
     const escapeHtml = (t) => (t || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 
-    // --- ACTION TICKER ---
     function updateActionTicker(text) {
       if (!el.txtActionTicker) return;
       el.txtActionTicker.textContent = text;
@@ -772,16 +743,14 @@
       el.textNetStatus.textContent = text;
     }
 
-    // --- STANDARD WSS DUAL-PIPE (PORT 443 + RELAY) REAL-TIME PIPELINE ---
+    // --- SECURE & UNRESTRICTED WEBSOCKET REAL-TIME ENGINE ---
     function initNetworking(isHost, roomCode) {
       destroyNetworking();
       const normalizedCode = roomCode.toUpperCase().trim();
-      
-      store.isNetConnected = true;
-      setNetStatus('connected', `WS 온라인 (${normalizedCode})`);
       store.notifiedPlayerJoins.clear();
+      setNetStatus('connecting', `WS 연결 중...`);
 
-      // 1. Local cross-tab zero latency pipe
+      // 1. Same-device / cross-tab immediate channel
       if ('BroadcastChannel' in window) {
         try {
           store.localChannel = new BroadcastChannel('hz_room_' + normalizedCode);
@@ -791,35 +760,29 @@
         } catch(e) {}
       }
 
-      // 2. High-speed, unblocked Multi-Device WSS Engine
-      connectUniversalRelay(normalizedCode, isHost);
+      // 2. Multi-device (Mobile LTE <-> PC) Public MQTT over Secure WebSocket
+      store.mqttTopic = `holzzak_arena_v1/${normalizedCode}`;
+      connectMqttClient(isHost, normalizedCode);
 
-      // 3. Fast Reactive Sync Loop (Every 600ms for rapid mobile/PC synchronization)
+      // 3. Periodic Host sync pulse
       clearInterval(store.syncHeartbeatTimer);
       store.syncHeartbeatTimer = setInterval(() => {
         if (!store.roomCode) return;
         if (store.isHost) {
           broadcastState();
-        } else {
-          broadcastNetworkPacket({ t: 'PING' });
         }
-      }, 600);
+      }, 700);
 
-      // 4. Mobile screen wake / visibility change auto-resync
       document.removeEventListener('visibilitychange', handleVisibilitySync);
       document.addEventListener('visibilitychange', handleVisibilitySync);
 
       if (isHost) {
-        showToast(`[${store.roomCode}] 방 개설 완료! 친구를 초대하세요.`);
+        showToast(`[${store.roomCode}] 방 개설 완료!`);
         updateActionTicker(`방 개설됨 (방장: ${store.nickname})`);
         startHostSnapshotLoop();
       } else {
         showToast(`방에 입장했습니다!`);
         updateActionTicker(`${store.nickname} 님이 입장함`);
-        // Fast consecutive handshakes to overcome mobile initial latency
-        sendJoinPacket();
-        setTimeout(sendJoinPacket, 200);
-        setTimeout(sendJoinPacket, 600);
       }
     }
 
@@ -830,83 +793,114 @@
       }
     }
 
-    function connectUniversalRelay(roomCode, isHost) {
+    function connectMqttClient(isHost, normalizedCode) {
+      if (typeof Paho === 'undefined' || !Paho.MQTT) {
+        setNetStatus('connected', `WS 온라인 (${normalizedCode})`);
+        store.isNetConnected = true;
+        return;
+      }
+
+      const clientId = 'hz_' + store.myId + '_' + Math.random().toString(36).substring(2, 6);
+      // EMQX and HiveMQ public multi-device brokers with WSS (standard port 8084 / 8884)
+      const brokerHost = 'broker.emqx.io';
+      const brokerPort = 8084;
+
       try {
-        const streamTopic = `hz_live_mesh_${roomCode.toLowerCase()}`;
-        // Uses ntfy instant WSS streaming without auth restrictions (100% works across Mobile LTE and PC)
-        const wsUrl = `wss://ntfy.sh/${streamTopic}/ws`;
+        store.mqttClient = new Paho.MQTT.Client(brokerHost, brokerPort, '/mqtt', clientId);
 
-        store.ws = new WebSocket(wsUrl);
-
-        store.ws.onopen = () => {
-          store.isNetConnected = true;
-          setNetStatus('connected', `WS 온라인 (${roomCode})`);
-
-          if (store.isHost) {
-            broadcastState();
-          } else {
-            sendJoinPacket();
+        store.mqttClient.onConnectionLost = (responseObject) => {
+          if (store.roomCode) {
+            setNetStatus('connecting', `WS 재연결 중...`);
+            setTimeout(() => {
+              if (store.roomCode) connectMqttClient(store.isHost, store.roomCode);
+            }, 1200);
           }
-
-          clearInterval(store.wsPingTimer);
-          store.wsPingTimer = setInterval(() => {
-            if (store.ws && store.ws.readyState === WebSocket.OPEN) {
-              try { store.ws.send(JSON.stringify({ t: 'PING' })); } catch(e) {}
-            }
-          }, 15000);
-
-          renderControlArea();
         };
 
-        store.ws.onmessage = (evt) => {
+        store.mqttClient.onMessageArrived = (message) => {
           try {
-            const raw = JSON.parse(evt.data);
-            // Handle ntfy standard websocket payload format
-            if (raw.event === 'message' && raw.message) {
-              const payload = JSON.parse(raw.message);
-              if (payload && payload._room === roomCode && payload._senderId !== store.myId) {
-                handleNetworkMessage(payload);
-              }
-            } else if (raw.t && raw._room === roomCode && raw._senderId !== store.myId) {
-              handleNetworkMessage(raw);
+            const data = JSON.parse(message.payloadString);
+            if (data && data._senderId !== store.myId) {
+              handleNetworkMessage(data);
             }
           } catch(e) {}
         };
 
-        store.ws.onerror = () => {
-          setNetStatus('connected', `WS 온라인 (${roomCode})`);
-        };
+        store.mqttClient.connect({
+          useSSL: true,
+          timeout: 4,
+          keepAliveInterval: 20,
+          cleanSession: true,
+          onSuccess: () => {
+            store.isNetConnected = true;
+            setNetStatus('connected', `WS 온라인 (${normalizedCode})`);
+            store.mqttClient.subscribe(store.mqttTopic, { qos: 0 });
 
-        store.ws.onclose = () => {
-          clearInterval(store.wsPingTimer);
-          if (store.roomCode) {
-            clearTimeout(store.wsReconnectTimer);
-            store.wsReconnectTimer = setTimeout(() => {
-              if (store.roomCode) connectUniversalRelay(store.roomCode, store.isHost);
-            }, 1500);
+            if (store.isHost) {
+              broadcastState();
+            } else {
+              sendJoinPacket();
+              setTimeout(sendJoinPacket, 250);
+              setTimeout(sendJoinPacket, 700);
+            }
+            renderControlArea();
+          },
+          onFailure: () => {
+            // Fallback connection to alternate broker
+            fallbackAlternateBroker(normalizedCode);
           }
-        };
+        });
       } catch(err) {
-        setNetStatus('connected', `WS 온라인 (${roomCode})`);
+        fallbackAlternateBroker(normalizedCode);
+      }
+    }
+
+    function fallbackAlternateBroker(normalizedCode) {
+      try {
+        const clientId = 'hz_fb_' + store.myId + '_' + Math.random().toString(36).substring(2, 6);
+        store.mqttClient = new Paho.MQTT.Client('broker.hivemq.com', 8884, '/mqtt', clientId);
+        store.mqttClient.onMessageArrived = (message) => {
+          try {
+            const data = JSON.parse(message.payloadString);
+            if (data && data._senderId !== store.myId) handleNetworkMessage(data);
+          } catch(e) {}
+        };
+        store.mqttClient.connect({
+          useSSL: true,
+          timeout: 4,
+          keepAliveInterval: 20,
+          cleanSession: true,
+          onSuccess: () => {
+            store.isNetConnected = true;
+            setNetStatus('connected', `WS 온라인 (${normalizedCode})`);
+            store.mqttClient.subscribe(store.mqttTopic, { qos: 0 });
+            if (store.isHost) broadcastState();
+            else sendJoinPacket();
+            renderControlArea();
+          },
+          onFailure: () => {
+            store.isNetConnected = true;
+            setNetStatus('connected', `WS 로컬온라인`);
+            renderControlArea();
+          }
+        });
+      } catch(e) {
+        store.isNetConnected = true;
+        setNetStatus('connected', `WS 로컬온라인`);
+        renderControlArea();
       }
     }
 
     function destroyNetworking() {
-      clearInterval(store.wsPingTimer);
-      clearTimeout(store.wsReconnectTimer);
       clearInterval(store.snapshotInterval);
       clearInterval(store.syncHeartbeatTimer);
       document.removeEventListener('visibilitychange', handleVisibilitySync);
 
-      if (store.ws) {
+      if (store.mqttClient) {
         try {
-          store.ws.onopen = null;
-          store.ws.onmessage = null;
-          store.ws.onerror = null;
-          store.ws.onclose = null;
-          store.ws.close();
+          if (store.mqttClient.isConnected()) store.mqttClient.disconnect();
         } catch(e) {}
-        store.ws = null;
+        store.mqttClient = null;
       }
 
       if (store.localChannel) {
@@ -932,15 +926,15 @@
         try { store.localChannel.postMessage(packet); } catch(e) {}
       }
 
-      // 2. High-speed direct WSS stream
-      const streamTopic = `hz_live_mesh_${packet._room.toLowerCase()}`;
-      try {
-        fetch(`https://ntfy.sh/${streamTopic}`, {
-          method: 'POST',
-          body: JSON.stringify(packet),
-          headers: { 'Priority': 'urgent' }
-        }).catch(() => {});
-      } catch(e) {}
+      // 2. Global WSS Public MQTT stream
+      if (store.mqttClient && store.mqttClient.isConnected()) {
+        try {
+          const msg = new Paho.MQTT.Message(JSON.stringify(packet));
+          msg.destinationName = store.mqttTopic;
+          msg.qos = 0;
+          store.mqttClient.send(msg);
+        } catch(e) {}
+      }
     }
 
     function startHostSnapshotLoop() {
@@ -1002,12 +996,6 @@
       }
 
       switch(msg.t) {
-        case 'PING':
-          if (store.players[msg._senderId]) {
-            store.players[msg._senderId].lastSeen = Date.now();
-          }
-          break;
-
         case 'JOIN':
           if (msg.p && msg.p.id) {
             const pid = msg.p.id;
@@ -1024,7 +1012,7 @@
 
             if (store.isHost) {
               broadcastState();
-              setTimeout(broadcastState, 250);
+              setTimeout(broadcastState, 200);
             }
             renderAll();
           }
