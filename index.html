@@ -750,7 +750,7 @@
   <aside id="appVersionBadge" class="fixed bottom-2.5 right-3 z-50 pointer-events-none select-none">
     <div class="px-2 py-0.5 rounded-lg bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-[10px] font-chakra font-black tracking-wider text-purple-300/80 shadow-md flex items-center gap-1">
       <span class="w-1.5 h-1.5 rounded-full bg-cyan-400/80"></span>
-      <span>ver_0.3.5</span>
+      <span>ver_0.3.6</span>
     </div>
   </aside>
 
@@ -1092,6 +1092,8 @@
         store.mqttClient = new Paho.MQTT.Client(brokerHost, brokerPort, '/mqtt', clientId);
 
         store.mqttClient.onConnectionLost = (responseObject) => {
+          store.isNetConnected = false;
+          renderControlArea();
           if (store.roomCode) {
             setNetStatus('connecting', `WS 재연결 중...`);
             setTimeout(() => {
@@ -1141,6 +1143,10 @@
       try {
         const clientId = 'hz_fb_' + store.myId + '_' + Math.random().toString(36).substring(2, 6);
         store.mqttClient = new Paho.MQTT.Client('broker.hivemq.com', 8884, '/mqtt', clientId);
+        store.mqttClient.onConnectionLost = () => {
+          store.isNetConnected = false;
+          renderControlArea();
+        };
         store.mqttClient.onMessageArrived = (message) => {
           try {
             const data = JSON.parse(message.payloadString);
@@ -2090,6 +2096,15 @@
         el.btnToggleReady.classList.remove('hidden');
         el.btnToggleReady.classList.add('flex');
 
+        // 소켓이 아직 연결되지 않았을 때는 준비완료 버튼 비활성화
+        if (!store.isNetConnected) {
+          el.btnToggleReady.disabled = true;
+          el.btnToggleReady.className = 'px-4 sm:px-5 py-2 rounded-xl bg-slate-800 text-slate-500 border border-slate-700/60 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-not-allowed whitespace-nowrap shrink-0';
+          el.iconToggleReady.className = 'ph-bold ph-spinner gap-spin text-base animate-spin text-amber-400 shrink-0';
+          el.textToggleReady.textContent = 'WS 연결 중...';
+          return;
+        }
+
         if (store.phase === 'WAITING' || store.phase === 'RESULT') {
           if (store.isReady) {
             el.btnToggleReady.disabled = false;
@@ -2148,7 +2163,11 @@
     }
 
     el.btnToggleReady.addEventListener('click', () => {
-      if (store.isHost || (store.phase !== 'WAITING' && store.phase !== 'RESULT')) return;
+      if (store.isHost) return;
+      if (!store.isNetConnected) {
+        return showToast('소켓(WS) 연결 중입니다. 잠시 후 다시 시도해주세요.', false);
+      }
+      if (store.phase !== 'WAITING' && store.phase !== 'RESULT') return;
       sound.playChip();
       store.isReady = !store.isReady;
       if (store.players[store.myId]) store.players[store.myId].isReady = store.isReady;
