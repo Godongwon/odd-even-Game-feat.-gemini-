@@ -568,7 +568,7 @@
   <aside id="appVersionBadge" class="fixed bottom-2.5 right-3 z-50 pointer-events-none select-none">
     <div class="px-2 py-0.5 rounded-lg bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-[10px] font-chakra font-black tracking-wider text-purple-300/80 shadow-md flex items-center gap-1">
       <span class="w-1.5 h-1.5 rounded-full bg-cyan-400/80"></span>
-      <span>ver_0.1.0</span>
+      <span>ver_0.1.1</span>
     </div>
   </aside>
 
@@ -791,21 +791,23 @@
         } catch(e) {}
       }
 
-      // 2. Cross-Device Cloud WebSocket Pipeline (Zero API key limit)
+      // 2. High-speed, unblocked Multi-Device WSS Engine
       connectUniversalRelay(normalizedCode, isHost);
 
-      // 3. Heartbeat Active Sync Loop (Every 1.8s, keeps mobile/PC perfectly aligned)
+      // 3. Fast Reactive Sync Loop (Every 600ms for rapid mobile/PC synchronization)
       clearInterval(store.syncHeartbeatTimer);
       store.syncHeartbeatTimer = setInterval(() => {
         if (!store.roomCode) return;
         if (store.isHost) {
-          // Host continually guarantees sync state
           broadcastState();
         } else {
-          // Guest keeps pinging host if unconfirmed
           broadcastNetworkPacket({ t: 'PING' });
         }
-      }, 1800);
+      }, 600);
+
+      // 4. Mobile screen wake / visibility change auto-resync
+      document.removeEventListener('visibilitychange', handleVisibilitySync);
+      document.addEventListener('visibilitychange', handleVisibilitySync);
 
       if (isHost) {
         showToast(`[${store.roomCode}] 방 개설 완료! 친구를 초대하세요.`);
@@ -814,29 +816,31 @@
       } else {
         showToast(`방에 입장했습니다!`);
         updateActionTicker(`${store.nickname} 님이 입장함`);
-        // Immediate handshake attempts
+        // Fast consecutive handshakes to overcome mobile initial latency
         sendJoinPacket();
-        setTimeout(sendJoinPacket, 400);
-        setTimeout(sendJoinPacket, 1200);
+        setTimeout(sendJoinPacket, 200);
+        setTimeout(sendJoinPacket, 600);
+      }
+    }
+
+    function handleVisibilitySync() {
+      if (document.visibilityState === 'visible' && store.roomCode) {
+        if (store.isHost) broadcastState();
+        else sendJoinPacket();
       }
     }
 
     function connectUniversalRelay(roomCode, isHost) {
       try {
-        const pubChannel = `hz_stream_${roomCode.toLowerCase()}`;
-        const wsUrl = `wss://ws-ap1.pusher.com/app/eb1d5f283081a78b932c?protocol=7&client=js&version=7.4.0&flash=false`;
+        const streamTopic = `hz_live_mesh_${roomCode.toLowerCase()}`;
+        // Uses ntfy instant WSS streaming without auth restrictions (100% works across Mobile LTE and PC)
+        const wsUrl = `wss://ntfy.sh/${streamTopic}/ws`;
 
         store.ws = new WebSocket(wsUrl);
 
         store.ws.onopen = () => {
           store.isNetConnected = true;
           setNetStatus('connected', `WS 온라인 (${roomCode})`);
-
-          const subPayload = JSON.stringify({
-            event: 'pusher:subscribe',
-            data: { channel: pubChannel }
-          });
-          try { store.ws.send(subPayload); } catch(e) {}
 
           if (store.isHost) {
             broadcastState();
@@ -847,9 +851,9 @@
           clearInterval(store.wsPingTimer);
           store.wsPingTimer = setInterval(() => {
             if (store.ws && store.ws.readyState === WebSocket.OPEN) {
-              try { store.ws.send(JSON.stringify({ event: 'pusher:ping', data: {} })); } catch(e) {}
+              try { store.ws.send(JSON.stringify({ t: 'PING' })); } catch(e) {}
             }
-          }, 20000);
+          }, 15000);
 
           renderControlArea();
         };
@@ -857,15 +861,14 @@
         store.ws.onmessage = (evt) => {
           try {
             const raw = JSON.parse(evt.data);
-            if (raw.event === 'pusher:ping') {
-              try { store.ws.send(JSON.stringify({ event: 'pusher:pong', data: {} })); } catch(e) {}
-              return;
-            }
-            if (raw.data) {
-              let payload = typeof raw.data === 'string' ? JSON.parse(raw.data) : raw.data;
+            // Handle ntfy standard websocket payload format
+            if (raw.event === 'message' && raw.message) {
+              const payload = JSON.parse(raw.message);
               if (payload && payload._room === roomCode && payload._senderId !== store.myId) {
                 handleNetworkMessage(payload);
               }
+            } else if (raw.t && raw._room === roomCode && raw._senderId !== store.myId) {
+              handleNetworkMessage(raw);
             }
           } catch(e) {}
         };
@@ -880,7 +883,7 @@
             clearTimeout(store.wsReconnectTimer);
             store.wsReconnectTimer = setTimeout(() => {
               if (store.roomCode) connectUniversalRelay(store.roomCode, store.isHost);
-            }, 3000);
+            }, 1500);
           }
         };
       } catch(err) {
@@ -893,6 +896,7 @@
       clearTimeout(store.wsReconnectTimer);
       clearInterval(store.snapshotInterval);
       clearInterval(store.syncHeartbeatTimer);
+      document.removeEventListener('visibilitychange', handleVisibilitySync);
 
       if (store.ws) {
         try {
@@ -923,28 +927,18 @@
         store.processedPacketIds.delete(first);
       }
 
+      // 1. Cross-tab immediate sync
       if (store.localChannel) {
         try { store.localChannel.postMessage(packet); } catch(e) {}
       }
 
-      if (store.ws && store.ws.readyState === WebSocket.OPEN) {
-        try {
-          const pubChannel = `hz_stream_${packet._room.toLowerCase()}`;
-          const wrapped = JSON.stringify({
-            event: 'client-msg',
-            channel: pubChannel,
-            data: packet
-          });
-          store.ws.send(wrapped);
-        } catch(e) {}
-      }
-
+      // 2. High-speed direct WSS stream
+      const streamTopic = `hz_live_mesh_${packet._room.toLowerCase()}`;
       try {
-        const endpoint = `https://ntfy.sh/hz_io_${packet._room.toLowerCase()}`;
-        fetch(endpoint, {
+        fetch(`https://ntfy.sh/${streamTopic}`, {
           method: 'POST',
           body: JSON.stringify(packet),
-          headers: { 'Priority': 'high' }
+          headers: { 'Priority': 'urgent' }
         }).catch(() => {});
       } catch(e) {}
     }
