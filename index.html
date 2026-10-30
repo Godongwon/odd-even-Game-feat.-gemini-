@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>홀짝 아레나 (Odd/Even Live)</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -131,6 +131,15 @@
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.25); border-radius: 4px; }
+
+    /* iOS Safari Auto-Zoom Fix on Input Focus (Requires font-size >= 16px) */
+    @media screen and (max-width: 768px) {
+      input[type="text"],
+      input[type="number"],
+      textarea {
+        font-size: 16px !important;
+      }
+    }
   </style>
 </head>
 <body class="flex flex-col min-h-screen text-slate-100 selection:bg-amber-500 selection:text-black">
@@ -511,7 +520,7 @@
             <!-- Input & Send (Fixed to Bottom) -->
             <form id="formChat" class="flex items-center gap-1.5 mt-auto">
               <input type="text" id="inputChat" maxlength="50" placeholder="메시지 입력..."
-                class="flex-1 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition" />
+                class="flex-1 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5 text-base sm:text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition" />
               <button type="submit" class="px-3 py-1.5 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-slate-950 font-black rounded-xl text-xs active:scale-95 transition shadow-md shadow-cyan-500/20">
                 전송
               </button>
@@ -637,7 +646,8 @@
       storageListener: null,
       heartbeatTimer: null,
       syncTimer: null,
-      lastEventTimestamp: 0
+      lastEventTimestamp: Date.now(),
+      processedPacketIds: new Set()
     };
 
     // DOM Elements
@@ -841,12 +851,13 @@
     function startCloudSync(roomCode, isHost) {
       clearInterval(store.syncTimer);
       const endpoint = `https://ntfy.sh/hz_live_${roomCode}`;
+      store.lastEventTimestamp = Date.now();
 
       // Polling once every 2 seconds without infinite reconnect loops
       store.syncTimer = setInterval(async () => {
         if (!store.roomCode) return;
         try {
-          const resp = await fetch(`${endpoint}/json?since=${store.lastEventTimestamp || (Date.now() - 3000)}ms&poll=1`, {
+          const resp = await fetch(`${endpoint}/json?since=${store.lastEventTimestamp || (Date.now() - 2500)}ms&poll=1`, {
             cache: 'no-store'
           });
           if (!resp.ok) return;
@@ -990,7 +1001,16 @@
 
     function broadcastNetworkPacket(packet) {
       packet._senderId = store.myId;
+      packet._pktId = store.myId + '_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
       packet._t = Date.now();
+      
+      // Memorize self packet id
+      store.processedPacketIds.add(packet._pktId);
+      if (store.processedPacketIds.size > 200) {
+        const first = store.processedPacketIds.values().next().value;
+        store.processedPacketIds.delete(first);
+      }
+
       const payload = JSON.stringify(packet);
 
       // Local Channel
@@ -1030,13 +1050,29 @@
     function handleNetworkMessage(msg) {
       if (!msg || !msg.type) return;
 
+      // Duplicate Packet Guard: drop identical packets received via multiple channels or poll replay
+      if (msg._pktId) {
+        if (store.processedPacketIds.has(msg._pktId)) return;
+        store.processedPacketIds.add(msg._pktId);
+        if (store.processedPacketIds.size > 200) {
+          const first = store.processedPacketIds.values().next().value;
+          store.processedPacketIds.delete(first);
+        }
+      }
+
       switch(msg.type) {
         case 'PLAYER_JOIN':
-          if (msg.player) {
+          if (msg.player && msg.player.id) {
+            const isExisting = !!store.players[msg.player.id];
             msg.player.lastSeen = Date.now();
-            store.players[msg.player.id] = msg.player;
-            sound.playChip();
-            showToast(`[${msg.player.name}] 님이 입장했습니다!`);
+            store.players[msg.player.id] = Object.assign(store.players[msg.player.id] || {}, msg.player);
+
+            // Only play sound and show toast if this is a completely brand-new player
+            if (!isExisting) {
+              sound.playChip();
+              showToast(`[${msg.player.name}] 님이 입장했습니다!`);
+            }
+
             if (store.isHost) {
               broadcastState();
             }
