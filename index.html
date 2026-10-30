@@ -482,15 +482,22 @@
               </div>
             </div>
 
-            <!-- Odd vs Even Select Cards (대형 고시인성 선택 패널) -->
+            <!-- Odd vs Even Select Cards (대형 고시인성 선택 패널 + 패리뮤추얼 배당률) -->
             <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
               <button id="cardOdd" type="button" class="py-3 px-2.5 rounded-2xl bg-slate-950/85 border-2 border-slate-700/80 hover:border-cyan-400/80 transition-all flex flex-col items-center justify-center gap-1 group relative cursor-pointer shadow-md select-none">
                 <div class="flex items-center gap-1.5">
                   <span class="text-cyan-400 text-base sm:text-lg">⚡</span>
                   <span class="text-2xl sm:text-3xl font-black font-chakra text-cyan-400 tracking-tight group-hover:scale-105 transition-transform">홀 (ODD)</span>
                 </div>
-                <div class="px-2 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-500/30 text-[10px] sm:text-[11px] font-chakra font-bold text-cyan-300">
-                  합 1, 3, 5, 7, 9, 11
+                <div class="flex items-center gap-1.5 flex-wrap justify-center">
+                  <div class="px-2 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-500/30 text-[10px] sm:text-[11px] font-chakra font-bold text-cyan-300">
+                    합 1, 3, 5, 7, 9, 11
+                  </div>
+                  <!-- 패리뮤추얼 홀 실시간 배당률 배지 -->
+                  <div id="oddsBadgeOdd" class="px-2 py-0.5 rounded-full bg-slate-900 border border-cyan-500/40 text-[10px] sm:text-[11px] font-chakra font-black text-cyan-300 shadow-sm flex items-center gap-1">
+                    <span id="lblOddsOdd">x2.00</span>
+                    <span id="lblPotOdd" class="text-[9px] text-cyan-400/70 font-normal">(0칩)</span>
+                  </div>
                 </div>
                 <div id="checkOdd" class="hidden absolute top-2 right-2 text-cyan-300 text-base sm:text-lg animate-bounce">
                   <i class="ph-fill ph-check-circle"></i>
@@ -502,8 +509,15 @@
                   <span class="text-rose-400 text-base sm:text-lg">❄️</span>
                   <span class="text-2xl sm:text-3xl font-black font-chakra text-rose-400 tracking-tight group-hover:scale-105 transition-transform">짝 (EVEN)</span>
                 </div>
-                <div class="px-2 py-0.5 rounded-full bg-rose-950/80 border border-rose-500/30 text-[10px] sm:text-[11px] font-chakra font-bold text-rose-300">
-                  합 2, 4, 6, 8, 10, 12
+                <div class="flex items-center gap-1.5 flex-wrap justify-center">
+                  <div class="px-2 py-0.5 rounded-full bg-rose-950/80 border border-rose-500/30 text-[10px] sm:text-[11px] font-chakra font-bold text-rose-300">
+                    합 2, 4, 6, 8, 10, 12
+                  </div>
+                  <!-- 패리뮤추얼 짝 실시간 배당률 배지 -->
+                  <div id="oddsBadgeEven" class="px-2 py-0.5 rounded-full bg-slate-900 border border-rose-500/40 text-[10px] sm:text-[11px] font-chakra font-black text-rose-300 shadow-sm flex items-center gap-1">
+                    <span id="lblOddsEven">x2.00</span>
+                    <span id="lblPotEven" class="text-[9px] text-rose-400/70 font-normal">(0칩)</span>
+                  </div>
                 </div>
                 <div id="checkEven" class="hidden absolute top-2 right-2 text-rose-300 text-base sm:text-lg animate-bounce">
                   <i class="ph-fill ph-check-circle"></i>
@@ -717,7 +731,7 @@
   <aside id="appVersionBadge" class="fixed bottom-2.5 right-3 z-50 pointer-events-none select-none">
     <div class="px-2 py-0.5 rounded-lg bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-[10px] font-chakra font-black tracking-wider text-purple-300/80 shadow-md flex items-center gap-1">
       <span class="w-1.5 h-1.5 rounded-full bg-cyan-400/80"></span>
-      <span>ver_0.2.8</span>
+      <span>ver_0.2.9</span>
     </div>
   </aside>
 
@@ -804,7 +818,7 @@
       forcedRig: null,
       players: {},
       isNetConnected: false,
-      roundHistory: [], // [{ round, d1, d2, sum, parity: 'ODD'|'EVEN' }]
+      roundHistory: [],
       
       chatMessages: [],
       isChatExpanded: false,
@@ -879,6 +893,12 @@
       cardEven: document.getElementById('cardEven'),
       checkOdd: document.getElementById('checkOdd'),
       checkEven: document.getElementById('checkEven'),
+      oddsBadgeOdd: document.getElementById('oddsBadgeOdd'),
+      lblOddsOdd: document.getElementById('lblOddsOdd'),
+      lblPotOdd: document.getElementById('lblPotOdd'),
+      oddsBadgeEven: document.getElementById('oddsBadgeEven'),
+      lblOddsEven: document.getElementById('lblOddsEven'),
+      lblPotEven: document.getElementById('lblPotEven'),
       lblBetAmount: document.getElementById('lblBetAmount'),
       lblBetRatioPercent: document.getElementById('lblBetRatioPercent'),
       summaryChoiceBadge: document.getElementById('summaryChoiceBadge'),
@@ -987,7 +1007,6 @@
         showToast(`방에 참가 중입니다...`);
         updateActionTicker(`${store.nickname} 님이 입장함`);
 
-        // 초대 링크 또는 게스트 입장 시 닫힌 방 검사 (3초 내 SYNC 미수신 시)
         if (store.roomHostCheckTimer) clearTimeout(store.roomHostCheckTimer);
         store.roomHostCheckTimer = setTimeout(() => {
           const hasHost = Object.values(store.players).some(p => p.isHost && p.id !== store.myId);
@@ -998,7 +1017,6 @@
       }
     }
 
-    // 닫힌 방 처리: [OOOO방은 닫힌 방입니다.] 알림 및 로비 복구
     function handleClosedRoom(closedRoomCode) {
       destroyNetworking();
 
@@ -1240,7 +1258,7 @@
       return remainingHumanPlayers[0].id;
     }
 
-    function applyNewHost(newHostId, broadcasterName = null) {
+    function applyNewHost(newHostId) {
       if (!newHostId || !store.players[newHostId]) return;
 
       Object.values(store.players).forEach(p => {
@@ -1296,7 +1314,6 @@
             const isNew = !store.players[pid];
             msg.p.lastSeen = Date.now();
 
-            // 방장 기준 시작 칩 동기화
             if (isNew && store.isHost) {
               msg.p.chips = store.startingChips;
             }
@@ -1342,7 +1359,7 @@
 
             if (wasHost) {
               const nextHostId = checkAndMigrateHost(msg.pid);
-              if (nextHostId) applyNewHost(nextHostId, leftName);
+              if (nextHostId) applyNewHost(nextHostId);
             } else if (store.isHost) {
               broadcastState();
               checkAllPlayersBetComplete();
@@ -1364,7 +1381,6 @@
           break;
 
         case 'SYNC':
-          // 방장 동기화 패킷이 도착했으므로 닫힌 방 검사 타이머 해제
           if (store.roomHostCheckTimer) {
             clearTimeout(store.roomHostCheckTimer);
             store.roomHostCheckTimer = null;
@@ -1393,7 +1409,6 @@
               betAmount: 0
             };
 
-            // 처음 참가한 게스트인 경우 방장의 startingChips를 내 칩으로 최초 동기화
             if (!store.isHost && (!store.players[store.myId] || (store.chips === 1000 && prevStartingChips !== store.startingChips && store.phase === 'WAITING' && !store.hasBet))) {
               if (msg.pls[store.myId]) {
                 store.chips = msg.pls[store.myId].chips;
@@ -1410,7 +1425,6 @@
               }
             });
 
-            // 내 로컬 배팅 상태(hasBet, choice, betAmount)는 내가 전송하기 전까지 보존 (원격 덮어쓰기 방지)
             const myLocalHasBet = store.hasBet;
             const myLocalChoice = store.selectedChoice;
             const myLocalBetAmount = store.betAmount;
@@ -1418,7 +1432,6 @@
             store.players = Object.assign({}, msg.pls);
             store.players[store.myId] = Object.assign({}, msg.pls[store.myId] || {}, myCurrent);
 
-            // 게스트 본인의 배팅 상태가 덮어씌워지지 않도록 로컬 값 반영
             if (!store.isHost && store.phase === 'BETTING') {
               store.players[store.myId].hasBet = myLocalHasBet;
               store.players[store.myId].choice = myLocalChoice;
@@ -1458,7 +1471,6 @@
           store.forcedRig = null;
           store.isReady = false;
 
-          // 모든 플레이어의 배팅 상태 초기화 (게스트 포함)
           Object.keys(store.players).forEach(id => {
             store.players[id].choice = null;
             store.players[id].betAmount = 0;
@@ -1560,7 +1572,6 @@
       });
     }
 
-    // --- LOBBY DETAILS ACCORDION & STARTING CHIPS SLIDER ---
     let isLobbyDetailsOpen = false;
     el.btnToggleLobbyDetails.addEventListener('click', () => {
       sound.playChip();
@@ -2022,7 +2033,6 @@
         } else if (p.hasBet && p.chips === 0 && (p.betAmount > 0)) {
           statusText = `<span class="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-400 font-black text-[10px] border border-amber-500/40 animate-pulse whitespace-nowrap shrink-0">올인</span>`;
         } else if (store.phase === 'BETTING') {
-          // 실제로 선택(choice)과 배팅액(betAmount > 0)을 정하고 hasBet이 true일 때만 배팅완료로 표시
           const isReallyBetDone = p.hasBet && p.choice && (p.betAmount > 0 || p.chips === 0);
           statusText = isReallyBetDone 
             ? `<span class="px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-semibold text-[10px] border border-emerald-500/30 whitespace-nowrap shrink-0">배팅완료</span>`
@@ -2061,13 +2071,76 @@
       });
     }
 
+    // --- PARI-MUTUEL POOL & ODDS CALCULATION ---
+    function calculatePariMutuelOdds() {
+      let oddPool = 0;
+      let evenPool = 0;
+
+      Object.values(store.players).forEach(p => {
+        if (p.hasBet && p.choice && p.betAmount > 0) {
+          if (p.choice === 'ODD') oddPool += p.betAmount;
+          else if (p.choice === 'EVEN') evenPool += p.betAmount;
+        }
+      });
+
+      if (store.phase === 'BETTING' && !store.hasBet && store.selectedChoice && store.betAmount > 0) {
+        if (store.selectedChoice === 'ODD') oddPool += store.betAmount;
+        else if (store.selectedChoice === 'EVEN') evenPool += store.betAmount;
+      }
+
+      const totalPool = oddPool + evenPool;
+      let oddOdds = 2.0;
+      let evenOdds = 2.0;
+
+      if (totalPool > 0) {
+        if (oddPool > 0 && evenPool > 0) {
+          oddOdds = Math.max(1.05, +(totalPool / oddPool).toFixed(2));
+          evenOdds = Math.max(1.05, +(totalPool / evenPool).toFixed(2));
+        } else if (oddPool > 0 && evenPool === 0) {
+          oddOdds = 1.05;
+          evenOdds = 5.0;
+        } else if (evenPool > 0 && oddPool === 0) {
+          evenOdds = 1.05;
+          oddOdds = 5.0;
+        }
+      }
+
+      return { totalPool, oddPool, evenPool, oddOdds, evenOdds };
+    }
+
+    function renderOddsDisplay() {
+      if (!el.lblOddsOdd || !el.lblOddsEven) return;
+      const { oddPool, evenPool, oddOdds, evenOdds } = calculatePariMutuelOdds();
+
+      el.lblOddsOdd.textContent = `x${oddOdds.toFixed(2)}`;
+      el.lblPotOdd.textContent = `(${oddPool.toLocaleString()}칩)`;
+
+      el.lblOddsEven.textContent = `x${evenOdds.toFixed(2)}`;
+      el.lblPotEven.textContent = `(${evenPool.toLocaleString()}칩)`;
+
+      if (oddOdds >= 2.5) {
+        el.oddsBadgeOdd.className = 'px-2 py-0.5 rounded-full bg-cyan-950/90 border-2 border-cyan-400 text-[10px] sm:text-[11px] font-chakra font-black text-cyan-200 shadow-md shadow-cyan-500/40 flex items-center gap-1 animate-pulse';
+        el.lblOddsOdd.textContent = `🔥 x${oddOdds.toFixed(2)}`;
+      } else {
+        el.oddsBadgeOdd.className = 'px-2 py-0.5 rounded-full bg-slate-900 border border-cyan-500/40 text-[10px] sm:text-[11px] font-chakra font-black text-cyan-300 shadow-sm flex items-center gap-1';
+      }
+
+      if (evenOdds >= 2.5) {
+        el.oddsBadgeEven.className = 'px-2 py-0.5 rounded-full bg-rose-950/90 border-2 border-rose-400 text-[10px] sm:text-[11px] font-chakra font-black text-rose-200 shadow-md shadow-rose-500/40 flex items-center gap-1 animate-pulse';
+        el.lblOddsEven.textContent = `🔥 x${evenOdds.toFixed(2)}`;
+      } else {
+        el.oddsBadgeEven.className = 'px-2 py-0.5 rounded-full bg-slate-900 border border-rose-500/40 text-[10px] sm:text-[11px] font-chakra font-black text-rose-300 shadow-sm flex items-center gap-1';
+      }
+    }
+
     function renderBettingPanel() {
       el.lblBetAmount.textContent = store.betAmount.toLocaleString();
       if (el.summaryBetAmount) {
         el.summaryBetAmount.textContent = store.betAmount.toLocaleString();
       }
 
-      // 좌측 배팅 요약 카드 홀/짝 뱃지 갱신
+      renderOddsDisplay();
+
       if (el.summaryChoiceBadge) {
         if (store.selectedChoice === 'ODD') {
           el.summaryChoiceBadge.className = 'px-2.5 py-1 rounded-xl bg-cyan-950/90 border-2 border-cyan-400 text-xs font-black font-chakra text-cyan-300 shadow-md shadow-cyan-500/30 flex items-center gap-1 animate-pulse';
@@ -2084,7 +2157,6 @@
         }
       }
 
-      // 배팅 비율 퍼센트 갱신
       if (el.lblBetRatioPercent) {
         const totalAvail = store.chips + (store.hasBet ? store.betAmount : 0);
         const ratio = totalAvail > 0 ? Math.round((store.betAmount / totalAvail) * 100) : 0;
@@ -2269,12 +2341,10 @@
         if (isEverySinglePlayerAllIn) {
           updateActionTicker('💥 전원 ALL-IN! 즉시 주사위 판정 시작!');
           showToast('전원 ALL-IN! 결과가 즉시 공개됩니다! 🔥');
-          // 전원 올인 시 타이머 대기 없이 0.2초 내 즉시 롤링 시작
           setTimeout(() => {
             if (store.phase === 'BETTING') rollTheDice();
           }, 200);
         } else {
-          // 전원 배팅 완료 시 즉시 롤링 시작
           setTimeout(() => {
             if (store.phase === 'BETTING') rollTheDice();
           }, 400);
@@ -2333,7 +2403,6 @@
         store.phase = 'RESULT';
         const resultParity = isOdd ? 'ODD' : 'EVEN';
 
-        // 라운드 히스토리에 기록 추가
         store.roundHistory.push({
           round: store.currentRound,
           d1,
@@ -2347,14 +2416,17 @@
         el.lblResultMain.textContent = isOdd ? '결과: [홀] ODD' : '결과: [짝] EVEN';
         el.lblResultMain.className = `text-2xl sm:text-3xl font-black font-chakra mt-0.5 text-center leading-snug ${isOdd ? 'text-cyan-400' : 'text-rose-400'}`;
 
+        const { oddOdds, evenOdds } = calculatePariMutuelOdds();
+        const winningOdds = isOdd ? oddOdds : evenOdds;
+
         const won = store.selectedChoice === resultParity;
         if (won) {
-          const reward = store.betAmount * 2;
+          const reward = Math.round(store.betAmount * winningOdds);
           store.chips += reward;
           confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
           sound.playWin();
-          showToast(`축하합니다! +${reward.toLocaleString()}칩 획득!`);
-          updateActionTicker(`🎉 ${store.nickname} 승리 (+${reward.toLocaleString()}칩)`);
+          showToast(`축하합니다! (x${winningOdds.toFixed(2)}배) +${reward.toLocaleString()}칩 획득!`);
+          updateActionTicker(`🎉 ${store.nickname} 승리 (x${winningOdds.toFixed(2)}배, +${reward.toLocaleString()}칩)`);
         } else if (store.betAmount > 0) {
           sound.playLose();
           showToast(`아쉽습니다. ${store.betAmount.toLocaleString()}칩을 잃었습니다.`, false);
@@ -2380,7 +2452,7 @@
           Object.values(store.players).forEach(p => {
             if (p.isBot && !p.isBankrupt && p.choice) {
               if (p.choice === resultParity) {
-                p.chips += p.betAmount * 2;
+                p.chips += Math.round(p.betAmount * winningOdds);
                 p.wins = (p.wins || 0) + 1;
               } else {
                 p.wins = 0;
@@ -2576,7 +2648,6 @@
       renderAll();
     }
 
-    // --- ROUND HISTORY & RATIO RENDERER ---
     function renderRoundHistoryUI() {
       if (!el.historyBeadsContainer) return;
 
@@ -2620,7 +2691,6 @@
         el.historyBeadsContainer.appendChild(bead);
       });
 
-      // 최신 기록이 보이도록 자동 스크롤
       el.historyBeadsContainer.scrollLeft = el.historyBeadsContainer.scrollWidth;
     }
 
