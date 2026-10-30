@@ -613,7 +613,7 @@
   <aside id="appVersionBadge" class="fixed bottom-2.5 right-3 z-50 pointer-events-none select-none">
     <div class="px-2 py-0.5 rounded-lg bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-[10px] font-chakra font-black tracking-wider text-purple-300/80 shadow-md flex items-center gap-1">
       <span class="w-1.5 h-1.5 rounded-full bg-cyan-400/80"></span>
-      <span>ver_0.2.4</span>
+      <span>ver_0.2.5</span>
     </div>
   </aside>
 
@@ -1264,7 +1264,10 @@
               chips: store.startingChips,
               isBankrupt: false,
               isReady: store.isReady,
-              isHost: store.isHost
+              isHost: store.isHost,
+              hasBet: false,
+              choice: null,
+              betAmount: 0
             };
 
             // 처음 참가한 게스트인 경우 방장의 startingChips를 내 칩으로 최초 동기화
@@ -1284,8 +1287,21 @@
               }
             });
 
+            // 내 로컬 배팅 상태(hasBet, choice, betAmount)는 내가 전송하기 전까지 보존 (원격 덮어쓰기 방지)
+            const myLocalHasBet = store.hasBet;
+            const myLocalChoice = store.selectedChoice;
+            const myLocalBetAmount = store.betAmount;
+
             store.players = Object.assign({}, msg.pls);
             store.players[store.myId] = Object.assign({}, msg.pls[store.myId] || {}, myCurrent);
+
+            // 게스트 본인의 배팅 상태가 덮어씌워지지 않도록 로컬 값 반영
+            if (!store.isHost && store.phase === 'BETTING') {
+              store.players[store.myId].hasBet = myLocalHasBet;
+              store.players[store.myId].choice = myLocalChoice;
+              store.players[store.myId].betAmount = myLocalBetAmount;
+            }
+
             Object.keys(store.players).forEach(id => store.notifiedPlayerJoins.add(id));
 
             if (store.players[store.myId]) {
@@ -1318,6 +1334,14 @@
           store.betAmount = 0;
           store.forcedRig = null;
           store.isReady = false;
+
+          // 모든 플레이어의 배팅 상태 초기화 (게스트 포함)
+          Object.keys(store.players).forEach(id => {
+            store.players[id].choice = null;
+            store.players[id].betAmount = 0;
+            store.players[id].hasBet = false;
+          });
+
           startBettingTimer(20);
           showToast(`ROUND ${store.currentRound} 배팅이 시작되었습니다!`);
           updateActionTicker(`🎯 ROUND ${store.currentRound} 배팅 시작!`);
@@ -1873,7 +1897,9 @@
         } else if (p.hasBet && p.chips === 0 && (p.betAmount > 0)) {
           statusText = `<span class="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-400 font-black text-[10px] border border-amber-500/40 animate-pulse whitespace-nowrap shrink-0">올인</span>`;
         } else if (store.phase === 'BETTING') {
-          statusText = p.hasBet 
+          // 실제로 선택(choice)과 배팅액(betAmount > 0)을 정하고 hasBet이 true일 때만 배팅완료로 표시
+          const isReallyBetDone = p.hasBet && p.choice && (p.betAmount > 0 || p.chips === 0);
+          statusText = isReallyBetDone 
             ? `<span class="px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-semibold text-[10px] border border-emerald-500/30 whitespace-nowrap shrink-0">배팅완료</span>`
             : `<span class="px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-400 font-semibold text-[10px] border border-amber-500/30 animate-pulse whitespace-nowrap shrink-0">배팅 중</span>`;
         } else if (p.choice && (store.phase === 'RESULT' || store.phase === 'ROLLING')) {
