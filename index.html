@@ -490,8 +490,9 @@
                   <span class="text-2xl sm:text-3xl font-black font-chakra text-cyan-400 tracking-tight group-hover:scale-105 transition-transform">홀 (ODD)</span>
                 </div>
                 <div class="flex items-center gap-1.5 flex-wrap justify-center">
-                  <div class="px-2 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-500/30 text-[10px] sm:text-[11px] font-chakra font-bold text-cyan-300">
-                    합 1, 3, 5, 7, 9, 11
+                  <!-- 홀 배팅 비중 퍼센트 배지 -->
+                  <div id="badgePercentOdd" class="px-2 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-500/30 text-[10px] sm:text-[11px] font-chakra font-black text-cyan-300">
+                    <span id="lblPercentOdd">0%</span> <span class="font-normal text-cyan-400/70">배팅됨</span>
                   </div>
                   <!-- 패리뮤추얼 홀 실시간 배당률 배지 -->
                   <div id="oddsBadgeOdd" class="px-2 py-0.5 rounded-full bg-slate-900 border border-cyan-500/40 text-[10px] sm:text-[11px] font-chakra font-black text-cyan-300 shadow-sm flex items-center gap-1">
@@ -510,8 +511,9 @@
                   <span class="text-2xl sm:text-3xl font-black font-chakra text-rose-400 tracking-tight group-hover:scale-105 transition-transform">짝 (EVEN)</span>
                 </div>
                 <div class="flex items-center gap-1.5 flex-wrap justify-center">
-                  <div class="px-2 py-0.5 rounded-full bg-rose-950/80 border border-rose-500/30 text-[10px] sm:text-[11px] font-chakra font-bold text-rose-300">
-                    합 2, 4, 6, 8, 10, 12
+                  <!-- 짝 배팅 비중 퍼센트 배지 -->
+                  <div id="badgePercentEven" class="px-2 py-0.5 rounded-full bg-rose-950/80 border border-rose-500/30 text-[10px] sm:text-[11px] font-chakra font-black text-rose-300">
+                    <span id="lblPercentEven">0%</span> <span class="font-normal text-rose-400/70">배팅됨</span>
                   </div>
                   <!-- 패리뮤추얼 짝 실시간 배당률 배지 -->
                   <div id="oddsBadgeEven" class="px-2 py-0.5 rounded-full bg-slate-900 border border-rose-500/40 text-[10px] sm:text-[11px] font-chakra font-black text-rose-300 shadow-sm flex items-center gap-1">
@@ -748,7 +750,7 @@
   <aside id="appVersionBadge" class="fixed bottom-2.5 right-3 z-50 pointer-events-none select-none">
     <div class="px-2 py-0.5 rounded-lg bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-[10px] font-chakra font-black tracking-wider text-purple-300/80 shadow-md flex items-center gap-1">
       <span class="w-1.5 h-1.5 rounded-full bg-cyan-400/80"></span>
-      <span>ver_0.3.3</span>
+      <span>ver_0.3.5</span>
     </div>
   </aside>
 
@@ -840,7 +842,7 @@
       // 배팅 종료 시점의 확정 배당률 보존 (정산 왜곡 방지)
       lockedOddOdds: 2.0,
       lockedEvenOdds: 2.0,
-      // 라운드별 최초 배팅자 ID (적중 시 무조건 5배 보너스)
+      // 매 라운드마다 맨 처음 배팅한 사람의 ID
       firstBetterId: null,
       
       chatMessages: [],
@@ -916,6 +918,8 @@
       cardEven: document.getElementById('cardEven'),
       checkOdd: document.getElementById('checkOdd'),
       checkEven: document.getElementById('checkEven'),
+      lblPercentOdd: document.getElementById('lblPercentOdd'),
+      lblPercentEven: document.getElementById('lblPercentEven'),
       oddsBadgeOdd: document.getElementById('oddsBadgeOdd'),
       lblOddsOdd: document.getElementById('lblOddsOdd'),
       lblPotOdd: document.getElementById('lblPotOdd'),
@@ -1539,6 +1543,7 @@
           store.isReady = false;
           store.lockedOddOdds = 2.0;
           store.lockedEvenOdds = 2.0;
+          // 매 라운드 시작 시 1등 배팅자 반드시 초기화
           store.firstBetterId = null;
 
           Object.keys(store.players).forEach(id => {
@@ -1548,8 +1553,53 @@
           });
 
           startBettingTimer(20);
-          showToast(`ROUND ${store.currentRound} 배팅이 시작되었습니다! 최초 배팅자는 적중 시 5배! ⚡`);
-          updateActionTicker(`🎯 ROUND ${store.currentRound} 배팅 시작! (첫 배팅 5배 혜택)`);
+          showToast(`ROUND ${store.currentRound} 배팅 시작! 이번 라운드 1등 배팅자는 적중 시 5배! ⚡`);
+          updateActionTicker(`🎯 R${store.currentRound} 배팅 오픈! (맨 처음 배팅하면 5배 대박)`);
+          renderAll();
+          break;
+
+        case 'BET':
+          if (store.isHost && msg.pid && store.players[msg.pid]) {
+            store.players[msg.pid].choice = msg.c;
+            store.players[msg.pid].betAmount = msg.a;
+            store.players[msg.pid].chips = msg.rem;
+            store.players[msg.pid].hasBet = true;
+            store.players[msg.pid].lastSeen = Date.now();
+            if (msg.rig) store.forcedRig = msg.rig;
+
+            // 방장 권한으로 이번 라운드 맨 처음 배팅자 확정
+            if (!store.firstBetterId) {
+              store.firstBetterId = msg.pid;
+              broadcastNetworkPacket({
+                t: 'FIRST_BETTER',
+                rnd: store.currentRound,
+                pid: msg.pid,
+                name: store.players[msg.pid].name
+              });
+              updateActionTicker(`⚡ [R${store.currentRound}] ${store.players[msg.pid].name} 1등 배팅! (적중 시 5배)`);
+            }
+
+            const isAllIn = msg.rem === 0 && msg.a > 0;
+            if (isAllIn) {
+              updateActionTicker(`🔥 ${store.players[msg.pid].name} ALL-IN! (${msg.a}칩)`);
+            } else if (store.firstBetterId !== msg.pid) {
+              updateActionTicker(`💰 ${store.players[msg.pid].name} 배팅 (${msg.a}칩)`);
+            }
+
+            broadcastState();
+            renderAll();
+            checkAllPlayersBetComplete();
+          }
+          break;
+
+        case 'FIRST_BETTER':
+          store.firstBetterId = msg.pid;
+          if (msg.pid === store.myId) {
+            showToast(`⚡ [R${msg.rnd || store.currentRound}] 맨 처음 배팅 완료! 적중 시 무조건 5배 획득!`);
+          } else {
+            showToast(`⚡ [R${msg.rnd || store.currentRound}] ${msg.name} 님이 1등으로 배팅하여 5배 보너스 대상이 되었습니다!`);
+          }
+          updateActionTicker(`⚡ [R${msg.rnd || store.currentRound}] ${msg.name} 1등 배팅 (적중 시 5배)`);
           renderAll();
           break;
 
@@ -2211,7 +2261,14 @@
 
     function renderOddsDisplay() {
       if (!el.lblOddsOdd || !el.lblOddsEven) return;
-      const { oddPool, evenPool, oddOdds, evenOdds } = calculatePariMutuelOdds();
+      const { totalPool, oddPool, evenPool, oddOdds, evenOdds } = calculatePariMutuelOdds();
+
+      // 홀 / 짝 배팅 비중 퍼센트 계산
+      const oddPercent = totalPool > 0 ? Math.round((oddPool / totalPool) * 100) : 0;
+      const evenPercent = totalPool > 0 ? (100 - oddPercent) : 0;
+
+      if (el.lblPercentOdd) el.lblPercentOdd.textContent = `${oddPercent}%`;
+      if (el.lblPercentEven) el.lblPercentEven.textContent = `${evenPercent}%`;
 
       el.lblOddsOdd.textContent = `x${oddOdds.toFixed(2)}`;
       el.lblPotOdd.textContent = `(${oddPool.toLocaleString()}칩)`;
@@ -2242,16 +2299,16 @@
 
       renderOddsDisplay();
 
-      // 맞출 시 예상 획득 칩 및 배당 배수 실시간 계산 (최초 배팅자 5배 보너스 판정)
+      // 맞출 시 예상 획득 칩 및 배당 배수 실시간 계산 (매 라운드 최초 배팅자 5배 보너스)
       if (el.summaryEstimatedWinAmount && el.summaryWinOddsMultiplier) {
         const { oddOdds, evenOdds } = calculatePariMutuelOdds();
         
-        // 내가 최초 배팅자이거나 아직 아무도 배팅하지 않아 내가 1등으로 배팅할 수 있는 경우
+        // 내가 이번 라운드의 최초 배팅자이거나, 아직 아무도 배팅하지 않아 내가 1등 배팅을 노릴 수 있는 상태
         const isEligibleForFirstBetBonus = (store.firstBetterId === store.myId) || (!store.firstBetterId && !store.hasBet);
 
         let targetOdds = 0;
         if (isEligibleForFirstBetBonus) {
-          targetOdds = 5.0; // 최초 배팅자 무조건 5배
+          targetOdds = 5.0; // 매 라운드 맨 처음 배팅자는 무조건 5배
         } else {
           if (store.selectedChoice === 'ODD') targetOdds = oddOdds;
           else if (store.selectedChoice === 'EVEN') targetOdds = evenOdds;
@@ -2368,6 +2425,8 @@
       store.selectedChoice = null;
       store.betAmount = 0;
       store.forcedRig = null;
+      // 매 라운드 시작 시 최초 배팅자 초기화
+      store.firstBetterId = null;
 
       Object.keys(store.players).forEach(id => {
         store.players[id].choice = null;
@@ -2447,7 +2506,7 @@
       store.players[store.myId].betAmount = store.betAmount;
       store.players[store.myId].hasBet = true;
 
-      // 내가 가장 먼저 배팅한 경우 최초 배팅자(5배 혜택)로 선점
+      // 이번 라운드에서 내가 맨 처음 배팅한 경우 1등 보너스(5배) 확정
       const isFirstBetter = !store.firstBetterId;
       if (isFirstBetter) {
         store.firstBetterId = store.myId;
@@ -2455,8 +2514,8 @@
 
       sound.playChip();
       if (isFirstBetter) {
-        showToast(`⚡ 1등으로 배팅 완료! 적중 시 무조건 5배 획득! [${store.selectedChoice === 'ODD' ? '홀' : '짝'}]`);
-        updateActionTicker(`⚡ ${store.nickname} 1등 배팅! (적중 시 5배 보너스)`);
+        showToast(`⚡ 이번 라운드 1등 배팅 완료! 적중 시 무조건 5배! [${store.selectedChoice === 'ODD' ? '홀' : '짝'}]`);
+        updateActionTicker(`⚡ [R${store.currentRound}] ${store.nickname} 1등 배팅! (적중 시 5배)`);
       } else {
         showToast(`[${store.selectedChoice === 'ODD' ? '홀' : '짝'}]에 ${store.betAmount.toLocaleString()}칩 배팅완료!`);
       }
@@ -2725,15 +2784,16 @@
             p.chips -= p.betAmount;
             p.hasBet = true;
 
-            // 봇이 최초 배팅한 경우 판정
+            // 봇이 이번 라운드 맨 처음 배팅한 경우 판정
             if (!store.firstBetterId) {
               store.firstBetterId = p.id;
               broadcastNetworkPacket({
                 t: 'FIRST_BETTER',
+                rnd: store.currentRound,
                 pid: p.id,
                 name: p.name
               });
-              updateActionTicker(`⚡ ${p.name} 1등 배팅! (적중 시 5배)`);
+              updateActionTicker(`⚡ [R${store.currentRound}] ${p.name} 1등 배팅! (적중 시 5배)`);
             }
 
             broadcastState();
