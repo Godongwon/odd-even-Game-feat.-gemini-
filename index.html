@@ -1626,32 +1626,43 @@
       hostControlWrap.classList.remove('hidden');
 
       // Non-host player controls (READY button toggle)
-      if (!store.isHost) {
-        btnStartRound.classList.add('hidden');
-        boxBotControls.classList.add('hidden');
-        btnToggleReady.classList.remove('hidden');
-        btnToggleReady.classList.add('flex');
+    if (!store.isHost) {
+      btnStartRound.classList.add('hidden');
+      boxBotControls.classList.add('hidden');
+      btnToggleReady.classList.remove('hidden');
+      btnToggleReady.classList.add('flex');
 
-        if (store.phase === 'WAITING' || store.phase === 'RESULT') {
-          btnToggleReady.disabled = false;
-          if (store.isReady) {
-            btnToggleReady.className = 'px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-emerald-400 border border-emerald-500/40 font-black shadow-lg text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer';
-            iconToggleReady.className = 'ph-bold ph-check-circle text-base text-emerald-400';
-            textToggleReady.textContent = '준비 완료됨 (클릭 시 취소)';
-          } else {
-            btnToggleReady.className = 'px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black shadow-lg shadow-emerald-500/25 text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer';
-            iconToggleReady.className = 'ph-bold ph-check text-base';
-            textToggleReady.textContent = '준비 완료 (READY)';
-          }
-        } else {
+      // Check if network connection is fully established
+      const isNetConnected = !!(store.hostConn && store.hostConn.open);
+
+      if (store.phase === 'WAITING' || store.phase === 'RESULT') {
+        if (!isNetConnected) {
+          // Connected to room but P2P channel not yet ready -> Disabled
           btnToggleReady.disabled = true;
-          btnToggleReady.className = 'px-6 py-2.5 rounded-xl bg-slate-800 text-slate-500 font-bold text-xs sm:text-sm flex items-center gap-2 transition cursor-not-allowed';
-          textToggleReady.textContent = '게임 진행 중';
+          btnToggleReady.className = 'px-6 py-2.5 rounded-xl bg-slate-800 text-slate-500 border border-slate-700/60 font-bold text-xs sm:text-sm flex items-center gap-2 transition cursor-not-allowed';
+          iconToggleReady.className = 'ph-bold ph-spinner animate-spin text-base text-amber-400';
+          textToggleReady.textContent = '네트워크 연결 중...';
+        } else if (store.isReady) {
+          btnToggleReady.disabled = false;
+          btnToggleReady.className = 'px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-emerald-400 border border-emerald-500/40 font-black shadow-lg text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer';
+          iconToggleReady.className = 'ph-bold ph-check-circle text-base text-emerald-400';
+          textToggleReady.textContent = '준비 완료됨 (클릭 시 취소)';
+        } else {
+          btnToggleReady.disabled = false;
+          btnToggleReady.className = 'px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black shadow-lg shadow-emerald-500/25 text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer';
+          iconToggleReady.className = 'ph-bold ph-check text-base';
+          textToggleReady.textContent = '준비 완료 (READY)';
         }
-        return;
+      } else {
+        btnToggleReady.disabled = true;
+        btnToggleReady.className = 'px-6 py-2.5 rounded-xl bg-slate-800 text-slate-500 font-bold text-xs sm:text-sm flex items-center gap-2 transition cursor-not-allowed';
+        iconToggleReady.className = 'ph-bold ph-hourglass text-base';
+        textToggleReady.textContent = '게임 진행 중';
       }
+      return;
+    }
 
-      // Host controls
+    // Host controls
       btnToggleReady.classList.add('hidden');
       btnToggleReady.classList.remove('flex');
       btnStartRound.classList.remove('hidden');
