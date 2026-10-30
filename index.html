@@ -323,67 +323,6 @@
       <!-- Main Responsive Grid: Dice & Betting (Left 7-8 cols) | Participants & Chat (Right 4-5 cols) -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-3.5 flex-1 min-h-0">
 
-        <!-- Right Column (Mobile: Ordered first/accessible, Desktop: Right 4-5 cols) -->
-        <div class="order-2 lg:order-2 lg:col-span-5 xl:col-span-4 flex flex-col gap-2.5 sm:gap-3 min-h-[360px] lg:min-h-0 lg:h-full">
-          
-          <!-- Participants List -->
-          <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-3 shadow-xl flex flex-col h-[180px] lg:h-[35%] shrink-0">
-            <div class="flex items-center justify-between mb-1.5 border-b border-slate-800 pb-1.5 whitespace-nowrap">
-              <h3 class="text-xs sm:text-sm font-bold text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
-                <i class="ph-bold ph-users text-amber-400 shrink-0"></i>
-                <span>참가자 현황 (<span id="lblPlayerCount" class="text-amber-400 font-chakra">1</span>명)</span>
-              </h3>
-              <span class="text-[9px] text-slate-500 font-chakra whitespace-nowrap">LEADERBOARD</span>
-            </div>
-            <div id="listPlayers" class="flex flex-col gap-1 overflow-y-auto pr-1 flex-1">
-              <!-- Dynamically populated -->
-            </div>
-          </div>
-
-          <!-- Real-time Chat & Reactions Box -->
-          <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-3 shadow-xl flex flex-col h-[260px] lg:h-auto lg:flex-1 lg:min-h-0">
-            <!-- Chat Header -->
-            <div class="flex items-center justify-between pb-1 border-b border-slate-800 mb-1 whitespace-nowrap">
-              <h3 class="text-xs font-bold text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
-                <i class="ph-bold ph-chat-centered-text text-cyan-400 shrink-0"></i>
-                <span>실시간 채팅</span>
-              </h3>
-              <span class="text-[9px] font-semibold text-slate-400 flex items-center gap-1 whitespace-nowrap">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> LIVE
-              </span>
-            </div>
-
-            <!-- Message Area -->
-            <div id="chatBox" class="flex-1 overflow-y-auto space-y-1 text-xs pr-1 mb-1.5 scroll-smooth">
-              <div class="text-slate-500 text-[10px] italic bg-slate-950/40 p-1.5 rounded-xl border border-slate-800/60">
-                💬 방에 입장했습니다. 대화와 이모티콘을 나눠보세요!
-              </div>
-            </div>
-
-            <!-- Emoji Reaction Quick-Bar -->
-            <div class="py-0.5 px-2 bg-slate-950/60 border border-slate-800/80 rounded-xl mb-1.5 flex items-center justify-between gap-1">
-              <span class="text-[9px] font-bold text-slate-400 px-1">반응</span>
-              <div class="flex items-center gap-1">
-                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="🔥">🔥</button>
-                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="👏">👏</button>
-                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="😭">😭</button>
-                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="🎲">🎲</button>
-                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="💰">💰</button>
-                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="👍">👍</button>
-              </div>
-            </div>
-
-            <!-- Input & Send -->
-            <form id="formChat" class="flex items-center gap-1.5 mt-auto">
-              <input type="text" id="inputChat" maxlength="50" placeholder="메시지 입력..."
-                class="flex-1 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5 text-base sm:text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition" />
-              <button type="submit" class="px-3 py-1.5 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-slate-950 font-black rounded-xl text-xs active:scale-95 transition shadow-md shadow-cyan-500/20">
-                전송
-              </button>
-            </form>
-          </div>
-        </div>
-
         <!-- Left Column (Dice & Bet Panel) -->
         <div class="order-1 lg:order-1 lg:col-span-7 xl:col-span-8 flex flex-col gap-2.5 sm:gap-3 min-h-0 justify-between">
           
@@ -534,11 +473,11 @@
           </div>
         </div>
 
-        <!-- Right Column: Participants & Real-time Chat Sidebar -->
-        <div class="lg:col-span-5 xl:col-span-4 flex flex-col gap-2.5 sm:gap-3 h-full min-h-0">
+        <!-- Right Column: Participants & Real-time Chat Sidebar (Single Unique Container) -->
+        <div class="order-2 lg:order-2 lg:col-span-5 xl:col-span-4 flex flex-col gap-2.5 sm:gap-3 h-full min-h-[360px] lg:min-h-0">
           
           <!-- Participants List (Proportional Height) -->
-          <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-3 shadow-xl flex flex-col h-[180px] sm:h-[200px] lg:h-[35%] shrink-0">
+          <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-3 shadow-xl flex flex-col h-[190px] sm:h-[210px] lg:h-[38%] shrink-0">
             <div class="flex items-center justify-between mb-1.5 border-b border-slate-800 pb-1.5 whitespace-nowrap">
               <h3 class="text-xs sm:text-sm font-bold text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
                 <i class="ph-bold ph-users text-amber-400 shrink-0"></i>
@@ -551,8 +490,8 @@
             </div>
           </div>
 
-          <!-- Real-time Chat & Reactions Box (Fills Remaining 65% on Desktop) -->
-          <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-3 shadow-xl flex flex-col flex-1 min-h-[220px] lg:min-h-0">
+          <!-- Real-time Chat & Reactions Box (Fills Remaining Space) -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-3 shadow-xl flex flex-col flex-1 min-h-[200px] lg:min-h-0">
             <!-- Chat Header -->
             <div class="flex items-center justify-between pb-1 border-b border-slate-800 mb-1 whitespace-nowrap">
               <h3 class="text-xs font-bold text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
@@ -1226,11 +1165,18 @@
           store.currentRound = msg.currentRound || store.currentRound;
           store.totalRounds = msg.totalRounds || store.totalRounds;
           if (msg.players) {
-            const myCurrent = store.players[store.myId];
+            const myCurrent = store.players[store.myId] || {
+              id: store.myId,
+              name: store.nickname,
+              chips: store.chips,
+              isBankrupt: store.isBankrupt,
+              isReady: store.isReady,
+              isHost: store.isHost
+            };
             store.players = Object.assign({}, msg.players);
-            if (myCurrent) {
-              store.players[store.myId] = Object.assign({}, msg.players[store.myId] || {}, myCurrent);
-            }
+            // Always guarantee self player object remains firmly registered in the players store
+            store.players[store.myId] = Object.assign({}, msg.players[store.myId] || {}, myCurrent);
+
             // Register known players into notified set so they won't trigger join toasts
             Object.keys(store.players).forEach(id => store.notifiedPlayerJoins.add(id));
             if (store.players[store.myId]) {
