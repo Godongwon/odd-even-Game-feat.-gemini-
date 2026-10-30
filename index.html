@@ -575,7 +575,7 @@
   <aside id="appVersionBadge" class="fixed bottom-2.5 right-3 z-50 pointer-events-none select-none">
     <div class="px-2 py-0.5 rounded-lg bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-[10px] font-chakra font-black tracking-wider text-purple-300/80 shadow-md flex items-center gap-1">
       <span class="w-1.5 h-1.5 rounded-full bg-cyan-400/80"></span>
-      <span>ver_0.2.1</span>
+      <span>ver_0.2.2</span>
     </div>
   </aside>
 
@@ -1969,14 +1969,29 @@
 
     function checkAllPlayersBetComplete() {
       if (!store.isHost || store.phase !== 'BETTING') return;
-      const pList = Object.values(store.players).filter(p => !p.isBankrupt && p.chips > 0);
-      const allDone = pList.length > 0 && pList.every(p => p.hasBet);
+      const pList = Object.values(store.players).filter(p => !p.isBankrupt && (p.chips > 0 || p.hasBet));
+      if (pList.length === 0) return;
+
+      const allDone = pList.every(p => p.hasBet);
+      const allInCount = pList.filter(p => p.hasBet && p.chips === 0 && p.betAmount > 0).length;
+      const isEverySinglePlayerAllIn = (allInCount === pList.length) && (pList.length >= 1);
 
       if (allDone) {
         clearInterval(store.timerTimer);
-        setTimeout(() => {
-          if (store.phase === 'BETTING') rollTheDice();
-        }, 500);
+
+        if (isEverySinglePlayerAllIn) {
+          updateActionTicker('💥 전원 ALL-IN! 즉시 주사위 판정 시작!');
+          showToast('전원 ALL-IN! 결과가 즉시 공개됩니다! 🔥');
+          // 전원 올인 시 타이머 대기 없이 0.2초 내 즉시 롤링 시작
+          setTimeout(() => {
+            if (store.phase === 'BETTING') rollTheDice();
+          }, 200);
+        } else {
+          // 전원 배팅 완료 시 즉시 롤링 시작
+          setTimeout(() => {
+            if (store.phase === 'BETTING') rollTheDice();
+          }, 400);
+        }
       }
     }
 
