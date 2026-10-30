@@ -750,11 +750,7 @@
   <aside id="appVersionBadge" class="fixed bottom-2.5 right-3 z-50 pointer-events-none select-none">
     <div class="px-2 py-0.5 rounded-lg bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-[10px] font-chakra font-black tracking-wider text-purple-300/80 shadow-md flex items-center gap-1">
       <span class="w-1.5 h-1.5 rounded-full bg-cyan-400/80"></span>
-<<<<<<< HEAD
       <span>ver_0.3.9</span>
-=======
-      <span>ver_0.3.6</span>
->>>>>>> parent of dc15f1e (Update index.html)
     </div>
   </aside>
 
@@ -842,11 +838,8 @@
       forcedRig: null,
       players: {},
       isNetConnected: false,
-<<<<<<< HEAD
       isReadyDelayUnlocked: false,
       readyDelayTimer: null,
-=======
->>>>>>> parent of dc15f1e (Update index.html)
       roundHistory: [],
       // 배팅 종료 시점의 확정 배당률 보존 (정산 왜곡 방지)
       lockedOddOdds: 2.0,
@@ -1079,7 +1072,6 @@
       showToast(`[${closedRoomCode}방은 닫힌 방입니다.]`, false);
     }
 
-<<<<<<< HEAD
     function triggerReadyButtonDelay() {
       if (store.readyDelayTimer) clearTimeout(store.readyDelayTimer);
       store.isReadyDelayUnlocked = false;
@@ -1089,23 +1081,13 @@
         store.isReadyDelayUnlocked = true;
         renderControlArea();
       }, 1000);
-=======
-    function handleVisibilitySync() {
-      if (document.visibilityState === 'visible' && store.roomCode) {
-        if (store.isHost) broadcastState();
-        else sendJoinPacket();
-      }
->>>>>>> parent of dc15f1e (Update index.html)
     }
 
     function connectMqttClient(isHost, normalizedCode, isGuestJoin = false) {
       if (typeof Paho === 'undefined' || !Paho.MQTT) {
         setNetStatus('connected', `WS 온라인 (${normalizedCode})`);
         store.isNetConnected = true;
-<<<<<<< HEAD
         triggerReadyButtonDelay();
-=======
->>>>>>> parent of dc15f1e (Update index.html)
         return;
       }
 
@@ -1118,11 +1100,8 @@
 
         store.mqttClient.onConnectionLost = (responseObject) => {
           store.isNetConnected = false;
-<<<<<<< HEAD
           store.isReadyDelayUnlocked = false;
           if (store.readyDelayTimer) clearTimeout(store.readyDelayTimer);
-=======
->>>>>>> parent of dc15f1e (Update index.html)
           renderControlArea();
           if (store.roomCode) {
             setNetStatus('connecting', `WS 재연결 중...`);
@@ -1175,11 +1154,8 @@
         store.mqttClient = new Paho.MQTT.Client('broker.hivemq.com', 8884, '/mqtt', clientId);
         store.mqttClient.onConnectionLost = () => {
           store.isNetConnected = false;
-<<<<<<< HEAD
           store.isReadyDelayUnlocked = false;
           if (store.readyDelayTimer) clearTimeout(store.readyDelayTimer);
-=======
->>>>>>> parent of dc15f1e (Update index.html)
           renderControlArea();
         };
         store.mqttClient.onMessageArrived = (message) => {
@@ -1219,14 +1195,11 @@
         clearTimeout(store.roomHostCheckTimer);
         store.roomHostCheckTimer = null;
       }
-<<<<<<< HEAD
       if (store.readyDelayTimer) {
         clearTimeout(store.readyDelayTimer);
         store.readyDelayTimer = null;
       }
       store.isReadyDelayUnlocked = false;
-=======
->>>>>>> parent of dc15f1e (Update index.html)
       clearInterval(store.snapshotInterval);
       clearInterval(store.syncHeartbeatTimer);
       document.removeEventListener('visibilitychange', handleVisibilitySync);
@@ -1649,50 +1622,6 @@
             showToast(`⚡ [R${msg.rnd || store.currentRound}] ${msg.name} 님이 1등으로 배팅하여 5배 보너스 대상이 되었습니다!`);
           }
           updateActionTicker(`⚡ [R${msg.rnd || store.currentRound}] ${msg.name} 1등 배팅 (적중 시 5배)`);
-          renderAll();
-          break;
-
-        case 'BET':
-          if (store.isHost && msg.pid && store.players[msg.pid]) {
-            store.players[msg.pid].choice = msg.c;
-            store.players[msg.pid].betAmount = msg.a;
-            store.players[msg.pid].chips = msg.rem;
-            store.players[msg.pid].hasBet = true;
-            store.players[msg.pid].lastSeen = Date.now();
-            if (msg.rig) store.forcedRig = msg.rig;
-
-            // 방장 권한으로 최초 배팅자 판정
-            if (!store.firstBetterId) {
-              store.firstBetterId = msg.pid;
-              broadcastNetworkPacket({
-                t: 'FIRST_BETTER',
-                pid: msg.pid,
-                name: store.players[msg.pid].name
-              });
-              updateActionTicker(`⚡ ${store.players[msg.pid].name} 1등 배팅! (적중 시 5배)`);
-            }
-
-            const isAllIn = msg.rem === 0 && msg.a > 0;
-            if (isAllIn) {
-              updateActionTicker(`🔥 ${store.players[msg.pid].name} ALL-IN! (${msg.a}칩)`);
-            } else if (store.firstBetterId !== msg.pid) {
-              updateActionTicker(`💰 ${store.players[msg.pid].name} 배팅 (${msg.a}칩)`);
-            }
-
-            broadcastState();
-            renderAll();
-            checkAllPlayersBetComplete();
-          }
-          break;
-
-        case 'FIRST_BETTER':
-          store.firstBetterId = msg.pid;
-          if (msg.pid === store.myId) {
-            showToast('⚡ 가장 먼저 배팅 완료! 적중 시 5배 획득 대상자입니다!');
-          } else {
-            showToast(`⚡ ${msg.name} 님이 첫 번째로 배팅하여 5배 보너스 대상이 되었습니다!`);
-          }
-          updateActionTicker(`⚡ ${msg.name} 1등 배팅 완료! (적중 시 5배)`);
           renderAll();
           break;
 
@@ -2143,12 +2072,11 @@
         if (!store.isNetConnected) {
           el.btnToggleReady.disabled = true;
           el.btnToggleReady.className = 'px-4 sm:px-5 py-2 rounded-xl bg-slate-800 text-slate-500 border border-slate-700/60 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-not-allowed whitespace-nowrap shrink-0';
-          el.iconToggleReady.className = 'ph-bold ph-spinner gap-spin text-base animate-spin text-amber-400 shrink-0';
+          el.iconToggleReady.className = 'ph-bold ph-spinner text-base animate-spin text-amber-400 shrink-0';
           el.textToggleReady.textContent = 'WS 연결 중...';
           return;
         }
 
-<<<<<<< HEAD
         // 웹소켓 연결 성공 후 1초 안정화 지연 대기 중일 때 버튼 비활성화
         if (!store.isReadyDelayUnlocked) {
           el.btnToggleReady.disabled = true;
@@ -2158,8 +2086,6 @@
           return;
         }
 
-=======
->>>>>>> parent of dc15f1e (Update index.html)
         if (store.phase === 'WAITING' || store.phase === 'RESULT') {
           if (store.isReady) {
             el.btnToggleReady.disabled = false;
@@ -2222,12 +2148,9 @@
       if (!store.isNetConnected) {
         return showToast('소켓(WS) 연결 중입니다. 잠시 후 다시 시도해주세요.', false);
       }
-<<<<<<< HEAD
       if (!store.isReadyDelayUnlocked) {
         return showToast('입장 안정화 대기 중(1초)입니다. 잠시 후 눌러주세요.', false);
       }
-=======
->>>>>>> parent of dc15f1e (Update index.html)
       if (store.phase !== 'WAITING' && store.phase !== 'RESULT') return;
       sound.playChip();
       store.isReady = !store.isReady;
