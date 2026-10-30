@@ -28,6 +28,12 @@
         overflow: hidden;
       }
     }
+    @media (max-width: 1023px) {
+      body {
+        min-height: 100vh;
+        overflow-y: auto !important;
+      }
+    }
 
     .font-chakra {
       font-family: 'Chakra Petch', sans-serif;
@@ -276,7 +282,7 @@
     </section>
 
     <!-- VIEW 2: GAME ROOM ARENA -->
-    <section id="viewRoom" class="hidden flex-col gap-2.5 sm:gap-3.5 h-full lg:max-h-[calc(100vh-68px)] overflow-y-auto lg:overflow-hidden pb-6 lg:pb-0">
+    <section id="viewRoom" class="hidden flex-col gap-2.5 sm:gap-3.5 h-full lg:max-h-[calc(100vh-68px)] overflow-y-auto lg:overflow-hidden pb-12 lg:pb-0">
 
       <!-- Room Sub-Header -->
       <div class="flex items-center justify-between gap-2 bg-slate-900/90 border border-purple-500/20 px-3 py-2 rounded-2xl backdrop-blur-md shadow-md shrink-0">
@@ -315,10 +321,71 @@
       </div>
 
       <!-- Main Responsive Grid: Dice & Betting (Left 7-8 cols) | Participants & Chat (Right 4-5 cols) -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-2.5 sm:gap-3.5 flex-1 min-h-0">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-3.5 flex-1 min-h-0">
+
+        <!-- Right Column (Mobile: Ordered first/accessible, Desktop: Right 4-5 cols) -->
+        <div class="order-2 lg:order-2 lg:col-span-5 xl:col-span-4 flex flex-col gap-2.5 sm:gap-3 min-h-[360px] lg:min-h-0 lg:h-full">
+          
+          <!-- Participants List -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-3 shadow-xl flex flex-col h-[180px] lg:h-[35%] shrink-0">
+            <div class="flex items-center justify-between mb-1.5 border-b border-slate-800 pb-1.5 whitespace-nowrap">
+              <h3 class="text-xs sm:text-sm font-bold text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
+                <i class="ph-bold ph-users text-amber-400 shrink-0"></i>
+                <span>참가자 현황 (<span id="lblPlayerCount" class="text-amber-400 font-chakra">1</span>명)</span>
+              </h3>
+              <span class="text-[9px] text-slate-500 font-chakra whitespace-nowrap">LEADERBOARD</span>
+            </div>
+            <div id="listPlayers" class="flex flex-col gap-1 overflow-y-auto pr-1 flex-1">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Real-time Chat & Reactions Box -->
+          <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-3 shadow-xl flex flex-col h-[260px] lg:h-auto lg:flex-1 lg:min-h-0">
+            <!-- Chat Header -->
+            <div class="flex items-center justify-between pb-1 border-b border-slate-800 mb-1 whitespace-nowrap">
+              <h3 class="text-xs font-bold text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
+                <i class="ph-bold ph-chat-centered-text text-cyan-400 shrink-0"></i>
+                <span>실시간 채팅</span>
+              </h3>
+              <span class="text-[9px] font-semibold text-slate-400 flex items-center gap-1 whitespace-nowrap">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> LIVE
+              </span>
+            </div>
+
+            <!-- Message Area -->
+            <div id="chatBox" class="flex-1 overflow-y-auto space-y-1 text-xs pr-1 mb-1.5 scroll-smooth">
+              <div class="text-slate-500 text-[10px] italic bg-slate-950/40 p-1.5 rounded-xl border border-slate-800/60">
+                💬 방에 입장했습니다. 대화와 이모티콘을 나눠보세요!
+              </div>
+            </div>
+
+            <!-- Emoji Reaction Quick-Bar -->
+            <div class="py-0.5 px-2 bg-slate-950/60 border border-slate-800/80 rounded-xl mb-1.5 flex items-center justify-between gap-1">
+              <span class="text-[9px] font-bold text-slate-400 px-1">반응</span>
+              <div class="flex items-center gap-1">
+                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="🔥">🔥</button>
+                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="👏">👏</button>
+                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="😭">😭</button>
+                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="🎲">🎲</button>
+                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="💰">💰</button>
+                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="👍">👍</button>
+              </div>
+            </div>
+
+            <!-- Input & Send -->
+            <form id="formChat" class="flex items-center gap-1.5 mt-auto">
+              <input type="text" id="inputChat" maxlength="50" placeholder="메시지 입력..."
+                class="flex-1 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5 text-base sm:text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition" />
+              <button type="submit" class="px-3 py-1.5 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-slate-950 font-black rounded-xl text-xs active:scale-95 transition shadow-md shadow-cyan-500/20">
+                전송
+              </button>
+            </form>
+          </div>
+        </div>
 
         <!-- Left Column (Dice & Bet Panel) -->
-        <div class="lg:col-span-7 xl:col-span-8 flex flex-col gap-2.5 sm:gap-3 h-full min-h-0 justify-between">
+        <div class="order-1 lg:order-1 lg:col-span-7 xl:col-span-8 flex flex-col gap-2.5 sm:gap-3 min-h-0 justify-between">
           
           <!-- 3D Dice Stage (Fluid Scaled) -->
           <div class="relative bg-gradient-to-b from-slate-900/90 to-purple-950/40 border border-purple-500/30 rounded-3xl p-3 sm:p-4 flex flex-col items-center justify-center flex-1 min-h-[170px] lg:min-h-0 overflow-hidden shadow-xl">
@@ -646,8 +713,10 @@
       storageListener: null,
       heartbeatTimer: null,
       syncTimer: null,
-      lastEventTimestamp: Date.now(),
-      processedPacketIds: new Set()
+      sessionStartTime: Date.now(),
+      lastEventTimestamp: Math.floor(Date.now() / 1000),
+      processedPacketIds: new Set(),
+      notifiedPlayerJoins: new Set() // Strict lock: notify join only ONCE per player per session
     };
 
     // DOM Elements
@@ -802,6 +871,9 @@
 
       const normalizedCode = roomCode.toUpperCase().trim();
       setNetStatus('connecting', '방 연결 확인 중...');
+      store.sessionStartTime = Date.now();
+      store.lastEventTimestamp = Math.floor(Date.now() / 1000);
+      store.notifiedPlayerJoins.clear();
 
       // 1. Same-Device BroadcastChannel
       if ('BroadcastChannel' in window) {
@@ -838,7 +910,9 @@
         broadcastState();
       } else {
         showToast(`방에 입장했습니다!`);
+        // Send join and request immediate full sync
         sendJoinPacket();
+        setTimeout(sendJoinPacket, 800);
         startGuestHeartbeat();
       }
       renderControlArea();
@@ -851,13 +925,14 @@
     function startCloudSync(roomCode, isHost) {
       clearInterval(store.syncTimer);
       const endpoint = `https://ntfy.sh/hz_live_${roomCode}`;
-      store.lastEventTimestamp = Date.now();
 
       // Polling once every 2 seconds without infinite reconnect loops
       store.syncTimer = setInterval(async () => {
         if (!store.roomCode) return;
         try {
-          const resp = await fetch(`${endpoint}/json?since=${store.lastEventTimestamp || (Date.now() - 2500)}ms&poll=1`, {
+          // Fetch only new messages since last observed timestamp
+          const sinceParam = store.lastEventTimestamp || Math.floor((Date.now() - 3000) / 1000);
+          const resp = await fetch(`${endpoint}/json?since=${sinceParam}&poll=1`, {
             cache: 'no-store'
           });
           if (!resp.ok) return;
@@ -870,10 +945,14 @@
             try {
               const entry = JSON.parse(line);
               if (entry.time) {
-                store.lastEventTimestamp = Math.max(store.lastEventTimestamp, entry.time * 1000);
+                store.lastEventTimestamp = Math.max(store.lastEventTimestamp, entry.time);
               }
               if (entry.event === 'message' && entry.message) {
                 const pkt = JSON.parse(entry.message);
+                // Discard messages sent before this user joined the room
+                if (pkt._t && pkt._t < store.sessionStartTime - 2000) {
+                  continue;
+                }
                 if (pkt && pkt._senderId !== store.myId) {
                   handleNetworkMessage(pkt);
                 }
@@ -883,7 +962,7 @@
         } catch (e) {
           // Soft ignore network hiccups without infinite reconnect triggers
         }
-      }, 2200);
+      }, 2000);
     }
 
     function sendJoinPacket() {
@@ -917,7 +996,7 @@
         for (let pid in store.players) {
           const p = store.players[pid];
           if (p.id !== store.myId && !p.isBot) {
-            if (p.lastSeen && now - p.lastSeen > 16000) {
+            if (p.lastSeen && now - p.lastSeen > 20000) {
               const leavingName = p.name;
               delete store.players[pid];
               showToast(`[${leavingName}] 님이 퇴장 처리되었습니다.`, false);
@@ -1001,12 +1080,12 @@
 
     function broadcastNetworkPacket(packet) {
       packet._senderId = store.myId;
-      packet._pktId = store.myId + '_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+      packet._pktId = store.myId + '_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
       packet._t = Date.now();
       
       // Memorize self packet id
       store.processedPacketIds.add(packet._pktId);
-      if (store.processedPacketIds.size > 200) {
+      if (store.processedPacketIds.size > 500) {
         const first = store.processedPacketIds.values().next().value;
         store.processedPacketIds.delete(first);
       }
@@ -1054,7 +1133,7 @@
       if (msg._pktId) {
         if (store.processedPacketIds.has(msg._pktId)) return;
         store.processedPacketIds.add(msg._pktId);
-        if (store.processedPacketIds.size > 200) {
+        if (store.processedPacketIds.size > 500) {
           const first = store.processedPacketIds.values().next().value;
           store.processedPacketIds.delete(first);
         }
@@ -1063,12 +1142,14 @@
       switch(msg.type) {
         case 'PLAYER_JOIN':
           if (msg.player && msg.player.id) {
-            const isExisting = !!store.players[msg.player.id];
+            const pid = msg.player.id;
+            const isAlreadyKnown = !!store.players[pid];
             msg.player.lastSeen = Date.now();
-            store.players[msg.player.id] = Object.assign(store.players[msg.player.id] || {}, msg.player);
+            store.players[pid] = Object.assign(store.players[pid] || {}, msg.player);
 
-            // Only play sound and show toast if this is a completely brand-new player
-            if (!isExisting) {
+            // Notify ONCE per player per entire session (avoids infinite toast loops completely)
+            if (!isAlreadyKnown && !store.notifiedPlayerJoins.has(pid) && pid !== store.myId) {
+              store.notifiedPlayerJoins.add(pid);
               sound.playChip();
               showToast(`[${msg.player.name}] 님이 입장했습니다!`);
             }
@@ -1095,6 +1176,7 @@
             const leftName = store.players[msg.playerId].name;
             const wasHost = store.players[msg.playerId].isHost;
             delete store.players[msg.playerId];
+            store.notifiedPlayerJoins.delete(msg.playerId);
             showToast(`[${leftName}] 님이 퇴장했습니다.`, false);
             
             if (wasHost && !store.isHost) {
@@ -1149,6 +1231,8 @@
             if (myCurrent) {
               store.players[store.myId] = Object.assign({}, msg.players[store.myId] || {}, myCurrent);
             }
+            // Register known players into notified set so they won't trigger join toasts
+            Object.keys(store.players).forEach(id => store.notifiedPlayerJoins.add(id));
             if (store.players[store.myId]) {
               store.chips = store.players[store.myId].chips;
               store.isBankrupt = store.players[store.myId].isBankrupt;
