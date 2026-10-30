@@ -149,15 +149,16 @@
       </div>
 
       <div class="flex items-center gap-1.5 sm:gap-2.5">
-        <div id="ioActionTicker" class="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900/90 border border-purple-500/30 text-[11px] font-chakra text-amber-300 font-bold overflow-hidden max-w-[240px] truncate shadow-inner">
-          <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping shrink-0"></span>
-          <span id="txtActionTicker" class="truncate">실시간 연결 대기 중</span>
+        <!-- 1. MERGED REAL-TIME STATUS & TICKER BADGE (사진의 두 UI 통합) -->
+        <div id="unifiedNetStatusBadge" class="flex items-center gap-1.5 sm:gap-2 px-2.5 py-1 rounded-xl bg-slate-900/90 border border-purple-500/30 shadow-inner max-w-[210px] sm:max-w-[320px] overflow-hidden">
+          <span id="dotNetStatus" class="w-2 h-2 rounded-full bg-slate-500 shrink-0"></span>
+          <span id="textNetStatus" class="text-[10px] sm:text-[11px] font-chakra font-bold text-slate-400 whitespace-nowrap shrink-0">WS 대기 중</span>
+          <span class="w-[1px] h-3 bg-slate-700 shrink-0"></span>
+          <div class="flex items-center gap-1 overflow-hidden truncate">
+            <span id="txtActionTicker" class="text-[10px] sm:text-[11px] font-bold text-amber-300 font-chakra truncate">실시간 연결 대기 중</span>
+          </div>
         </div>
 
-        <div id="badgeNetStatus" class="px-2 sm:px-2.5 py-1 rounded-xl bg-slate-800/80 border border-slate-700 text-[10px] sm:text-[11px] font-bold text-slate-400 flex items-center gap-1.5 shrink-0">
-          <span id="dotNetStatus" class="w-2 h-2 rounded-full bg-slate-500"></span>
-          <span id="textNetStatus" class="whitespace-nowrap font-chakra">WS 대기 중</span>
-        </div>
         <button id="btnHeaderInvite" class="hidden px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-500/40 text-xs font-bold transition flex items-center gap-1.5 shrink-0" title="방 초대하기">
           <i class="ph-bold ph-share-network text-sm sm:text-base"></i>
           <span class="hidden sm:inline">초대</span>
@@ -487,35 +488,35 @@
               </div>
             </button>
 
+            <!-- 3. ALWAYS ACCESSIBLE EMOJI REACTION QUICK-BAR (접혀 있어도 언제든 즉시 사용 가능) -->
+            <div class="py-1 px-2 bg-slate-950/70 border border-slate-800/80 rounded-xl my-2 flex items-center justify-between gap-1 shadow-inner">
+              <span class="text-[9px] font-bold text-amber-400/90 px-1 font-chakra whitespace-nowrap">반응</span>
+              <div class="flex items-center gap-1 overflow-x-auto">
+                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm sm:text-base hover:scale-125 active:scale-95 transition" data-emoji="🔥" title="불꽃">🔥</button>
+                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm sm:text-base hover:scale-125 active:scale-95 transition" data-emoji="👏" title="박수">👏</button>
+                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm sm:text-base hover:scale-125 active:scale-95 transition" data-emoji="😭" title="눈물">😭</button>
+                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm sm:text-base hover:scale-125 active:scale-95 transition" data-emoji="🎲" title="주사위">🎲</button>
+                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm sm:text-base hover:scale-125 active:scale-95 transition" data-emoji="💰" title="돈">💰</button>
+                <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm sm:text-base hover:scale-125 active:scale-95 transition" data-emoji="👍" title="최고">👍</button>
+              </div>
+            </div>
+
             <!-- 1. COLLAPSED VIEW: Displays ONLY the 3 Most Recent Messages -->
-            <div id="chatCollapsedPreview" class="py-2 flex flex-col gap-1.5">
+            <div id="chatCollapsedPreview" class="flex flex-col gap-1.5">
               <div id="chatMiniList" class="flex flex-col gap-1 text-[11px] min-h-[58px]">
                 <div class="text-slate-500 text-[10px] italic py-1">대화가 시작되면 최근 3개 메시지가 여기에 표시됩니다.</div>
               </div>
               <button id="btnQuickOpenChat" type="button" class="w-full py-1.5 px-2 bg-slate-950/80 hover:bg-slate-800/80 border border-slate-800 hover:border-cyan-500/30 rounded-xl text-[11px] font-bold text-cyan-300 flex items-center justify-center gap-1.5 transition">
                 <i class="ph-bold ph-chats-circle text-xs"></i>
-                <span>전체 채팅 및 반응 열기</span>
+                <span>전체 채팅 및 메시지 입력 열기</span>
               </button>
             </div>
 
-            <!-- 2. EXPANDED VIEW: Full Chat History, Reactions & Input -->
-            <div id="chatExpandedBody" class="hidden flex-col pt-2 transition-all">
+            <!-- 2. EXPANDED VIEW: Full Chat History & Input -->
+            <div id="chatExpandedBody" class="hidden flex-col transition-all">
               <div id="chatBox" class="h-44 sm:h-52 overflow-y-auto space-y-1 text-xs pr-1 mb-2 scroll-smooth">
                 <div class="text-slate-500 text-[10px] italic bg-slate-950/40 p-1.5 rounded-xl border border-slate-800/60">
                   💬 방에 입장했습니다. 대화와 이모티콘을 나눠보세요!
-                </div>
-              </div>
-
-              <!-- Emoji Reaction Quick-Bar -->
-              <div class="py-1 px-2 bg-slate-950/60 border border-slate-800/80 rounded-xl mb-2 flex items-center justify-between gap-1">
-                <span class="text-[9px] font-bold text-slate-400 px-1">반응</span>
-                <div class="flex items-center gap-1">
-                  <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="🔥">🔥</button>
-                  <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="👏">👏</button>
-                  <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="😭">😭</button>
-                  <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="🎲">🎲</button>
-                  <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="💰">💰</button>
-                  <button type="button" class="btn-reaction p-1 hover:bg-slate-800 rounded-lg text-sm hover:scale-125 active:scale-95 transition" data-emoji="👍">👍</button>
                 </div>
               </div>
 
@@ -563,7 +564,7 @@
   <aside id="appVersionBadge" class="fixed bottom-2.5 right-3 z-50 pointer-events-none select-none">
     <div class="px-2 py-0.5 rounded-lg bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-[10px] font-chakra font-black tracking-wider text-purple-300/80 shadow-md flex items-center gap-1">
       <span class="w-1.5 h-1.5 rounded-full bg-cyan-400/80"></span>
-      <span>ver_0.1.7</span>
+      <span>ver_0.1.8</span>
     </div>
   </aside>
 
@@ -762,14 +763,14 @@
 
     function setNetStatus(status, text) {
       if (status === 'connected') {
-        el.dotNetStatus.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
-        el.textNetStatus.className = 'text-emerald-300 font-bold';
+        el.dotNetStatus.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0';
+        el.textNetStatus.className = 'text-emerald-300 font-bold text-[10px] sm:text-[11px] font-chakra whitespace-nowrap shrink-0';
       } else if (status === 'connecting') {
-        el.dotNetStatus.className = 'w-2 h-2 rounded-full bg-amber-400 animate-ping';
-        el.textNetStatus.className = 'text-amber-300 font-bold';
+        el.dotNetStatus.className = 'w-2 h-2 rounded-full bg-amber-400 animate-ping shrink-0';
+        el.textNetStatus.className = 'text-amber-300 font-bold text-[10px] sm:text-[11px] font-chakra whitespace-nowrap shrink-0';
       } else {
-        el.dotNetStatus.className = 'w-2 h-2 rounded-full bg-slate-500';
-        el.textNetStatus.className = 'text-slate-400';
+        el.dotNetStatus.className = 'w-2 h-2 rounded-full bg-slate-500 shrink-0';
+        el.textNetStatus.className = 'text-slate-400 font-medium text-[10px] sm:text-[11px] font-chakra whitespace-nowrap shrink-0';
       }
       el.textNetStatus.textContent = text;
     }
@@ -810,10 +811,12 @@
       if (isHost) {
         showToast(`[${store.roomCode}] 방 개설 완료!`);
         updateActionTicker(`방 개설됨 (방장: ${store.nickname})`);
+        appendSystemChat(`${store.nickname}님이 방을 생성하였습니다.`);
         startHostSnapshotLoop();
       } else {
         showToast(`방에 입장했습니다!`);
         updateActionTicker(`${store.nickname} 님이 입장함`);
+        appendSystemChat(`${store.nickname}님이 입장하였습니다.`);
       }
     }
 
@@ -1057,11 +1060,13 @@
         broadcastState();
         showToast(`방장이 퇴장하여 회원님이 새로운 방장이 되었습니다! 👑`);
         updateActionTicker(`👑 [방장 변경] ${newHostName} 님으로 위임됨`);
+        appendSystemChat(`👑 [방장 변경] ${newHostName}님이 새로운 방장이 되었습니다.`);
       } else {
         store.isHost = false;
         clearInterval(store.snapshotInterval);
         showToast(`[${newHostName}] 님이 새로운 방장이 되었습니다. 👑`);
         updateActionTicker(`👑 [방장 변경] ${newHostName} 님`);
+        appendSystemChat(`👑 [방장 변경] ${newHostName}님이 새로운 방장이 되었습니다.`);
       }
 
       renderAll();
@@ -1092,6 +1097,8 @@
               sound.playChip();
               showToast(`[${msg.p.name}] 님이 입장했습니다!`);
               updateActionTicker(`🟢 ${msg.p.name} 님이 참가함`);
+              // 2. 새 플레이어 입장 시 시스템 채팅 출력
+              appendSystemChat(`${msg.p.name}님이 입장하였습니다.`);
             }
 
             if (store.isHost) {
@@ -1121,6 +1128,7 @@
             store.notifiedPlayerJoins.delete(msg.pid);
             showToast(`[${leftName}] 님이 퇴장했습니다.`, false);
             updateActionTicker(`🔴 ${leftName} 님이 퇴장함`);
+            appendSystemChat(`${leftName}님이 퇴장하였습니다.`);
 
             // 방장이 나간 경우: 방장 넘기기(Host Migration) 즉시 발동
             if (wasHost) {
@@ -1163,6 +1171,15 @@
               isReady: store.isReady,
               isHost: store.isHost
             };
+            
+            // Check for new joins from SYNC
+            Object.values(msg.pls).forEach(p => {
+              if (p.id !== store.myId && !store.players[p.id] && !store.notifiedPlayerJoins.has(p.id)) {
+                store.notifiedPlayerJoins.add(p.id);
+                appendSystemChat(`${p.name}님이 입장하였습니다.`);
+              }
+            });
+
             store.players = Object.assign({}, msg.pls);
             store.players[store.myId] = Object.assign({}, msg.pls[store.myId] || {}, myCurrent);
             Object.keys(store.players).forEach(id => store.notifiedPlayerJoins.add(id));
@@ -2077,6 +2094,7 @@
 
       showToast(`봇 [${bName}]을 추가했습니다.`);
       updateActionTicker(`🤖 봇 [${bName}] 참가`);
+      appendSystemChat(`🤖 [봇] ${bName}이(가) 방에 추가되었습니다.`);
       broadcastState();
       renderAll();
 
@@ -2091,6 +2109,7 @@
         const name = store.players[lastKey].name;
         delete store.players[lastKey];
         showToast(`봇 [${name}]을 제거했습니다.`, false);
+        appendSystemChat(`🤖 [봇] ${name}이(가) 방에서 퇴장했습니다.`);
         broadcastState();
         renderAll();
       } else {
@@ -2233,6 +2252,7 @@
       setTimeout(() => elem.remove(), 1900);
     }
 
+    // Reaction Click Handlers (접힌 상태, 펼친 상태 상관없이 동작)
     document.querySelectorAll('.btn-reaction').forEach(btn => {
       btn.addEventListener('click', () => {
         const emoji = btn.getAttribute('data-emoji');
@@ -2282,10 +2302,35 @@
       el.inputChat.value = '';
     });
 
+    // 2. 시스템 메시지 (입장/퇴장/방장 위임 등) 전용 함수
+    function appendSystemChat(text) {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+      const item = { author: '[시스템]', text, timeStr, isSystem: true, isMe: false };
+
+      store.chatMessages.push(item);
+      if (store.chatMessages.length > 80) store.chatMessages.shift();
+
+      // Expanded chatBox
+      const msg = document.createElement('div');
+      msg.className = 'p-1.5 sm:p-2 rounded-xl bg-purple-950/40 border border-purple-500/30 text-xs break-words leading-snug flex items-center justify-between';
+      msg.innerHTML = `
+        <div class="flex items-center gap-1.5 text-purple-300 font-semibold text-[11px]">
+          <i class="ph-bold ph-bell-ringing text-amber-400 text-xs shrink-0"></i>
+          <span>${escapeHtml(text)}</span>
+        </div>
+        <span class="text-[9px] text-slate-500 font-chakra shrink-0 ml-2">${timeStr}</span>
+      `;
+      el.chatBox.appendChild(msg);
+      el.chatBox.scrollTop = el.chatBox.scrollHeight;
+
+      renderMiniChatPreview();
+    }
+
     function appendChat(author, text) {
       const now = new Date();
       const timeStr = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-      const item = { author, text, timeStr, isMe: author === store.nickname };
+      const item = { author, text, timeStr, isMe: author === store.nickname, isSystem: false };
       
       store.chatMessages.push(item);
       if (store.chatMessages.length > 80) store.chatMessages.shift();
@@ -2295,7 +2340,7 @@
       msg.className = 'p-2 rounded-xl bg-slate-950/70 border border-slate-800/80 text-xs break-words leading-snug';
       msg.innerHTML = `
         <div class="flex items-center justify-between mb-0.5">
-          <span class="font-bold text-[11px] ${item.isMe ? 'text-amber-400' : 'text-purple-300'}">${escapeHtml(author)}</span>
+          <span class="font-bold text-[11px] ${item.isMe ? 'text-amber-400' : 'text-cyan-300'}">${escapeHtml(author)}</span>
           <span class="text-[9px] text-slate-500">${timeStr}</span>
         </div>
         <div class="text-slate-200 text-xs">${escapeHtml(text)}</div>
@@ -2318,10 +2363,12 @@
       el.chatMiniList.innerHTML = '';
       recent3.forEach(m => {
         const row = document.createElement('div');
-        row.className = 'flex items-center gap-1.5 py-0.5 px-1.5 rounded-lg bg-slate-950/60 border border-slate-800/60 text-[11px] truncate';
+        row.className = `flex items-center gap-1.5 py-0.5 px-1.5 rounded-lg border text-[11px] truncate ${
+          m.isSystem ? 'bg-purple-950/40 border-purple-500/30 text-purple-300' : 'bg-slate-950/60 border-slate-800/60 text-slate-300'
+        }`;
         row.innerHTML = `
-          <span class="font-bold shrink-0 ${m.isMe ? 'text-amber-400' : 'text-cyan-300'}">${escapeHtml(m.author)}:</span>
-          <span class="text-slate-300 truncate">${escapeHtml(m.text)}</span>
+          <span class="font-bold shrink-0 ${m.isSystem ? 'text-amber-400' : (m.isMe ? 'text-amber-400' : 'text-cyan-300')}">${escapeHtml(m.author)}:</span>
+          <span class="truncate ${m.isSystem ? 'text-purple-200 font-medium' : 'text-slate-300'}">${escapeHtml(m.text)}</span>
           <span class="text-[9px] text-slate-500 shrink-0 ml-auto font-chakra">${m.timeStr}</span>
         `;
         el.chatMiniList.appendChild(row);
