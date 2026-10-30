@@ -517,6 +517,44 @@
             </div>
           </div>
 
+          <!-- ROUND HISTORY & ODD:EVEN RATIO SECTION -->
+          <div class="bg-slate-900/90 border border-purple-500/30 rounded-3xl p-3 shadow-xl flex flex-col gap-2 shrink-0">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-1.5">
+              <div class="flex items-center gap-1.5">
+                <i class="ph-bold ph-chart-pie-slice text-amber-400 text-sm"></i>
+                <h4 class="text-xs font-bold text-slate-200">라운드 기록 & 비율</h4>
+              </div>
+              <span class="text-[10px] text-slate-400 font-chakra">
+                총 <span id="lblHistoryTotalRounds" class="text-amber-400 font-bold">0</span>판 진행
+              </span>
+            </div>
+
+            <!-- Odd : Even Ratio Gauge -->
+            <div class="flex flex-col gap-1 bg-slate-950/60 p-2 rounded-2xl border border-slate-800/80">
+              <div class="flex items-center justify-between text-[11px] font-chakra font-bold">
+                <div class="flex items-center gap-1 text-cyan-400">
+                  <span>홀 (ODD)</span>
+                  <span id="lblHistoryOddCount" class="text-xs">0회</span>
+                  <span id="lblHistoryOddPercent" class="text-[10px] text-cyan-300/70">(0%)</span>
+                </div>
+                <div class="flex items-center gap-1 text-rose-400">
+                  <span id="lblHistoryEvenPercent" class="text-[10px] text-rose-300/70">(0%)</span>
+                  <span id="lblHistoryEvenCount" class="text-xs">0회</span>
+                  <span>짝 (EVEN)</span>
+                </div>
+              </div>
+              <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden flex border border-slate-700/60">
+                <div id="barHistoryOdd" class="h-full bg-cyan-500 transition-all duration-300" style="width: 50%;"></div>
+                <div id="barHistoryEven" class="h-full bg-rose-500 transition-all duration-300" style="width: 50%;"></div>
+              </div>
+            </div>
+
+            <!-- Horizontal History Bead Pills -->
+            <div class="flex items-center gap-1.5 overflow-x-auto py-0.5" id="historyBeadsContainer">
+              <div class="text-[10px] text-slate-500 italic py-1 px-1">아직 진행된 라운드가 없습니다.</div>
+            </div>
+          </div>
+
           <!-- COLLAPSIBLE DROPDOWN CHAT BOX -->
           <div id="chatAccordionWrapper" class="bg-slate-900/95 border border-purple-500/30 rounded-3xl p-3 shadow-2xl flex flex-col transition-all duration-300 shrink-0">
             
@@ -613,7 +651,7 @@
   <aside id="appVersionBadge" class="fixed bottom-2.5 right-3 z-50 pointer-events-none select-none">
     <div class="px-2 py-0.5 rounded-lg bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-[10px] font-chakra font-black tracking-wider text-purple-300/80 shadow-md flex items-center gap-1">
       <span class="w-1.5 h-1.5 rounded-full bg-cyan-400/80"></span>
-      <span>ver_0.2.5</span>
+      <span>ver_0.2.6</span>
     </div>
   </aside>
 
@@ -700,6 +738,7 @@
       forcedRig: null,
       players: {},
       isNetConnected: false,
+      roundHistory: [], // [{ round, d1, d2, sum, parity: 'ODD'|'EVEN' }]
       
       chatMessages: [],
       isChatExpanded: false,
@@ -780,6 +819,14 @@
       iconConfirmBet: document.getElementById('iconConfirmBet'),
       lblPlayerCount: document.getElementById('lblPlayerCount'),
       listPlayers: document.getElementById('listPlayers'),
+      lblHistoryTotalRounds: document.getElementById('lblHistoryTotalRounds'),
+      lblHistoryOddCount: document.getElementById('lblHistoryOddCount'),
+      lblHistoryOddPercent: document.getElementById('lblHistoryOddPercent'),
+      lblHistoryEvenCount: document.getElementById('lblHistoryEvenCount'),
+      lblHistoryEvenPercent: document.getElementById('lblHistoryEvenPercent'),
+      barHistoryOdd: document.getElementById('barHistoryOdd'),
+      barHistoryEven: document.getElementById('barHistoryEven'),
+      historyBeadsContainer: document.getElementById('historyBeadsContainer'),
       btnToggleChatCollapse: document.getElementById('btnToggleChatCollapse'),
       lblChatToggleHint: document.getElementById('lblChatToggleHint'),
       iconChatCollapseArrow: document.getElementById('iconChatCollapseArrow'),
@@ -1107,7 +1154,8 @@
         rnd: store.currentRound,
         tot: store.totalRounds,
         sc: store.startingChips,
-        pls: store.players
+        pls: store.players,
+        rh: store.roundHistory
       });
     }
 
@@ -1256,6 +1304,10 @@
           store.currentRound = msg.rnd || store.currentRound;
           store.totalRounds = msg.tot || store.totalRounds;
           if (msg.sc) store.startingChips = msg.sc;
+          if (msg.rh && Array.isArray(msg.rh)) {
+            store.roundHistory = msg.rh;
+            renderRoundHistoryUI();
+          }
 
           if (msg.pls) {
             const myCurrent = store.players[store.myId] || {
@@ -1628,6 +1680,7 @@
       store.selectedChoice = null;
       store.betAmount = 0;
       store.chatMessages = [];
+      store.roundHistory = [];
       store.isChatExpanded = false;
 
       el.lblRoomCode.textContent = store.roomCode;
@@ -1663,6 +1716,7 @@
 
       initNetworking(isHost, store.roomCode, !isHost);
       setChatExpandedState(false);
+      renderRoundHistoryUI();
       renderAll();
     }
 
@@ -2181,6 +2235,16 @@
         store.phase = 'RESULT';
         const resultParity = isOdd ? 'ODD' : 'EVEN';
 
+        // 라운드 히스토리에 기록 추가
+        store.roundHistory.push({
+          round: store.currentRound,
+          d1,
+          d2,
+          sum,
+          parity: resultParity
+        });
+        renderRoundHistoryUI();
+
         el.lblResultSub.textContent = `주사위 합: ${d1} + ${d2} = ${sum}`;
         el.lblResultMain.textContent = isOdd ? '결과: [홀] ODD' : '결과: [짝] EVEN';
         el.lblResultMain.className = `text-2xl sm:text-3xl font-black font-chakra mt-0.5 text-center leading-snug ${isOdd ? 'text-cyan-400' : 'text-rose-400'}`;
@@ -2394,6 +2458,7 @@
       store.selectedChoice = null;
       store.betAmount = 0;
       store.forcedRig = null;
+      store.roundHistory = [];
 
       Object.keys(store.players).forEach(id => {
         store.players[id].chips = store.startingChips;
@@ -2409,7 +2474,56 @@
       updateActionTicker(`🔄 새 게임 시작 (시작 칩: ${store.startingChips.toLocaleString()})`);
       appendSystemChat(`🔄 새 게임이 시작되었습니다. 모든 참가자에게 ${store.startingChips.toLocaleString()}칩이 지급되었습니다.`);
 
+      renderRoundHistoryUI();
       renderAll();
+    }
+
+    // --- ROUND HISTORY & RATIO RENDERER ---
+    function renderRoundHistoryUI() {
+      if (!el.historyBeadsContainer) return;
+
+      const total = store.roundHistory.length;
+      el.lblHistoryTotalRounds.textContent = total;
+
+      const oddCount = store.roundHistory.filter(h => h.parity === 'ODD').length;
+      const evenCount = total - oddCount;
+
+      el.lblHistoryOddCount.textContent = `${oddCount}회`;
+      el.lblHistoryEvenCount.textContent = `${evenCount}회`;
+
+      const oddPercent = total > 0 ? Math.round((oddCount / total) * 100) : 50;
+      const evenPercent = total > 0 ? (100 - oddPercent) : 50;
+
+      el.lblHistoryOddPercent.textContent = `(${total > 0 ? oddPercent : 0}%)`;
+      el.lblHistoryEvenPercent.textContent = `(${total > 0 ? evenPercent : 0}%)`;
+
+      el.barHistoryOdd.style.width = `${oddPercent}%`;
+      el.barHistoryEven.style.width = `${evenPercent}%`;
+
+      if (total === 0) {
+        el.historyBeadsContainer.innerHTML = `<div class="text-[10px] text-slate-500 italic py-1 px-1">아직 진행된 라운드가 없습니다.</div>`;
+        return;
+      }
+
+      el.historyBeadsContainer.innerHTML = '';
+      store.roundHistory.forEach(h => {
+        const isOdd = h.parity === 'ODD';
+        const bead = document.createElement('div');
+        bead.className = `flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[10px] font-chakra shrink-0 shadow-sm ${
+          isOdd 
+            ? 'bg-cyan-950/60 border-cyan-500/40 text-cyan-300' 
+            : 'bg-rose-950/60 border-rose-500/40 text-rose-300'
+        }`;
+        bead.innerHTML = `
+          <span class="text-slate-400 font-bold">R${h.round}</span>
+          <span class="font-black">${isOdd ? '홀' : '짝'}</span>
+          <span class="text-[9px] ${isOdd ? 'text-cyan-400/80' : 'text-rose-400/80'}">(${h.sum})</span>
+        `;
+        el.historyBeadsContainer.appendChild(bead);
+      });
+
+      // 최신 기록이 보이도록 자동 스크롤
+      el.historyBeadsContainer.scrollLeft = el.historyBeadsContainer.scrollWidth;
     }
 
     el.btnRestartGame.addEventListener('click', () => {
