@@ -474,18 +474,18 @@
         </div>
 
         <!-- Right Column: Participants & Real-time Chat Sidebar (Single Unique Container) -->
-        <div class="order-2 lg:order-2 lg:col-span-5 xl:col-span-4 flex flex-col gap-2.5 sm:gap-3 h-full min-h-[360px] lg:min-h-0">
+        <div class="order-2 lg:order-2 lg:col-span-5 xl:col-span-4 flex flex-col gap-2.5 sm:gap-3 flex-1 min-h-[420px] lg:min-h-0">
           
           <!-- Participants List (Proportional Height) -->
-          <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-3 shadow-xl flex flex-col h-[190px] sm:h-[210px] lg:h-[38%] shrink-0">
-            <div class="flex items-center justify-between mb-1.5 border-b border-slate-800 pb-1.5 whitespace-nowrap">
+          <div class="bg-slate-900/90 border border-purple-500/30 rounded-3xl p-3 sm:p-3.5 shadow-xl flex flex-col min-h-[200px] lg:h-[45%] shrink-0">
+            <div class="flex items-center justify-between mb-2 border-b border-slate-800 pb-1.5 whitespace-nowrap">
               <h3 class="text-xs sm:text-sm font-bold text-slate-200 flex items-center gap-1.5 whitespace-nowrap">
-                <i class="ph-bold ph-users text-amber-400 shrink-0"></i>
-                <span>참가자 현황 (<span id="lblPlayerCount" class="text-amber-400 font-chakra">1</span>명)</span>
+                <i class="ph-bold ph-users text-amber-400 shrink-0 text-base"></i>
+                <span>참가자 현황 (<span id="lblPlayerCount" class="text-amber-400 font-chakra font-bold">1</span>명)</span>
               </h3>
-              <span class="text-[9px] text-slate-500 font-chakra whitespace-nowrap">LEADERBOARD</span>
+              <span class="text-[9px] text-slate-500 font-chakra whitespace-nowrap font-bold">LIVE ROSTER</span>
             </div>
-            <div id="listPlayers" class="flex flex-col gap-1 overflow-y-auto pr-1 flex-1">
+            <div id="listPlayers" class="flex flex-col gap-1.5 overflow-y-auto pr-1 flex-1 min-h-[140px]">
               <!-- Dynamically populated -->
             </div>
           </div>
@@ -1571,28 +1571,24 @@
       if (store.phase === 'WAITING') {
         badgePhase.className = 'px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-2';
         lblPhaseText.textContent = '라운드 시작 대기 중';
-        boxTimer.classList.add('hidden');
         lblResultSub.textContent = `ROUND ${store.currentRound} 대기`;
         lblResultMain.textContent = store.isHost ? '[라운드 시작하기]를 누르면 배팅이 시작됩니다' : '방장의 라운드 시작을 기다리고 있습니다';
         lblResultMain.className = 'text-2xl sm:text-3xl font-black font-chakra text-white mt-0.5';
       } else if (store.phase === 'BETTING') {
         badgePhase.className = 'px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-2';
         lblPhaseText.textContent = '배팅 진행 중';
-        boxTimer.classList.remove('hidden');
         lblResultSub.textContent = `ROUND ${store.currentRound} / ${store.totalRounds}`;
         lblResultMain.textContent = '홀 또는 짝과 배팅액을 선택 후 [배팅완료]를 누르세요';
         lblResultMain.className = 'text-xl sm:text-2xl font-black font-chakra text-amber-400 mt-0.5 animate-pulse';
       } else if (store.phase === 'ROLLING') {
         badgePhase.className = 'px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/40 flex items-center gap-2';
         lblPhaseText.textContent = '주사위 굴리는 중...';
-        boxTimer.classList.add('hidden');
         lblResultSub.textContent = `ROUND ${store.currentRound} 판정 중`;
         lblResultMain.textContent = '주사위가 굴러가고 있습니다!';
         lblResultMain.className = 'text-2xl sm:text-3xl font-black font-chakra text-purple-300 mt-0.5';
       } else if (store.phase === 'RESULT') {
         badgePhase.className = 'px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-2';
         lblPhaseText.textContent = '결과 정산 완료';
-        boxTimer.classList.add('hidden');
       }
     }
 
