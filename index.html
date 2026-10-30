@@ -750,7 +750,7 @@
   <aside id="appVersionBadge" class="fixed bottom-2.5 right-3 z-50 pointer-events-none select-none">
     <div class="px-2 py-0.5 rounded-lg bg-slate-900/80 backdrop-blur-md border border-purple-500/30 text-[10px] font-chakra font-black tracking-wider text-purple-300/80 shadow-md flex items-center gap-1">
       <span class="w-1.5 h-1.5 rounded-full bg-cyan-400/80"></span>
-      <span>ver_0.3.8</span>
+      <span>ver_0.3.9</span>
     </div>
   </aside>
 
@@ -839,7 +839,7 @@
       players: {},
       isNetConnected: false,
       isReadyDelayUnlocked: false,
-      readyUnlockTimer: null,
+      readyDelayTimer: null,
       roundHistory: [],
       // 배팅 종료 시점의 확정 배당률 보존 (정산 왜곡 방지)
       lockedOddOdds: 2.0,
@@ -1072,18 +1072,14 @@
       showToast(`[${closedRoomCode}방은 닫힌 방입니다.]`, false);
     }
 
-    function scheduleReadyUnlockDelay() {
-      if (store.readyUnlockTimer) {
-        clearTimeout(store.readyUnlockTimer);
-      }
+    function triggerReadyButtonDelay() {
+      if (store.readyDelayTimer) clearTimeout(store.readyDelayTimer);
       store.isReadyDelayUnlocked = false;
       renderControlArea();
 
-      store.readyUnlockTimer = setTimeout(() => {
-        if (store.isNetConnected) {
-          store.isReadyDelayUnlocked = true;
-          renderControlArea();
-        }
+      store.readyDelayTimer = setTimeout(() => {
+        store.isReadyDelayUnlocked = true;
+        renderControlArea();
       }, 1000);
     }
 
@@ -1091,7 +1087,7 @@
       if (typeof Paho === 'undefined' || !Paho.MQTT) {
         setNetStatus('connected', `WS 온라인 (${normalizedCode})`);
         store.isNetConnected = true;
-        scheduleReadyUnlockDelay();
+        triggerReadyButtonDelay();
         return;
       }
 
@@ -1105,7 +1101,7 @@
         store.mqttClient.onConnectionLost = (responseObject) => {
           store.isNetConnected = false;
           store.isReadyDelayUnlocked = false;
-          if (store.readyUnlockTimer) clearTimeout(store.readyUnlockTimer);
+          if (store.readyDelayTimer) clearTimeout(store.readyDelayTimer);
           renderControlArea();
           if (store.roomCode) {
             setNetStatus('connecting', `WS 재연결 중...`);
@@ -1131,7 +1127,6 @@
           cleanSession: true,
           onSuccess: () => {
             store.isNetConnected = true;
-            scheduleReadyUnlockDelay();
             setNetStatus('connected', `WS 온라인 (${normalizedCode})`);
             store.mqttClient.subscribe(store.mqttTopic, { qos: 0 });
 
@@ -1142,7 +1137,7 @@
               setTimeout(sendJoinPacket, 250);
               setTimeout(sendJoinPacket, 700);
             }
-            renderControlArea();
+            triggerReadyButtonDelay();
           },
           onFailure: () => {
             fallbackAlternateBroker(normalizedCode, isGuestJoin);
@@ -1160,7 +1155,7 @@
         store.mqttClient.onConnectionLost = () => {
           store.isNetConnected = false;
           store.isReadyDelayUnlocked = false;
-          if (store.readyUnlockTimer) clearTimeout(store.readyUnlockTimer);
+          if (store.readyDelayTimer) clearTimeout(store.readyDelayTimer);
           renderControlArea();
         };
         store.mqttClient.onMessageArrived = (message) => {
@@ -1176,25 +1171,22 @@
           cleanSession: true,
           onSuccess: () => {
             store.isNetConnected = true;
-            scheduleReadyUnlockDelay();
             setNetStatus('connected', `WS 온라인 (${normalizedCode})`);
             store.mqttClient.subscribe(store.mqttTopic, { qos: 0 });
             if (store.isHost) broadcastState();
             else sendJoinPacket();
-            renderControlArea();
+            triggerReadyButtonDelay();
           },
           onFailure: () => {
             store.isNetConnected = true;
-            scheduleReadyUnlockDelay();
             setNetStatus('connected', `WS 로컬온라인`);
-            renderControlArea();
+            triggerReadyButtonDelay();
           }
         });
       } catch(e) {
         store.isNetConnected = true;
-        scheduleReadyUnlockDelay();
         setNetStatus('connected', `WS 로컬온라인`);
-        renderControlArea();
+        triggerReadyButtonDelay();
       }
     }
 
@@ -1203,9 +1195,9 @@
         clearTimeout(store.roomHostCheckTimer);
         store.roomHostCheckTimer = null;
       }
-      if (store.readyUnlockTimer) {
-        clearTimeout(store.readyUnlockTimer);
-        store.readyUnlockTimer = null;
+      if (store.readyDelayTimer) {
+        clearTimeout(store.readyDelayTimer);
+        store.readyDelayTimer = null;
       }
       store.isReadyDelayUnlocked = false;
       clearInterval(store.snapshotInterval);
@@ -2090,7 +2082,7 @@
           el.btnToggleReady.disabled = true;
           el.btnToggleReady.className = 'px-4 sm:px-5 py-2 rounded-xl bg-slate-800 text-slate-400 border border-slate-700/60 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition cursor-not-allowed whitespace-nowrap shrink-0';
           el.iconToggleReady.className = 'ph-bold ph-hourglass text-base text-amber-400 animate-spin shrink-0';
-          el.textToggleReady.textContent = '방 안정화 대기 (1초)...';
+          el.textToggleReady.textContent = '준비 대기 중 (1초)...';
           return;
         }
 
@@ -2157,7 +2149,7 @@
         return showToast('소켓(WS) 연결 중입니다. 잠시 후 다시 시도해주세요.', false);
       }
       if (!store.isReadyDelayUnlocked) {
-        return showToast('방 네트워크 연결 안정화 중입니다 (1초 대기). 잠시 후 눌러주세요.', false);
+        return showToast('입장 안정화 대기 중(1초)입니다. 잠시 후 눌러주세요.', false);
       }
       if (store.phase !== 'WAITING' && store.phase !== 'RESULT') return;
       sound.playChip();
